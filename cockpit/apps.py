@@ -1,3 +1,5 @@
+"""App configuration for the cockpit app."""
+
 from django.apps import AppConfig
 
 

@@ -8,41 +8,10 @@ In Mendix terms, these are the app's constants.
 
 import os
 from pathlib import Path
-from urllib.parse import urlparse
+
+from config.env import database_from_url, env_bool, env_list, load_env_file
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-def load_env_file(path: Path) -> None:
-    """Load KEY=VALUE lines from a local .env file into os.environ.
-
-    Values already set in the real environment win, so CI and production
-    are never overridden by a stray .env file.
-    """
-    if not path.exists():
-        return
-    for line in path.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip())
-
-
-def database_from_url(url: str) -> dict:
-    """Turn a DATABASE_URL into a Django DATABASES entry.
-
-    Only SQLite is supported for now: `sqlite:///db.sqlite3` is a file
-    relative to the project root. Add other databases when a story needs them.
-    """
-    parsed = urlparse(url)
-    if parsed.scheme != "sqlite":
-        raise ValueError(f"Unsupported DATABASE_URL scheme: {parsed.scheme!r}")
-    return {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / parsed.path.lstrip("/"),
-    }
-
 
 load_env_file(BASE_DIR / ".env")
 
@@ -50,13 +19,10 @@ load_env_file(BASE_DIR / ".env")
 
 # The fallback key is only for local development and tests. Set a real
 # DJANGO_SECRET_KEY in any shared or deployed environment.
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key")
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() == "true"
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if host.strip()
-]
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or "dev-only-insecure-key"
+# DEBUG is off unless DJANGO_DEBUG says otherwise; .env.example turns it on locally.
+DEBUG = env_bool("DJANGO_DEBUG", default=False)
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1")
 
 # --- SAP (consumed OData service) -------------------------------------------
 
@@ -107,7 +73,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 # --- Database ---------------------------------------------------------------
 
 DATABASES = {
-    "default": database_from_url(os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3")),
+    "default": database_from_url(
+        os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3"), base_dir=BASE_DIR
+    ),
 }
 
 AUTH_PASSWORD_VALIDATORS = [

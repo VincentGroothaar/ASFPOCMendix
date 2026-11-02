@@ -22,7 +22,7 @@ package = false
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
-testpaths = ["cockpit/tests", "tests"]
+testpaths = ["cockpit/tests", "config/tests", "tests"]
 
 [tool.ruff]
 line-length = 100

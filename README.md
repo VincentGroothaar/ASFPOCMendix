@@ -36,6 +36,9 @@ Settings come from environment variables. Locally they are read from `.env`; see
 | `SAP_BASE_URL` | Base URL of the SAP OData V2 sandbox                 |
 | `SAP_API_KEY`  | API key for the SAP sandbox (never commit it)        |
 | `DATABASE_URL` | Database location, default `sqlite:///db.sqlite3`    |
+| `DJANGO_SECRET_KEY` | Django signing key; a dev-only key is used if empty |
+| `DJANGO_DEBUG` | `true` shows debug pages; off when unset            |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated host names, default `localhost,127.0.0.1` |
 
 ## Where things live
 
