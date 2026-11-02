@@ -170,3 +170,16 @@ def test_env_list_splits_on_commas_and_skips_empty_items(monkeypatch: pytest.Mon
     monkeypatch.setenv("HOSTS", " a.test , ,b.test,, ")
 
     assert env_list("HOSTS", default="") == ["a.test", "b.test"]
+
+
+def test_database_from_url_keeps_an_explicit_port_zero() -> None:
+    assert database_from_url("postgresql://u:p@host:0/db")["PORT"] == "0"
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["postgresql://u:p/ss@host/db", "postgresql://u:p#ss@host/db", "postgresql://u:p@[::1/db"],
+)
+def test_database_from_url_suggests_percent_encoding_for_a_broken_password(url: str) -> None:
+    with pytest.raises(ValueError, match="Percent-encode"):
+        database_from_url(url)

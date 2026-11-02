@@ -6,6 +6,7 @@ from urllib.parse import unquote, urlparse
 
 TRUE_VALUES = {"1", "true", "yes", "on"}
 POSTGRES_SCHEMES = {"postgres", "postgresql"}
+ENCODE_HINT = "Percent-encode special characters in the password, e.g. @ as %40 and / as %2F."
 
 
 def parse_env_line(line: str) -> tuple[str, str] | None:
@@ -85,19 +86,22 @@ def database_from_url(url: str) -> dict:
     Raises ValueError for anything else. The error never contains the URL,
     so the password cannot end up in a log.
     """
-    parsed = urlparse(url.strip())
+    try:
+        parsed = urlparse(url.strip())
+    except ValueError:
+        raise ValueError(f"DATABASE_URL could not be read. {ENCODE_HINT}") from None
     if parsed.scheme not in POSTGRES_SCHEMES:
         raise ValueError(
             f"Unsupported DATABASE_URL scheme {parsed.scheme!r}: only Postgres is supported, "
             "e.g. postgresql://cockpit:cockpit@localhost:5432/cockpit"
         )
     if parsed.query or parsed.fragment:
-        raise ValueError("DATABASE_URL must not contain options after '?' or '#'")
+        raise ValueError(f"DATABASE_URL must not contain options after '?' or '#'. {ENCODE_HINT}")
 
     try:
         port = parsed.port
     except ValueError:
-        raise ValueError("DATABASE_URL has a port that is not a number") from None
+        raise ValueError(f"DATABASE_URL has a port that is not a number. {ENCODE_HINT}") from None
     name = unquote(parsed.path.removeprefix("/"))
     if not parsed.hostname or not name or "/" in name:
         raise ValueError(
@@ -111,5 +115,5 @@ def database_from_url(url: str) -> dict:
         "USER": unquote(parsed.username or ""),
         "PASSWORD": unquote(parsed.password or ""),
         "HOST": parsed.hostname,
-        "PORT": str(port) if port else "",
+        "PORT": "" if port is None else str(port),
     }
