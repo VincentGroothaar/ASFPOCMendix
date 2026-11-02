@@ -1,0 +1,34 @@
+[project]
+name = "material-shortage-cockpit"
+version = "0.1.0"
+description = "Material Shortage Cockpit: high-code track of the Mendix vs agentic software factory PoC."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.2,<6",
+    "requests>=2.32",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-django>=4.9",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+testpaths = ["cockpit/tests", "tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Blueprint skills are vendored, unmodified copies; do not lint them.
+extend-exclude = [".claude"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
