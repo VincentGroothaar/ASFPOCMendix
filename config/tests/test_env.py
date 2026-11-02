@@ -7,8 +7,6 @@ import pytest
 
 from config.env import database_from_url, env_bool, env_list, load_env_file, parse_env_line
 
-BASE_DIR = Path("/project")
-
 
 @pytest.mark.parametrize(
     ("line", "expected"),
@@ -76,35 +74,60 @@ def test_load_env_file_reports_the_line_number(tmp_path: Path) -> None:
         load_env_file(env_file)
 
 
-def test_database_from_url_relative_path_is_under_project() -> None:
-    database = database_from_url("sqlite:///db.sqlite3", base_dir=BASE_DIR)
+def test_database_from_url_maps_a_postgres_url_to_django_settings() -> None:
+    database = database_from_url("postgresql://cockpit:cockpit@db.local:5433/cockpit")
 
-    assert database["ENGINE"] == "django.db.backends.sqlite3"
-    assert database["NAME"] == Path("/project/db.sqlite3")
+    assert database == {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "cockpit",
+        "USER": "cockpit",
+        "PASSWORD": "cockpit",
+        "HOST": "db.local",
+        "PORT": "5433",
+    }
 
 
-def test_database_from_url_keeps_absolute_path() -> None:
-    database = database_from_url("sqlite:////var/data/db.sqlite3", base_dir=BASE_DIR)
+def test_database_from_url_accepts_the_short_postgres_scheme_and_default_port() -> None:
+    database = database_from_url("postgres://cockpit:cockpit@localhost/cockpit")
 
-    assert database["NAME"] == Path("/var/data/db.sqlite3")
+    assert database["ENGINE"] == "django.db.backends.postgresql"
+    assert database["PORT"] == ""
+
+
+def test_database_from_url_decodes_special_characters_in_user_and_password() -> None:
+    database = database_from_url("postgresql://app%2Buser:p%40ss%3Aw%2Fo%23rd%25@localhost/cockpit")
+
+    assert database["USER"] == "app+user"
+    assert database["PASSWORD"] == "p@ss:w/o#rd%"
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["sqlite:///db.sqlite3", "sqlite:////var/data/db.sqlite3", "mysql://u:secret@host/db", ""],
+)
+def test_database_from_url_rejects_other_databases_with_a_clear_error(url: str) -> None:
+    with pytest.raises(ValueError, match="only Postgres is supported"):
+        database_from_url(url)
 
 
 @pytest.mark.parametrize(
     "url",
     [
-        "",
-        "sqlite://",
-        "sqlite:///",
-        "sqlite:///db.sqlite3?mode=ro",
-        "sqlit:///db.sqlite3",
-        "sqlite://host/db.sqlite3",
-        "sqlite:///db.sqlite3#x",
-        "postgres://user:secret@host/db",
+        "postgresql://u:secret@host",
+        "postgresql://u:secret@host/",
+        "postgresql://u:secret@/db",
+        "postgresql://u:secret@host/db/extra",
+        "postgresql://u:secret@host:abc/db",
+        "postgresql://u:secret@host:99999/db",
+        "postgresql://u:secret@host/db?sslmode=require",
+        "postgresql://u:secret@host/db#x",
     ],
 )
-def test_database_from_url_rejects_unsupported_urls(url: str) -> None:
+def test_database_from_url_rejects_incomplete_postgres_urls_without_showing_the_password(
+    url: str,
+) -> None:
     with pytest.raises(ValueError) as error:
-        database_from_url(url, base_dir=BASE_DIR)
+        database_from_url(url)
 
     assert "secret" not in str(error.value)
 

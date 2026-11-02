@@ -6,18 +6,21 @@ This repository is the high-code track: the **Material Shortage Cockpit**, built
 
 ## Run locally
 
-You need [uv](https://docs.astral.sh/uv/). It installs the right Python version and all dependencies for you.
+You need [uv](https://docs.astral.sh/uv/), which installs the right Python version and all dependencies, and [Docker](https://docs.docker.com/get-docker/), which runs the local Postgres database. The app uses Postgres in every environment; there is no SQLite fallback.
 
 ```sh
 cp .env.example .env              # then fill in SAP_API_KEY
+docker compose up -d              # start Postgres (data is kept in a Docker volume)
 uv sync                           # install Python and dependencies
-uv run python manage.py migrate   # create the local SQLite database
+uv run python manage.py migrate   # create the tables in Postgres
 uv run python manage.py runserver
 ```
 
 Open http://127.0.0.1:8000/.
 
 ## Run tests and checks
+
+Postgres must be running (`docker compose up -d`); the tests create and remove their own `test_cockpit` database.
 
 ```sh
 uv run pytest                     # tests
@@ -35,7 +38,9 @@ Settings come from environment variables. Locally they are read from `.env`; see
 | -------------- | ---------------------------------------------------- |
 | `SAP_BASE_URL` | Base URL of the SAP OData V2 sandbox                 |
 | `SAP_API_KEY`  | API key for the SAP sandbox (never commit it)        |
-| `DATABASE_URL` | Database location, default `sqlite:///db.sqlite3`    |
+| `DATABASE_URL` | Postgres URL, required, e.g. `postgresql://cockpit:cockpit@localhost:5432/cockpit` |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Used by `docker compose` to create the local database |
+| `MOCK_PR_BASE_URL`, `MOCK_API_KEY` | Purchase requisition mock, used by a later story |
 | `DJANGO_SECRET_KEY` | Django signing key; a dev-only key is used if empty |
 | `DJANGO_DEBUG` | `true` shows debug pages; off when unset            |
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated host names, default `localhost,127.0.0.1` |

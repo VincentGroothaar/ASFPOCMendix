@@ -9,6 +9,8 @@ In Mendix terms, these are the app's constants.
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 from config.env import database_from_url, env_bool, env_list, load_env_file
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -72,11 +74,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # --- Database ---------------------------------------------------------------
 
-DATABASES = {
-    "default": database_from_url(
-        os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3"), base_dir=BASE_DIR
-    ),
-}
+# Postgres in every environment; there is no SQLite fallback. Locally,
+# `docker compose up -d` starts the database that .env.example points to.
+# Lowercase on purpose: Django's debug page lists every UPPERCASE setting,
+# and this URL contains the database password.
+database_url = os.environ.get("DATABASE_URL", "")
+if not database_url.strip():
+    raise ImproperlyConfigured(
+        "DATABASE_URL is not set. Copy .env.example to .env and run `docker compose up -d`."
+    )
+DATABASES = {"default": database_from_url(database_url)}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

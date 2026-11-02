@@ -2,9 +2,10 @@
 
 import os
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 TRUE_VALUES = {"1", "true", "yes", "on"}
+POSTGRES_SCHEMES = {"postgres", "postgresql"}
 
 
 def parse_env_line(line: str) -> tuple[str, str] | None:
@@ -75,27 +76,40 @@ def env_list(name: str, default: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-def database_from_url(url: str, base_dir: Path) -> dict:
-    """Turn a DATABASE_URL into a Django DATABASES entry.
+def database_from_url(url: str) -> dict:
+    """Turn a DATABASE_URL into a Django DATABASES entry for Postgres.
 
-    Only SQLite is supported for now. `sqlite:///db.sqlite3` is a file relative
-    to `base_dir`; `sqlite:////var/data/db.sqlite3` is an absolute path.
-    Add other databases when a story needs them.
+    Expects postgresql://user:password@host:port/database (the scheme may also
+    be postgres://). Special characters in the user or password must be
+    percent-encoded, e.g. "p@ss" as "p%40ss"; they are decoded here.
+    Raises ValueError for anything else. The error never contains the URL,
+    so the password cannot end up in a log.
     """
-    parsed = urlparse(url)
-    if parsed.scheme != "sqlite":
-        raise ValueError(f"Unsupported DATABASE_URL scheme: {parsed.scheme!r}")
-    if parsed.netloc or parsed.query or parsed.fragment:
+    parsed = urlparse(url.strip())
+    if parsed.scheme not in POSTGRES_SCHEMES:
         raise ValueError(
-            "DATABASE_URL must look like sqlite:///db.sqlite3, without host or options"
+            f"Unsupported DATABASE_URL scheme {parsed.scheme!r}: only Postgres is supported, "
+            "e.g. postgresql://cockpit:cockpit@localhost:5432/cockpit"
+        )
+    if parsed.query or parsed.fragment:
+        raise ValueError("DATABASE_URL must not contain options after '?' or '#'")
+
+    try:
+        port = parsed.port
+    except ValueError:
+        raise ValueError("DATABASE_URL has a port that is not a number") from None
+    name = unquote(parsed.path.removeprefix("/"))
+    if not parsed.hostname or not name or "/" in name:
+        raise ValueError(
+            "DATABASE_URL must name a host and a database, e.g. "
+            "postgresql://cockpit:cockpit@localhost:5432/cockpit"
         )
 
-    # urlparse keeps one leading "/" from "sqlite:///"; remove it so a
-    # relative path stays relative and "////" leaves an absolute path.
-    file_path = parsed.path.removeprefix("/")
-    if not file_path:
-        raise ValueError("DATABASE_URL must name a database file, e.g. sqlite:///db.sqlite3")
     return {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": base_dir / file_path,
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": name,
+        "USER": unquote(parsed.username or ""),
+        "PASSWORD": unquote(parsed.password or ""),
+        "HOST": parsed.hostname,
+        "PORT": str(port) if port else "",
     }
