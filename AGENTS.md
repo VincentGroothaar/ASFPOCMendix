@@ -31,12 +31,13 @@ This repo is the high-code track of a PoC that compares Mendix + Maia Make with 
 
 ## Commands
 
-To be filled in when issue 2 is done.
+Dependencies are managed with `uv`. Install them with `uv sync`.
 
-- Lint: TBD
-- Format: TBD
-- Test: TBD
-- Run: TBD
+- Lint: `uv run ruff check`
+- Format: `uv run ruff format` (CI runs `uv run ruff format --check`)
+- Test: `uv run pytest`
+- Django checks: `uv run python manage.py check` and `uv run python manage.py makemigrations --check --dry-run`
+- Run: `uv run python manage.py runserver`
 
 ## Blueprint
 
