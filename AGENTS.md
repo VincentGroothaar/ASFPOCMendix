@@ -28,6 +28,25 @@ This repo is the high-code track of a PoC that compares Mendix + Maia Make with 
 - Leave PRs open unless asked to merge.
 - If implementation shows the spec is wrong, stop and update the spec in a separate small PR first.
 - Review against [REVIEW.md](REVIEW.md).
+- End every PR description with the Metrics block below.
+
+## Metrics
+
+This repo is measured as part of the PoC. The PR history is the evidence, so every PR description ends with this block, filled in from what actually happened in the session:
+
+```markdown
+## Metrics
+- Issue: #<number>
+- Story: <story label, e.g. story-4, or change-request, or none>
+- Covers: <REQ-n, AC-n and INV-n IDs this PR implements or tests, or none>
+- Repair rounds: <times checks or CI failed and were fixed before the PR was ready>
+- Review findings fixed: <count from the independent review, or 0>
+- Blocked by: <what slowed or stopped the work, e.g. sandbox down from 10:20 to 10:45, or none>
+```
+
+- Report only facts from this session. Write "unknown" rather than estimating.
+- Do not report human effort, confidence, or how much code the human reviewed. The person steering logs those separately.
+- Do not write to Notion or any other metrics store. The PR description is the only record you keep.
 
 ## Commands
 
