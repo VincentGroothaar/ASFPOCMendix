@@ -11,8 +11,9 @@ def parse_env_line(line: str) -> tuple[str, str] | None:
     """Parse one line of a .env file into (key, value).
 
     Returns None for blank lines and comments. Accepts an optional leading
-    `export`, removes matching quotes around the value, and drops a trailing
-    ` # comment` from unquoted values. Raises ValueError for a malformed line.
+    `export`, removes quotes around the value, and drops a trailing
+    ` # comment`. Raises ValueError for a malformed line. The error never
+    contains the value, so a secret cannot end up in a log.
     """
     line = line.strip()
     if not line or line.startswith("#"):
@@ -20,16 +21,22 @@ def parse_env_line(line: str) -> tuple[str, str] | None:
     if line.startswith("export "):
         line = line.removeprefix("export ").strip()
     if "=" not in line:
-        raise ValueError(f"Expected KEY=value in .env, got: {line!r}")
+        raise ValueError("expected KEY=value")
 
     key, value = line.split("=", 1)
     key, value = key.strip(), value.strip()
-    if not key:
-        raise ValueError(f"Missing key before '=' in .env line: {line!r}")
+    if not key or any(char.isspace() for char in key):
+        raise ValueError("the key before '=' is missing or contains spaces")
 
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-        value = value[1:-1]
-    elif " #" in value:
+    if value[:1] in ('"', "'"):
+        quote = value[0]
+        closing = value.find(quote, 1)
+        rest = value[closing + 1 :].strip() if closing != -1 else ""
+        if closing == -1 or (rest and not rest.startswith("#")):
+            raise ValueError(f"the value of {key} has an unmatched quote")
+        return key, value[1:closing]
+
+    if " #" in value:
         value = value.split(" #", 1)[0].rstrip()
     return key, value
 
@@ -42,8 +49,13 @@ def load_env_file(path: Path) -> None:
     """
     if not path.exists():
         return
-    for line in path.read_text().splitlines():
-        parsed = parse_env_line(line)
+    # utf-8-sig ignores the invisible byte-order mark some editors add.
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
+    for number, line in enumerate(lines, start=1):
+        try:
+            parsed = parse_env_line(line)
+        except ValueError as error:
+            raise ValueError(f"{path.name} line {number}: {error}") from None
         if parsed:
             key, value = parsed
             os.environ.setdefault(key, value)
@@ -73,8 +85,10 @@ def database_from_url(url: str, base_dir: Path) -> dict:
     parsed = urlparse(url)
     if parsed.scheme != "sqlite":
         raise ValueError(f"Unsupported DATABASE_URL scheme: {parsed.scheme!r}")
-    if parsed.query:
-        raise ValueError("DATABASE_URL options (?...) are not supported")
+    if parsed.netloc or parsed.query or parsed.fragment:
+        raise ValueError(
+            "DATABASE_URL must look like sqlite:///db.sqlite3, without host or options"
+        )
 
     # urlparse keeps one leading "/" from "sqlite:///"; remove it so a
     # relative path stays relative and "////" leaves an absolute path.

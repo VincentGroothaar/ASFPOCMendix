@@ -1,10 +1,11 @@
 """Tests for the helpers that read settings from the environment and .env."""
 
+import os
 from pathlib import Path
 
 import pytest
 
-from config.env import database_from_url, env_bool, env_list, parse_env_line
+from config.env import database_from_url, env_bool, env_list, load_env_file, parse_env_line
 
 BASE_DIR = Path("/project")
 
@@ -19,6 +20,9 @@ BASE_DIR = Path("/project")
         ("export SAP_API_KEY=abc", ("SAP_API_KEY", "abc")),
         ("SAP_API_KEY=abc # my key", ("SAP_API_KEY", "abc")),
         ('SAP_API_KEY="abc # not a comment"', ("SAP_API_KEY", "abc # not a comment")),
+        ('SAP_API_KEY="abc" # my key', ("SAP_API_KEY", "abc")),
+        ("SAP_API_KEY='abc'   # my key", ("SAP_API_KEY", "abc")),
+        ('SAP_API_KEY=""', ("SAP_API_KEY", "")),
         ("SAP_API_KEY=", ("SAP_API_KEY", "")),
         ("URL=https://x.test/?a=b", ("URL", "https://x.test/?a=b")),
     ],
@@ -32,10 +36,44 @@ def test_parse_env_line_skips_blank_lines_and_comments(line: str) -> None:
     assert parse_env_line(line) is None
 
 
-@pytest.mark.parametrize("line", ["=oops", "  = value", "NO_EQUALS_SIGN"])
-def test_parse_env_line_rejects_malformed_lines(line: str) -> None:
-    with pytest.raises(ValueError):
+@pytest.mark.parametrize(
+    "line",
+    [
+        "=oops",
+        "  = value",
+        "SAP_API_KEY sk-secret",
+        "MY KEY=sk-secret",
+        'SAP_API_KEY="sk-secret',
+        'SAP_API_KEY="sk-secret" extra',
+    ],
+)
+def test_parse_env_line_rejects_malformed_lines_without_showing_the_value(line: str) -> None:
+    with pytest.raises(ValueError) as error:
         parse_env_line(line)
+
+    assert "sk-secret" not in str(error.value)
+
+
+def test_load_env_file_keeps_values_already_in_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("\ufeffFROM_FILE=file\nALREADY_SET=file\n", encoding="utf-8")
+    monkeypatch.delenv("FROM_FILE", raising=False)
+    monkeypatch.setenv("ALREADY_SET", "real")
+
+    load_env_file(env_file)
+
+    assert os.environ["FROM_FILE"] == "file"
+    assert os.environ["ALREADY_SET"] == "real"
+
+
+def test_load_env_file_reports_the_line_number(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("GOOD=1\nBROKEN\n")
+
+    with pytest.raises(ValueError, match="line 2"):
+        load_env_file(env_file)
 
 
 def test_database_from_url_relative_path_is_under_project() -> None:
@@ -59,6 +97,8 @@ def test_database_from_url_keeps_absolute_path() -> None:
         "sqlite:///",
         "sqlite:///db.sqlite3?mode=ro",
         "sqlit:///db.sqlite3",
+        "sqlite://host/db.sqlite3",
+        "sqlite:///db.sqlite3#x",
         "postgres://user:secret@host/db",
     ],
 )
