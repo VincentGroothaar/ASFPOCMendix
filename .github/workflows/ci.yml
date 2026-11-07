@@ -8,6 +8,26 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+
+    # Throwaway Postgres for this job only; the values are not secrets.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cockpit
+          POSTGRES_PASSWORD: cockpit
+          POSTGRES_DB: cockpit
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cockpit -d cockpit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://cockpit:cockpit@localhost:5432/cockpit
+
     steps:
       - uses: actions/checkout@v4
 
