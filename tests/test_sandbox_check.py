@@ -149,9 +149,16 @@ def test_calculate_statuses_puts_orders_without_start_date_last() -> None:
     assert result["order_status"] == {"2": "green", "1": "red"}
 
 
-def test_calculate_statuses_gives_an_order_its_worst_component_status() -> None:
-    orders = [make_order("1", "2026-11-03", [("M1", "10", "0", "PC"), ("M2", "10", "0", "PC")])]
-    stock = {"M1": (Decimal("5"), "PC"), "M2": (Decimal("100"), "PC")}  # red line first
+@pytest.mark.parametrize("red_line_first", [True, False])
+def test_calculate_statuses_gives_an_order_its_worst_component_status(
+    red_line_first: bool,
+) -> None:
+    # M1 is short, M2 is covered. Both line orders must give a red order.
+    lines = [("M1", "10", "0", "PC"), ("M2", "10", "0", "PC")]
+    if not red_line_first:
+        lines.reverse()
+    orders = [make_order("1", "2026-11-03", lines)]
+    stock = {"M1": (Decimal("5"), "PC"), "M2": (Decimal("100"), "PC")}
     result = calculate_statuses(orders, stock)
     assert result["components"] == {"green": 1, "red": 1}
     assert result["order_status"] == {"1": "red"}

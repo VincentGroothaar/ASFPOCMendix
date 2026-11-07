@@ -26,7 +26,8 @@ so the counts below drift. Acceptance tests should assert the rules, not these n
 ## Production orders (`API_PRODUCTION_ORDER_2_SRV`)
 
 Entity set `A_ProductionOrder_2`. All released open orders are category `10`. Their order type is
-mostly `ZBM1` (AUC1: 724 of 725; 1710: 517 of 572, plus `YBM1`, `YBM4`, `YBM5`). The release
+mostly `ZBM1` (AUC1: 724 of 725; 1710: 517 of 572, plus `YBM1`, `YBM4`, `YBM5`; the one
+order in 1010 is `YBM3`). The release
 filter does not depend on the type.
 
 ### Orders per plant
