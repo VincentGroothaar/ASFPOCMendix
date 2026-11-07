@@ -1,0 +1,1016 @@
+{
+  "run_on": "2026-11-07",
+  "release_filter": "OrderIsReleased eq 'X' and OrderIsDelivered eq '' and OrderIsTechnicallyCompleted eq '' and OrderIsClosed eq '' and OrderIsDeleted eq '' and OrderIsMarkedForDeletion eq ''",
+  "start_date_field": "MfgOrderScheduledStartDate",
+  "metadata_bytes": {
+    "API_PRODUCTION_ORDER_2_SRV": 139893,
+    "API_MATERIAL_STOCK_SRV": 20861,
+    "API_PRODUCT_SRV": 227840,
+    "API_PURCHASEREQ_PROCESS_SRV": 80516
+  },
+  "plants": [
+    "1710",
+    "AUC1",
+    "DEC1",
+    "USC1",
+    "1010"
+  ],
+  "status_counts": {
+    "1710": {
+      "total": 55968,
+      "OrderIsReleased": 46921,
+      "OrderIsPartiallyReleased": 0,
+      "OrderIsDelivered": 54251,
+      "OrderIsTechnicallyCompleted": 8671,
+      "OrderIsClosed": 313,
+      "OrderIsDeleted": 0,
+      "OrderIsMarkedForDeletion": 4,
+      "released_open": 572
+    },
+    "AUC1": {
+      "total": 7399,
+      "OrderIsReleased": 7321,
+      "OrderIsPartiallyReleased": 0,
+      "OrderIsDelivered": 6636,
+      "OrderIsTechnicallyCompleted": 78,
+      "OrderIsClosed": 0,
+      "OrderIsDeleted": 0,
+      "OrderIsMarkedForDeletion": 0,
+      "released_open": 725
+    },
+    "DEC1": {
+      "total": 6334,
+      "OrderIsReleased": 6302,
+      "OrderIsPartiallyReleased": 0,
+      "OrderIsDelivered": 5993,
+      "OrderIsTechnicallyCompleted": 31,
+      "OrderIsClosed": 0,
+      "OrderIsDeleted": 0,
+      "OrderIsMarkedForDeletion": 0,
+      "released_open": 330
+    },
+    "USC1": {
+      "total": 7353,
+      "OrderIsReleased": 7285,
+      "OrderIsPartiallyReleased": 0,
+      "OrderIsDelivered": 6650,
+      "OrderIsTechnicallyCompleted": 61,
+      "OrderIsClosed": 7,
+      "OrderIsDeleted": 0,
+      "OrderIsMarkedForDeletion": 1,
+      "released_open": 676
+    },
+    "1010": {
+      "total": 9,
+      "OrderIsReleased": 7,
+      "OrderIsPartiallyReleased": 0,
+      "OrderIsDelivered": 6,
+      "OrderIsTechnicallyCompleted": 1,
+      "OrderIsClosed": 0,
+      "OrderIsDeleted": 0,
+      "OrderIsMarkedForDeletion": 0,
+      "released_open": 1
+    }
+  },
+  "chosen_plant": "AUC1",
+  "plant_checks": {
+    "1710": {
+      "plant": "1710",
+      "load": {
+        "seconds_total": 8.13,
+        "calls": 11,
+        "seconds_per_call": [
+          2.45,
+          0.57,
+          0.54,
+          0.57,
+          0.61,
+          0.54,
+          0.56,
+          0.57,
+          0.53,
+          0.62,
+          0.54
+        ]
+      },
+      "released_open_orders": 572,
+      "orders": {
+        "categories": {
+          "10": 572
+        },
+        "types": {
+          "ZBM1": 517,
+          "YBM4": 6,
+          "YBM1": 48,
+          "YBM5": 1
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 1
+      },
+      "start_dates": {
+        "MfgOrderScheduledStartDate": {
+          "filled": 572,
+          "empty": 0,
+          "earliest": "2017-06-06",
+          "latest": "2026-09-02"
+        },
+        "MfgOrderPlannedStartDate": {
+          "filled": 572,
+          "empty": 0,
+          "earliest": "2017-06-06",
+          "latest": "2026-09-02"
+        },
+        "orders_where_fields_differ": 5,
+        "start_today_or_later": 0,
+        "start_in_last_14_days": 0,
+        "per_year": {
+          "2017": 10,
+          "2018": 14,
+          "2019": 2,
+          "2020": 8,
+          "2021": 4,
+          "2022": 2,
+          "2023": 20,
+          "2024": 22,
+          "2025": 463,
+          "2026": 27
+        }
+      },
+      "components": {
+        "orders_with_a_material_on_several_lines": 5,
+        "lines_of_repeated_materials": 22,
+        "orders_with_components": 572,
+        "components": 4928,
+        "materials": 162,
+        "units": {
+          "PC": 4920,
+          "EA": 2,
+          "KG": 6
+        },
+        "withdrawn_above_zero": 84,
+        "finally_issued": 84,
+        "marked_for_deletion": 0,
+        "phantom_items": 5
+      },
+      "stock": {
+        "rows": 219,
+        "stock_types": {
+          "01": 215,
+          "02": 3,
+          "07": 1
+        },
+        "special_stock_types": {
+          "": 212,
+          "O": 4,
+          "K": 1,
+          "E": 2
+        },
+        "units": {
+          "PC": 216,
+          "KG": 3
+        }
+      },
+      "materials_without_unrestricted_stock": [
+        "MZ-FG-M600-01",
+        "MZ-FG-M600-02",
+        "MZ-RM-B10-01",
+        "MZ-RM-MTS1",
+        "MZ-SG-MTS1",
+        "MZ-SG-S26",
+        "MZ-SG-S27",
+        "MZ-SG_ST35"
+      ],
+      "materials_without_description": [],
+      "description_example": [
+        "FG0511",
+        "Carton 12x1 kg Bags Medium Beans Arabica"
+      ],
+      "statuses": {
+        "components": {
+          "issued": 84,
+          "green": 4818,
+          "red": 20,
+          "amber": 6
+        },
+        "orders": {
+          "no open components": 11,
+          "green": 545,
+          "red": 16
+        },
+        "materials_with_open_requirement": 153,
+        "competing_materials": 127,
+        "competing_material_examples": [
+          "MZ-RM-26ECR-1",
+          "MZ-RM-26ECR-2",
+          "MZ-RM-26ECR-3",
+          "MZ-RM-26ECR-4",
+          "MZ-RM-26ECR-5",
+          "MZ-RM-26ECR-6",
+          "MZ-RM-26ECR-7",
+          "MZ-RM-26ECR-8",
+          "MZ-RM-26ECR-9",
+          "MZ-RM-26EMN-1"
+        ]
+      }
+    },
+    "AUC1": {
+      "plant": "AUC1",
+      "load": {
+        "seconds_total": 2.26,
+        "calls": 3,
+        "seconds_per_call": [
+          1.2,
+          0.51,
+          0.53
+        ]
+      },
+      "released_open_orders": 725,
+      "orders": {
+        "categories": {
+          "10": 725
+        },
+        "types": {
+          "ZBM1": 724,
+          "YBM1": 1
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 0
+      },
+      "start_dates": {
+        "MfgOrderScheduledStartDate": {
+          "filled": 725,
+          "empty": 0,
+          "earliest": "2021-06-04",
+          "latest": "2026-11-06"
+        },
+        "MfgOrderPlannedStartDate": {
+          "filled": 725,
+          "empty": 0,
+          "earliest": "2021-06-04",
+          "latest": "2026-11-06"
+        },
+        "orders_where_fields_differ": 0,
+        "start_today_or_later": 0,
+        "start_in_last_14_days": 14,
+        "per_year": {
+          "2021": 1,
+          "2023": 2,
+          "2024": 1,
+          "2025": 363,
+          "2026": 358
+        }
+      },
+      "components": {
+        "orders_with_a_material_on_several_lines": 0,
+        "lines_of_repeated_materials": 0,
+        "orders_with_components": 725,
+        "components": 5911,
+        "materials": 16,
+        "units": {
+          "PC": 5911
+        },
+        "withdrawn_above_zero": 0,
+        "finally_issued": 0,
+        "marked_for_deletion": 0,
+        "phantom_items": 0
+      },
+      "stock": {
+        "rows": 16,
+        "stock_types": {
+          "01": 16
+        },
+        "special_stock_types": {
+          "": 16
+        },
+        "units": {
+          "PC": 16
+        }
+      },
+      "materials_without_unrestricted_stock": [],
+      "materials_without_description": [],
+      "description_example": [
+        "MZ-RM-C990-01",
+        "BKC-990 Frame"
+      ],
+      "statuses": {
+        "components": {
+          "green": 2021,
+          "amber": 6,
+          "red": 3884
+        },
+        "orders": {
+          "green": 251,
+          "red": 474
+        },
+        "materials_with_open_requirement": 16,
+        "competing_materials": 16,
+        "competing_material_examples": [
+          "MZ-RM-C990-01",
+          "MZ-RM-C990-02",
+          "MZ-RM-C990-03",
+          "MZ-RM-C990-04",
+          "MZ-RM-C990-05",
+          "MZ-RM-C990-06",
+          "MZ-RM-C990-09",
+          "MZ-RM-R300-01",
+          "MZ-RM-R300-02",
+          "MZ-RM-R300-03"
+        ]
+      }
+    },
+    "DEC1": {
+      "plant": "DEC1",
+      "load": {
+        "seconds_total": 2.09,
+        "calls": 3,
+        "seconds_per_call": [
+          0.94,
+          0.53,
+          0.6
+        ]
+      },
+      "released_open_orders": 330,
+      "orders": {
+        "categories": {
+          "10": 330
+        },
+        "types": {
+          "ZBM1": 329,
+          "YBM1": 1
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 0
+      },
+      "start_dates": {
+        "MfgOrderScheduledStartDate": {
+          "filled": 330,
+          "empty": 0,
+          "earliest": "2018-10-28",
+          "latest": "2026-07-23"
+        },
+        "MfgOrderPlannedStartDate": {
+          "filled": 330,
+          "empty": 0,
+          "earliest": "2018-10-28",
+          "latest": "2026-07-23"
+        },
+        "orders_where_fields_differ": 0,
+        "start_today_or_later": 0,
+        "start_in_last_14_days": 0,
+        "per_year": {
+          "2018": 1,
+          "2023": 1,
+          "2025": 194,
+          "2026": 134
+        }
+      },
+      "components": {
+        "orders_with_a_material_on_several_lines": 0,
+        "lines_of_repeated_materials": 0,
+        "orders_with_components": 330,
+        "components": 3294,
+        "materials": 17,
+        "units": {
+          "PC": 3294
+        },
+        "withdrawn_above_zero": 0,
+        "finally_issued": 0,
+        "marked_for_deletion": 0,
+        "phantom_items": 0
+      },
+      "stock": {
+        "rows": 17,
+        "stock_types": {
+          "01": 17
+        },
+        "special_stock_types": {
+          "": 17
+        },
+        "units": {
+          "PC": 17
+        }
+      },
+      "materials_without_unrestricted_stock": [],
+      "materials_without_description": [],
+      "description_example": [
+        "MZ-RM-C990-01",
+        "BKC-990 Frame"
+      ],
+      "statuses": {
+        "components": {
+          "green": 1324,
+          "red": 1970
+        },
+        "orders": {
+          "green": 133,
+          "red": 197
+        },
+        "materials_with_open_requirement": 17,
+        "competing_materials": 17,
+        "competing_material_examples": [
+          "MZ-RM-C990-01",
+          "MZ-RM-C990-02",
+          "MZ-RM-C990-03",
+          "MZ-RM-C990-04",
+          "MZ-RM-C990-05",
+          "MZ-RM-C990-06",
+          "MZ-RM-C990-09",
+          "MZ-RM-M550-01",
+          "MZ-RM-M550-02",
+          "MZ-RM-M550-03"
+        ]
+      }
+    },
+    "USC1": {
+      "plant": "USC1",
+      "load": {
+        "seconds_total": 2.41,
+        "calls": 3,
+        "seconds_per_call": [
+          1.32,
+          0.51,
+          0.56
+        ]
+      },
+      "released_open_orders": 676,
+      "orders": {
+        "categories": {
+          "10": 676
+        },
+        "types": {
+          "ZBM1": 676
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 0
+      },
+      "start_dates": {
+        "MfgOrderScheduledStartDate": {
+          "filled": 676,
+          "empty": 0,
+          "earliest": "2023-08-01",
+          "latest": "2026-07-23"
+        },
+        "MfgOrderPlannedStartDate": {
+          "filled": 676,
+          "empty": 0,
+          "earliest": "2023-08-01",
+          "latest": "2026-07-23"
+        },
+        "orders_where_fields_differ": 0,
+        "start_today_or_later": 0,
+        "start_in_last_14_days": 0,
+        "per_year": {
+          "2023": 2,
+          "2025": 406,
+          "2026": 268
+        }
+      },
+      "components": {
+        "orders_with_a_material_on_several_lines": 0,
+        "lines_of_repeated_materials": 0,
+        "orders_with_components": 676,
+        "components": 5761,
+        "materials": 28,
+        "units": {
+          "PC": 5761
+        },
+        "withdrawn_above_zero": 0,
+        "finally_issued": 0,
+        "marked_for_deletion": 0,
+        "phantom_items": 0
+      },
+      "stock": {
+        "rows": 28,
+        "stock_types": {
+          "01": 28
+        },
+        "special_stock_types": {
+          "": 28
+        },
+        "units": {
+          "PC": 28
+        }
+      },
+      "materials_without_unrestricted_stock": [],
+      "materials_without_description": [],
+      "description_example": [
+        "MZ-RM-C990-01",
+        "BKC-990 Frame"
+      ],
+      "statuses": {
+        "components": {
+          "green": 2345,
+          "red": 3416
+        },
+        "orders": {
+          "green": 274,
+          "red": 402
+        },
+        "materials_with_open_requirement": 28,
+        "competing_materials": 28,
+        "competing_material_examples": [
+          "MZ-RM-C990-01",
+          "MZ-RM-C990-02",
+          "MZ-RM-C990-03",
+          "MZ-RM-C990-04",
+          "MZ-RM-C990-05",
+          "MZ-RM-C990-06",
+          "MZ-RM-C990-09",
+          "MZ-RM-M550-01",
+          "MZ-RM-M550-02",
+          "MZ-RM-M550-03"
+        ]
+      }
+    },
+    "1010": {
+      "plant": "1010",
+      "load": {
+        "seconds_total": 1.63,
+        "calls": 3,
+        "seconds_per_call": [
+          0.53,
+          0.56,
+          0.53
+        ]
+      },
+      "released_open_orders": 1,
+      "orders": {
+        "categories": {
+          "10": 1
+        },
+        "types": {
+          "YBM3": 1
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 0
+      },
+      "start_dates": {
+        "MfgOrderScheduledStartDate": {
+          "filled": 1,
+          "empty": 0,
+          "earliest": "2023-02-15",
+          "latest": "2023-02-15"
+        },
+        "MfgOrderPlannedStartDate": {
+          "filled": 1,
+          "empty": 0,
+          "earliest": "2023-02-15",
+          "latest": "2023-02-15"
+        },
+        "orders_where_fields_differ": 0,
+        "start_today_or_later": 0,
+        "start_in_last_14_days": 0,
+        "per_year": {
+          "2023": 1
+        }
+      },
+      "components": {
+        "orders_with_a_material_on_several_lines": 0,
+        "lines_of_repeated_materials": 0,
+        "orders_with_components": 1,
+        "components": 4,
+        "materials": 4,
+        "units": {
+          "PC": 4
+        },
+        "withdrawn_above_zero": 0,
+        "finally_issued": 0,
+        "marked_for_deletion": 0,
+        "phantom_items": 0
+      },
+      "stock": {
+        "rows": 0,
+        "stock_types": {},
+        "special_stock_types": {},
+        "units": {}
+      },
+      "materials_without_unrestricted_stock": [
+        "SF-FL-COMB",
+        "SF-FL-CWEIGHT",
+        "SF-FL-FORK-S",
+        "SF-FL-TIRE-CUSH"
+      ],
+      "materials_without_description": [],
+      "description_example": [
+        "SF-FL-COMB",
+        "Forklift Base Combustion Model"
+      ],
+      "statuses": {
+        "components": {
+          "red": 4
+        },
+        "orders": {
+          "red": 1
+        },
+        "materials_with_open_requirement": 4,
+        "competing_materials": 0,
+        "competing_material_examples": []
+      }
+    }
+  },
+  "paging": {
+    "plant": "1710",
+    "rows_without_top": 55968,
+    "server_sent_next_link": false,
+    "rows_with_top_5_skip_5": 5,
+    "rows_with_top_20000": 20000
+  },
+  "total_calls": 79,
+  "call_log": [
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/$metadata",
+      "status": 200,
+      "seconds": 0.63
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/$metadata",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCT_SRV/$metadata",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PURCHASEREQ_PROCESS_SRV/$metadata",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.5
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.67
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 1.14
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.52
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.52
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.51
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.58
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.62
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.6
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.62
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.51
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.6
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.52
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.6
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 2.45
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.62
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 1.2
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.51
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.94
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.6
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 1.32
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.51
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 3.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 1.5
+    }
+  ]
+}
