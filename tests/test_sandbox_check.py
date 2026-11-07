@@ -24,6 +24,11 @@ def make_order(number: str, start: str, components: list[tuple[str, str, str, st
     odata_date = f"/Date({millis})/"
     return {
         "ManufacturingOrder": number,
+        "ManufacturingOrderCategory": "10",
+        "ManufacturingOrderType": "YBM1",
+        "ProductionPlant": "AUC1",
+        "Plant": "AUC1",
+        "OrderIsPartiallyDelivered": "",
         "Material": "FG",
         "TotalQuantity": "1",
         "ProductionUnit": "PC",
@@ -64,8 +69,15 @@ def make_stock_row(material: str, quantity: str, stock_type="01", special="", un
 
 def test_parse_odata_date() -> None:
     assert parse_odata_date("/Date(1496707200000)/") == date(2017, 6, 6)
+    assert parse_odata_date(" /Date(1496707200000+0000)/ ") == date(2017, 6, 6)
     assert parse_odata_date(None) is None
     assert parse_odata_date("") is None
+
+
+@pytest.mark.parametrize("value", ["2017-06-06", "/Date()/", "/Date(abc)/", "Date(1)"])
+def test_parse_odata_date_rejects_other_formats(value: str) -> None:
+    with pytest.raises(ValueError, match="not an OData V2 date"):
+        parse_odata_date(value)
 
 
 def test_convert_same_dimension_is_exact() -> None:
@@ -92,6 +104,11 @@ def test_unrestricted_stock_skips_other_stock_types_and_special_stock() -> None:
     assert unrestricted_stock(rows) == {"M1": (Decimal("15"), "PC")}
 
 
+def test_unrestricted_stock_converts_rows_into_the_first_unit() -> None:
+    rows = [make_stock_row("M1", "1000", unit="G"), make_stock_row("M1", "1", unit="KG")]
+    assert unrestricted_stock(rows) == {"M1": (Decimal("2000"), "G")}
+
+
 @pytest.mark.parametrize(
     ("available", "expected"),
     [("99", "red"), ("100", "amber"), ("109.999", "amber"), ("110", "green")],
@@ -100,15 +117,51 @@ def test_component_status_thresholds(available: str, expected: str) -> None:
     assert component_status(Decimal(available), Decimal("100")) == expected
 
 
-def test_calculate_statuses_allocates_by_start_date_then_order_number() -> None:
+def test_calculate_statuses_allocates_by_start_date() -> None:
     # Stock 100: the earlier order takes 60, the later one is left with 40 for 60.
+    # The later order is listed first, so the input order is not what decides.
     orders = [
-        make_order("2", "2026-11-04", [("M1", "60", "0", "PC")]),
-        make_order("1", "2026-11-03", [("M1", "60", "0", "PC")]),
+        make_order("1", "2026-11-04", [("M1", "60", "0", "PC")]),
+        make_order("2", "2026-11-03", [("M1", "60", "0", "PC")]),
     ]
     result = calculate_statuses(orders, {"M1": (Decimal("100"), "PC")})
-    assert result["orders"] == {"green": 1, "red": 1}
+    assert result["order_status"] == {"2": "green", "1": "red"}
     assert result["competing_materials"] == 1
+
+
+def test_calculate_statuses_breaks_ties_by_order_number_as_a_number() -> None:
+    # Same start date: order 9 comes before order 10.
+    orders = [
+        make_order("10", "2026-11-03", [("M1", "60", "0", "PC")]),
+        make_order("9", "2026-11-03", [("M1", "60", "0", "PC")]),
+    ]
+    result = calculate_statuses(orders, {"M1": (Decimal("100"), "PC")})
+    assert result["order_status"] == {"9": "green", "10": "red"}
+
+
+def test_calculate_statuses_puts_orders_without_start_date_last() -> None:
+    orders = [
+        make_order("1", "2026-11-03", [("M1", "60", "0", "PC")]),
+        make_order("2", "2026-11-04", [("M1", "60", "0", "PC")]),
+    ]
+    orders[0]["MfgOrderScheduledStartDate"] = None
+    result = calculate_statuses(orders, {"M1": (Decimal("100"), "PC")})
+    assert result["order_status"] == {"2": "green", "1": "red"}
+
+
+def test_calculate_statuses_gives_an_order_its_worst_component_status() -> None:
+    orders = [make_order("1", "2026-11-03", [("M1", "10", "0", "PC"), ("M2", "10", "0", "PC")])]
+    stock = {"M1": (Decimal("5"), "PC"), "M2": (Decimal("100"), "PC")}  # red line first
+    result = calculate_statuses(orders, stock)
+    assert result["components"] == {"green": 1, "red": 1}
+    assert result["order_status"] == {"1": "red"}
+
+
+def test_calculate_statuses_lets_lines_of_one_order_take_stock_in_turn() -> None:
+    # Two lines of the same material in one order: the second sees what the first left.
+    orders = [make_order("1", "2026-11-03", [("M1", "60", "0", "PC"), ("M1", "60", "0", "PC")])]
+    result = calculate_statuses(orders, {"M1": (Decimal("100"), "PC")})
+    assert result["components"] == {"green": 1, "red": 1}
 
 
 def test_calculate_statuses_takes_only_the_real_requirement_from_stock() -> None:
@@ -133,6 +186,12 @@ def test_calculate_statuses_counts_issued_and_mismatched_components() -> None:
     result = calculate_statuses(orders, stock)
     assert result["components"] == {"issued": 1, "unit mismatch": 1, "red": 1}
     assert result["orders"] == {"red + unit mismatch": 1}
+
+
+def test_calculate_statuses_labels_an_order_with_only_mismatches() -> None:
+    orders = [make_order("1", "2026-11-03", [("M1", "10", "0", "PC")])]
+    result = calculate_statuses(orders, {"M1": (Decimal("1"), "KG")})
+    assert result["order_status"] == {"1": "unit mismatch only"}
 
 
 class FakeResponse:

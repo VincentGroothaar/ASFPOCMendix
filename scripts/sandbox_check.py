@@ -18,6 +18,7 @@ docs/sandbox/findings.md explains the results in words.
 
 import json
 import os
+import re
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -71,6 +72,11 @@ START_DATE_FIELD = "MfgOrderScheduledStartDate"
 
 ORDER_FIELDS = [
     "ManufacturingOrder",
+    "ManufacturingOrderCategory",
+    "ManufacturingOrderType",
+    "ProductionPlant",
+    "Plant",
+    "OrderIsPartiallyDelivered",
     "Material",
     "TotalQuantity",
     "ProductionUnit",
@@ -94,6 +100,9 @@ UNRESTRICTED_STOCK_TYPE = "01"
 NO_SPECIAL_STOCK = ""
 
 BUFFER = Decimal("1.1")
+
+# "/Date(<milliseconds since 1970>)/", optionally with an offset such as "+0000".
+ODATA_DATE = re.compile(r"/Date\((-?\d+)(?:[+-]\d{4})?\)/")
 
 # Exact factors to a base unit per dimension (REQ-4), keyed by SAP unit code as the
 # sandbox returns it. SAP writes tonne as "TO", not "T".
@@ -155,10 +164,17 @@ class SapReader:
 
 
 def parse_odata_date(value: str | None) -> date | None:
-    """Turn an OData V2 date such as "/Date(1496707200000)/" into a date, or None if empty."""
-    if not value:
+    """Turn an OData V2 date such as "/Date(1496707200000)/" into a date, or None if empty.
+
+    A time zone offset such as "/Date(1496707200000+0000)/" is ignored: the number
+    before it is already in UTC. Raises ValueError for anything else.
+    """
+    if not value or not value.strip():
         return None
-    milliseconds = int(value.removeprefix("/Date(").removesuffix(")/"))
+    match = ODATA_DATE.fullmatch(value.strip())
+    if not match:
+        raise ValueError(f"not an OData V2 date: {value!r}")
+    milliseconds = int(match.group(1))
     return datetime.fromtimestamp(milliseconds / 1000, UTC).date()
 
 
@@ -178,7 +194,8 @@ def convert(quantity: Decimal, from_unit: str, to_unit: str) -> Decimal:
 def unrestricted_stock(stock_rows: list[dict]) -> dict[str, tuple[Decimal, str]]:
     """Sum unrestricted-use, non-special stock per material over all storage locations.
 
-    Returns {material: (quantity, unit)}.
+    Returns {material: (quantity, unit)}, in the unit of the material's first row.
+    Raises UnitMismatch if a later row's unit cannot be converted into it.
     """
     totals: dict[str, tuple[Decimal, str]] = {}
     for row in stock_rows:
@@ -187,11 +204,11 @@ def unrestricted_stock(stock_rows: list[dict]) -> dict[str, tuple[Decimal, str]]
         if row["InventorySpecialStockType"] != NO_SPECIAL_STOCK:
             continue
         material = row["Material"]
-        quantity, _ = totals.get(material, (Decimal(0), row["MaterialBaseUnit"]))
-        totals[material] = (
-            quantity + Decimal(row["MatlWrhsStkQtyInMatlBaseUnit"]),
-            row["MaterialBaseUnit"],
+        quantity, unit = totals.get(material, (Decimal(0), row["MaterialBaseUnit"]))
+        row_quantity = convert(
+            Decimal(row["MatlWrhsStkQtyInMatlBaseUnit"]), row["MaterialBaseUnit"], unit
         )
+        totals[material] = (quantity + row_quantity, unit)
     return totals
 
 
@@ -208,17 +225,21 @@ def calculate_statuses(orders: list[dict], stock: dict[str, tuple[Decimal, str]]
     """Run the REQ-4 rule by hand: allocate stock by start date, then order number.
 
     `orders` are A_ProductionOrder_2 rows with expanded `to_ProductionOrderComponent`.
-    Returns counts of component and order statuses and the materials needed by two or
-    more orders (competing demand).
+    Orders without a start date go last. Within one order, component lines take stock
+    one after the other, so a second line of the same material sees what the first left.
+
+    Returns counts of component and order statuses, the status of each order
+    (`order_status`), and the materials needed by two or more orders (competing demand).
     """
     severity = {"green": 1, "amber": 2, "red": 3}
     balance = {material: quantity for material, (quantity, _) in stock.items()}
 
     def sort_key(order: dict) -> tuple:
-        return (parse_odata_date(order[START_DATE_FIELD]), order["ManufacturingOrder"].zfill(12))
+        start = parse_odata_date(order[START_DATE_FIELD]) or date.max
+        return (start, order["ManufacturingOrder"].zfill(12))
 
     component_counts: Counter = Counter()
-    order_counts: Counter = Counter()
+    order_status: dict[str, str] = {}
     orders_per_material: dict[str, set[str]] = defaultdict(set)
 
     for order in sorted(orders, key=sort_key):
@@ -251,13 +272,19 @@ def calculate_statuses(orders: list[dict], stock: dict[str, tuple[Decimal, str]]
             # Only the real requirement leaves stock; the buffer does not.
             balance[material] = balance.get(material, Decimal(0)) - needed
 
-        order_status = worst or "no open components"
-        order_counts[order_status + (" + unit mismatch" if has_mismatch else "")] += 1
+        if worst and has_mismatch:
+            label = f"{worst} + unit mismatch"
+        elif has_mismatch:
+            label = "unit mismatch only"
+        else:
+            label = worst or "no open components"
+        order_status[order["ManufacturingOrder"]] = label
 
     competing = sorted(m for m, numbers in orders_per_material.items() if len(numbers) > 1)
     return {
         "components": dict(component_counts),
-        "orders": dict(order_counts),
+        "orders": dict(Counter(order_status.values())),
+        "order_status": order_status,
         "materials_with_open_requirement": len(orders_per_material),
         "competing_materials": len(competing),
         "competing_material_examples": competing[:10],
@@ -364,10 +391,35 @@ def start_date_summary(orders: list[dict], today: date) -> dict:
     return summary
 
 
+def describe_orders(orders: list[dict]) -> dict:
+    """Count order categories and types, and flags that the release filter lets through."""
+    return {
+        "categories": dict(Counter(order["ManufacturingOrderCategory"] for order in orders)),
+        "types": dict(Counter(order["ManufacturingOrderType"] for order in orders)),
+        "plant_differs_from_production_plant": sum(
+            1 for order in orders if order["Plant"] != order["ProductionPlant"]
+        ),
+        "partially_delivered": sum(1 for order in orders if order["OrderIsPartiallyDelivered"]),
+    }
+
+
 def describe_components(orders: list[dict]) -> dict:
     """Count components, their units and the flags that affect the open requirement."""
     components = [c for order in orders for c in order["to_ProductionOrderComponent"]["results"]]
+    repeated = []
+    for order in orders:
+        per_material = Counter(
+            c["Material"] for c in order["to_ProductionOrderComponent"]["results"]
+        )
+        repeated.extend(count for count in per_material.values() if count > 1)
     return {
+        "orders_with_a_material_on_several_lines": sum(
+            1
+            for order in orders
+            if len({c["Material"] for c in order["to_ProductionOrderComponent"]["results"]})
+            < len(order["to_ProductionOrderComponent"]["results"])
+        ),
+        "lines_of_repeated_materials": sum(repeated),
         "orders_with_components": sum(
             1 for order in orders if order["to_ProductionOrderComponent"]["results"]
         ),
@@ -405,6 +457,9 @@ def check_plant(reader: SapReader, plant: str, today: date) -> dict:
     calls = reader.calls[calls_before:]
 
     stock = unrestricted_stock(stock_rows)
+    statuses = calculate_statuses(orders, stock)
+    # The status of every single order is too long for the results file; the counts are kept.
+    del statuses["order_status"]
     return {
         "plant": plant,
         "load": {
@@ -413,13 +468,14 @@ def check_plant(reader: SapReader, plant: str, today: date) -> dict:
             "seconds_per_call": [call["seconds"] for call in calls],
         },
         "released_open_orders": len(orders),
+        "orders": describe_orders(orders),
         "start_dates": start_date_summary(orders, today),
         "components": describe_components(orders),
         "stock": describe_stock(stock_rows),
         "materials_without_unrestricted_stock": sorted(set(materials) - set(stock)),
         "materials_without_description": sorted(set(materials) - set(descriptions)),
         "description_example": next(iter(descriptions.items()), None),
-        "statuses": calculate_statuses(orders, stock),
+        "statuses": statuses,
     }
 
 
@@ -438,11 +494,15 @@ def check_paging(reader: SapReader, plant: str) -> dict:
             "$skip": "5",
         },
     ).json()["d"]
+    large = reader.get(
+        path, {"$filter": plant_filter, "$select": "ManufacturingOrder", "$top": "20000"}
+    ).json()["d"]
     return {
         "plant": plant,
         "rows_without_top": len(body["results"]),
         "server_sent_next_link": bool(body.get("__next")),
         "rows_with_top_5_skip_5": len(skipped["results"]),
+        "rows_with_top_20000": len(large["results"]),
     }
 
 
@@ -490,6 +550,7 @@ def main() -> None:
         "plant_checks": plant_checks,
         "paging": paging,
         "total_calls": len(reader.calls),
+        "call_log": reader.calls,
     }
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     output_file = OUTPUT_DIR / "check_results.json"

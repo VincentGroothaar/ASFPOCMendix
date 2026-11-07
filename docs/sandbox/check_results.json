@@ -77,23 +77,36 @@
     "1710": {
       "plant": "1710",
       "load": {
-        "seconds_total": 9.68,
+        "seconds_total": 8.13,
         "calls": 11,
         "seconds_per_call": [
-          3.04,
-          0.86,
+          2.45,
+          0.57,
+          0.54,
+          0.57,
+          0.61,
+          0.54,
+          0.56,
+          0.57,
+          0.53,
           0.62,
-          0.63,
-          0.62,
-          0.92,
-          0.6,
-          0.59,
-          0.6,
-          0.6,
-          0.56
+          0.54
         ]
       },
       "released_open_orders": 572,
+      "orders": {
+        "categories": {
+          "10": 572
+        },
+        "types": {
+          "ZBM1": 517,
+          "YBM4": 6,
+          "YBM1": 48,
+          "YBM5": 1
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 1
+      },
       "start_dates": {
         "MfgOrderScheduledStartDate": {
           "filled": 572,
@@ -124,6 +137,8 @@
         }
       },
       "components": {
+        "orders_with_a_material_on_several_lines": 5,
+        "lines_of_repeated_materials": 22,
         "orders_with_components": 572,
         "components": 4928,
         "materials": 162,
@@ -201,15 +216,26 @@
     "AUC1": {
       "plant": "AUC1",
       "load": {
-        "seconds_total": 3.49,
+        "seconds_total": 2.26,
         "calls": 3,
         "seconds_per_call": [
-          2.16,
-          0.71,
-          0.59
+          1.2,
+          0.51,
+          0.53
         ]
       },
       "released_open_orders": 725,
+      "orders": {
+        "categories": {
+          "10": 725
+        },
+        "types": {
+          "ZBM1": 724,
+          "YBM1": 1
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 0
+      },
       "start_dates": {
         "MfgOrderScheduledStartDate": {
           "filled": 725,
@@ -235,6 +261,8 @@
         }
       },
       "components": {
+        "orders_with_a_material_on_several_lines": 0,
+        "lines_of_repeated_materials": 0,
         "orders_with_components": 725,
         "components": 5911,
         "materials": 16,
@@ -293,15 +321,26 @@
     "DEC1": {
       "plant": "DEC1",
       "load": {
-        "seconds_total": 3.14,
+        "seconds_total": 2.09,
         "calls": 3,
         "seconds_per_call": [
-          1.54,
-          0.93,
-          0.66
+          0.94,
+          0.53,
+          0.6
         ]
       },
       "released_open_orders": 330,
+      "orders": {
+        "categories": {
+          "10": 330
+        },
+        "types": {
+          "ZBM1": 329,
+          "YBM1": 1
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 0
+      },
       "start_dates": {
         "MfgOrderScheduledStartDate": {
           "filled": 330,
@@ -326,6 +365,8 @@
         }
       },
       "components": {
+        "orders_with_a_material_on_several_lines": 0,
+        "lines_of_repeated_materials": 0,
         "orders_with_components": 330,
         "components": 3294,
         "materials": 17,
@@ -383,15 +424,25 @@
     "USC1": {
       "plant": "USC1",
       "load": {
-        "seconds_total": 4.04,
+        "seconds_total": 2.41,
         "calls": 3,
         "seconds_per_call": [
-          2.33,
-          0.92,
-          0.76
+          1.32,
+          0.51,
+          0.56
         ]
       },
       "released_open_orders": 676,
+      "orders": {
+        "categories": {
+          "10": 676
+        },
+        "types": {
+          "ZBM1": 676
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 0
+      },
       "start_dates": {
         "MfgOrderScheduledStartDate": {
           "filled": 676,
@@ -415,6 +466,8 @@
         }
       },
       "components": {
+        "orders_with_a_material_on_several_lines": 0,
+        "lines_of_repeated_materials": 0,
         "orders_with_components": 676,
         "components": 5761,
         "materials": 28,
@@ -472,15 +525,25 @@
     "1010": {
       "plant": "1010",
       "load": {
-        "seconds_total": 3.02,
+        "seconds_total": 1.63,
         "calls": 3,
         "seconds_per_call": [
-          1.02,
-          1.4,
-          0.59
+          0.53,
+          0.56,
+          0.53
         ]
       },
       "released_open_orders": 1,
+      "orders": {
+        "categories": {
+          "10": 1
+        },
+        "types": {
+          "YBM3": 1
+        },
+        "plant_differs_from_production_plant": 0,
+        "partially_delivered": 0
+      },
       "start_dates": {
         "MfgOrderScheduledStartDate": {
           "filled": 1,
@@ -502,6 +565,8 @@
         }
       },
       "components": {
+        "orders_with_a_material_on_several_lines": 0,
+        "lines_of_repeated_materials": 0,
         "orders_with_components": 1,
         "components": 4,
         "materials": 4,
@@ -547,7 +612,405 @@
     "plant": "1710",
     "rows_without_top": 55968,
     "server_sent_next_link": false,
-    "rows_with_top_5_skip_5": 5
+    "rows_with_top_5_skip_5": 5,
+    "rows_with_top_20000": 20000
   },
-  "total_calls": 78
+  "total_calls": 79,
+  "call_log": [
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/$metadata",
+      "status": 200,
+      "seconds": 0.63
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/$metadata",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCT_SRV/$metadata",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PURCHASEREQ_PROCESS_SRV/$metadata",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.5
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.67
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 1.14
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.52
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.52
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.51
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.58
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.62
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.6
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.62
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.51
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.6
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.55
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.52
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.6
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.59
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2/$count",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 2.45
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.61
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.57
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.62
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.54
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 1.2
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.51
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.94
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.6
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 1.32
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.51
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod",
+      "status": 200,
+      "seconds": 0.56
+    },
+    {
+      "path": "API_PRODUCT_SRV/A_ProductDescription",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 3.56
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 0.53
+    },
+    {
+      "path": "API_PRODUCTION_ORDER_2_SRV/A_ProductionOrder_2",
+      "status": 200,
+      "seconds": 1.5
+    }
+  ]
 }
