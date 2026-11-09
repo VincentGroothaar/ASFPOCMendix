@@ -40,7 +40,7 @@ Settings come from environment variables. Locally they are read from `.env`; see
 | `SAP_API_KEY`  | API key for the SAP sandbox (never commit it)        |
 | `DATABASE_URL` | Postgres URL, required, e.g. `postgresql://cockpit:cockpit@localhost:5432/cockpit` |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Used by `docker compose` to create the local database |
-| `MOCK_PR_BASE_URL`, `MOCK_API_KEY` | Purchase requisition mock, used by a later story |
+| `MOCK_PR_BASE_URL`, `MOCK_API_KEY` | Purchase requisition mock: its base URL (for the Cockpit) and its API key (for both); see `mock_pr/README.md` |
 | `DJANGO_SECRET_KEY` | Django signing key; a dev-only key is used if empty |
 | `DJANGO_DEBUG` | `true` shows debug pages; off when unset            |
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated host names, default `localhost,127.0.0.1` |
@@ -63,7 +63,7 @@ Other folders:
 - `config/`: Django project settings, top-level URLs and the WSGI entry point.
 - `cockpit/views.py` and `cockpit/urls.py`: which URL shows which page. Views stay thin and call services.
 - `cockpit/tests/`: unit tests for the cockpit app.
-- `mock_pr/`: placeholder for the purchase requisition write mock.
+- `mock_pr/`: the purchase requisition write mock, a separate FastAPI service; see `mock_pr/README.md`.
 - `tests/acceptance/`: acceptance tests, one module per user story.
 - `static/`: CSS, images and other static files.
 - `docs/`: specs.

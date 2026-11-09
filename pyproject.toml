@@ -6,12 +6,15 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "django>=5.2,<6",
+    "fastapi>=0.162.2",
     "psycopg[binary]>=3.2",
     "requests>=2.32",
+    "uvicorn>=0.54.0",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=8",
     "pytest-django>=4.9",
     "ruff>=0.6",
@@ -23,7 +26,7 @@ package = false
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
-testpaths = ["cockpit/tests", "config/tests", "tests"]
+testpaths = ["cockpit/tests", "config/tests", "mock_pr/tests", "tests"]
 
 [tool.ruff]
 line-length = 100
