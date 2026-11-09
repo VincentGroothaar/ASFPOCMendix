@@ -7,7 +7,6 @@ the base URL. Start it with (see mock_pr/README.md):
     uv run --env-file .env uvicorn mock_pr.main:create_app_from_env --factory
 """
 
-import hmac
 import json
 import os
 from contextlib import asynccontextmanager
@@ -16,7 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException
 
-from mock_pr.csrf import is_valid_token, new_token
+from mock_pr.csrf import is_valid_token, new_token, same_text
 from mock_pr.metadata import (
     HEADER_TYPE,
     ITEM_TYPE,
@@ -64,7 +63,7 @@ def create_app(database_url: str, api_key: str, schema: str = DEFAULT_SCHEMA) ->
     @app.middleware("http")
     async def check_api_key_and_hand_out_csrf_token(request: Request, call_next):
         """Every request needs the API key. A GET can also fetch a CSRF token."""
-        if not hmac.compare_digest(request.headers.get("APIKey", ""), api_key):
+        if not same_text(request.headers.get("APIKey", ""), api_key):
             return odata_error(401, "UNAUTHORIZED", "Missing or invalid APIKey header.")
         response = await call_next(request)
         if request.method == "GET" and request.headers.get(CSRF_HEADER, "").lower() == "fetch":
@@ -80,10 +79,12 @@ def create_app(database_url: str, api_key: str, schema: str = DEFAULT_SCHEMA) ->
 
     @app.get(f"{SERVICE_PATH}/")
     def service_document() -> JSONResponse:
+        """The OData service document: the list of entity sets."""
         return JSONResponse({"d": {"EntitySets": parse_entity_sets(metadata_xml)}})
 
     @app.get(f"{SERVICE_PATH}/$metadata")
     def metadata() -> Response:
+        """SAP's real $metadata, as saved from the sandbox."""
         return Response(metadata_xml, media_type="application/xml")
 
     @app.post(f"{SERVICE_PATH}/{HEADER_SET}")
@@ -99,7 +100,9 @@ def create_app(database_url: str, api_key: str, schema: str = DEFAULT_SCHEMA) ->
         try:
             body = json.loads(await request.body())
             requisition = validate_requisition(body, header_type, item_type)
-        except json.JSONDecodeError:
+        except (ValueError, RecursionError):
+            # ValueError covers bad JSON, bytes that are not UTF-8 and over-long numbers;
+            # RecursionError covers JSON nested too deeply.
             return odata_error(400, "INVALID_JSON", "The request body is not valid JSON.")
         except InvalidRequisition as error:
             return odata_error(400, "INVALID_REQUISITION", str(error))
@@ -158,6 +161,7 @@ def with_metadata(stored: dict, base_url: str) -> dict:
 
 
 def _metadata_block(uri: str, entity_type: str) -> dict:
+    """The `__metadata` block OData V2 puts on every entity."""
     return {"id": uri, "uri": uri, "type": f"{SERVICE}.{entity_type}"}
 
 
@@ -167,6 +171,7 @@ def service_url(request: Request) -> str:
 
 
 def header_uri(base_url: str, number: str) -> str:
+    """The link to one requisition, e.g. .../A_PurchaseRequisitionHeader('10000000')."""
     return f"{base_url}/{HEADER_SET}('{number}')"
 
 

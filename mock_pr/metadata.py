@@ -77,4 +77,5 @@ def _parse_property(prop: ET.Element) -> Property:
 
 
 def _optional_int(value: str | None) -> int | None:
+    """Turn an optional attribute such as MaxLength into a number."""
     return None if value is None else int(value)

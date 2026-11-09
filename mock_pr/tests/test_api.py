@@ -2,6 +2,7 @@
 
 import os
 
+import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
@@ -60,7 +61,7 @@ def error_message(response) -> str:
     return error["message"]["value"]
 
 
-@pytest.mark.parametrize("headers", [{}, {"APIKey": "wrong"}])
+@pytest.mark.parametrize("headers", [{}, {"APIKey": "wrong"}, {"APIKey": b"r\xe9view"}])
 def test_missing_or_wrong_api_key_returns_401(client, headers) -> None:
     client.headers.pop("APIKey")
 
@@ -88,7 +89,7 @@ def test_csrf_fetch_returns_a_token_in_header_and_cookie(client) -> None:
     assert response.cookies.get("sap-XSRF_mock") == token
 
 
-@pytest.mark.parametrize("token", [None, "made-up.token"])
+@pytest.mark.parametrize("token", [None, "made-up.token", b"a.\xe9"])
 def test_post_without_a_valid_csrf_token_returns_403(client, token) -> None:
     headers = {} if token is None else {"X-CSRF-Token": token}
 
@@ -142,6 +143,12 @@ def test_numbers_and_requisitions_survive_a_restart(client, database_url) -> Non
 
     assert int(second["PurchaseRequisition"]) > int(first)
     assert read_back.status_code == 200
+    # The numbers come from a sequence in the database, not from memory in the process.
+    with psycopg.connect(database_url) as connection:
+        row = connection.execute(
+            "SELECT last_value FROM pg_sequences WHERE schemaname = %s", (TEST_SCHEMA,)
+        ).fetchone()
+    assert row == (int(second["PurchaseRequisition"]),)
 
 
 def test_a_requisition_can_be_read_back_by_number(client) -> None:
@@ -180,8 +187,17 @@ def with_item_field(name: str, value: object) -> dict:
         (with_item_field("Colour", "red"), "Property 'Colour' is invalid"),
         (with_item_field("RequestedQuantity", 12.5), "RequestedQuantity"),
         (with_item_field("Plant", "AUC12"), "at most 4 characters"),
+        (with_item_field("Material", 123), "expected text"),
+        (with_item_field("Material", "AB\u0000C"), "not allowed"),
     ],
-    ids=["missing required field", "unknown property", "wrong type", "too long"],
+    ids=[
+        "missing required field",
+        "unknown property",
+        "wrong type",
+        "too long",
+        "number for text",
+        "NUL character",
+    ],
 )
 def test_invalid_payload_returns_400_with_an_odata_error(client, body, expected) -> None:
     response = post_requisition(client, body)
@@ -190,10 +206,15 @@ def test_invalid_payload_returns_400_with_an_odata_error(client, body, expected)
     assert expected in error_message(response)
 
 
-def test_invalid_json_returns_400(client) -> None:
+@pytest.mark.parametrize(
+    "content",
+    [b"{not json", b'{"a": \xff}', b"[" * 100000, b"1" * 5000],
+    ids=["broken JSON", "not UTF-8", "nested too deeply", "number too long"],
+)
+def test_invalid_json_returns_400(client, content) -> None:
     response = client.post(
         HEADERS_URL,
-        content=b"{not json",
+        content=content,
         headers={"X-CSRF-Token": fetch_token(client), "Content-Type": "application/json"},
     )
 

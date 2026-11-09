@@ -47,7 +47,7 @@ def test_an_iso_date_is_returned_in_odata_form() -> None:
     assert result.items[0]["DeliveryDate"] == "/Date(1762646400000)/"
 
 
-@pytest.mark.parametrize("quantity", ["10", "10.125", 10, "9999999999.999"])
+@pytest.mark.parametrize("quantity", ["10", "10.125", 10, "9999999999.999", "0000000000012.5"])
 def test_accepted_quantities(quantity) -> None:
     check(requisition(RequestedQuantity=quantity))
 
@@ -63,6 +63,10 @@ def test_accepted_quantities(quantity) -> None:
         ("NaN", "not a number"),
         (1.5, "number as text"),
         (True, "number as text"),
+        ("1E+50", "not a number"),
+        ("1e3", "not a number"),
+        (" 12.5 ", "not a number"),
+        ("12.", "not a number"),
     ],
 )
 def test_rejected_quantities(quantity, expected) -> None:
@@ -84,6 +88,10 @@ def test_rejected_quantities(quantity, expected) -> None:
         ({**requisition(), "SourceDetermination": "yes"}, "true or false"),
         ({**requisition(), "PurchaseRequisition": None}, "must not be null"),
         (requisition(DeliveryDate="tomorrow"), "expected a date"),
+        (requisition(DeliveryDate="/Date(99999999999999999999999)/"), "out of range"),
+        ({**requisition(), "PurReqnDescription": 123}, "expected text"),
+        (requisition(Material="AB\u0000C"), "not allowed"),
+        (requisition(Material="\ud800"), "not allowed"),
         (requisition(to_PurchaseReqnItemText=[]), "does not support a deep insert"),
         (requisition(Material=None), "'Material' is required"),
     ],
@@ -98,3 +106,11 @@ def test_odata_metadata_block_is_ignored() -> None:
     body["__metadata"] = {"type": "API_PURCHASEREQ_PROCESS_SRV.A_PurchaseRequisitionHeaderType"}
 
     assert "__metadata" not in check(body).header
+
+
+def test_at_most_9999_items() -> None:
+    body = requisition()
+    body["to_PurchaseReqnItem"] = body["to_PurchaseReqnItem"] * 10000
+
+    with pytest.raises(InvalidRequisition, match="at most 9999 items"):
+        check(body)

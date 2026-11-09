@@ -11,7 +11,7 @@ Two kinds of check:
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from mock_pr.metadata import EntityType, Property
 
@@ -29,7 +29,13 @@ REQUIRED_ITEM_FIELDS = [
 
 # OData V2 sends dates as "/Date(<milliseconds since 1970 UTC>)/", optionally with an offset.
 ODATA_DATE = re.compile(r"^/Date\((-?\d+)([+-]\d{4})?\)/$")
+# OData V2 sends decimals as plain text: digits, optionally a point and more digits.
+PLAIN_DECIMAL = re.compile(r"^-?\d+(\.\d+)?$")
+# Characters Postgres cannot store in text: NUL and unpaired UTF-16 surrogates.
+UNSTORABLE_CHARACTERS = re.compile("[\x00\ud800-\udfff]")
 INT32_RANGE = range(-(2**31), 2**31)
+# Item numbers go 10, 20, ... and PurchaseRequisitionItem holds at most 5 characters.
+MAX_ITEMS = 9999
 
 
 class InvalidRequisition(Exception):
@@ -79,6 +85,8 @@ def _item_list(value: object) -> list:
         value = value["results"]
     if not isinstance(value, list) or not value:
         raise InvalidRequisition(f"A requisition needs at least one item in {ITEMS_NAVIGATION}.")
+    if len(value) > MAX_ITEMS:
+        raise InvalidRequisition(f"A requisition can have at most {MAX_ITEMS} items.")
     return value
 
 
@@ -116,6 +124,8 @@ def check_value(prop: Property, value: object, where: str) -> object:
         case "Edm.String":
             if not isinstance(value, str):
                 raise InvalidRequisition(f"{problem}: expected text.")
+            if UNSTORABLE_CHARACTERS.search(value):
+                raise InvalidRequisition(f"{problem}: contains a character that is not allowed.")
             if prop.max_length is not None and len(value) > prop.max_length:
                 raise InvalidRequisition(f"{problem}: at most {prop.max_length} characters.")
             return value
@@ -140,17 +150,14 @@ def _check_decimal(prop: Property, value: object, problem: str) -> None:
     """Check a decimal sent as a string (the OData V2 rule) or a whole number."""
     if isinstance(value, bool) or not isinstance(value, str | int):
         raise InvalidRequisition(f'{problem}: expected a number as text, e.g. "10.5".')
-    try:
-        number = Decimal(str(value).strip())
-    except InvalidOperation:
-        raise InvalidRequisition(f"{problem}: not a number.") from None
-    if not number.is_finite():
-        raise InvalidRequisition(f"{problem}: not a number.")
+    text = str(value)
+    if not PLAIN_DECIMAL.match(text):
+        raise InvalidRequisition(f'{problem}: not a number. Use digits and a point, e.g. "10.5".')
 
     scale = prop.scale or 0
-    _sign, digits, exponent = number.as_tuple()
-    decimals = max(0, -exponent)
-    whole_digits = len(digits) - decimals
+    whole_part, _, decimal_part = text.removeprefix("-").partition(".")
+    whole_digits = len(whole_part.lstrip("0"))
+    decimals = len(decimal_part)
     if decimals > scale:
         raise InvalidRequisition(f"{problem}: at most {scale} decimals.")
     if prop.precision is not None and whole_digits > prop.precision - scale:
@@ -163,7 +170,13 @@ def _odata_date(value: object, problem: str) -> str:
     """Accept "/Date(ms)/" or an ISO date-time and return the OData form "/Date(ms)/"."""
     if not isinstance(value, str):
         raise InvalidRequisition(f"{problem}: expected a date.")
-    if ODATA_DATE.match(value):
+    odata_match = ODATA_DATE.match(value)
+    if odata_match:
+        milliseconds = int(odata_match.group(1))
+        try:
+            datetime.fromtimestamp(milliseconds / 1000, UTC)
+        except (OverflowError, ValueError, OSError):
+            raise InvalidRequisition(f"{problem}: the date is out of range.") from None
         return value
     try:
         moment = datetime.fromisoformat(value)

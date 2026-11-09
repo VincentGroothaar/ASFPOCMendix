@@ -20,8 +20,18 @@ def is_valid_token(token: str | None, secret: str) -> bool:
     if not token or "." not in token:
         return False
     random_part, signature = token.rsplit(".", 1)
-    return hmac.compare_digest(signature, _signature(random_part, secret))
+    return same_text(signature, _signature(random_part, secret))
+
+
+def same_text(sent: str, expected: str) -> bool:
+    """Compare a header value with a secret in constant time, so timing reveals nothing.
+
+    Compares bytes: header values may hold non-ASCII characters, which
+    hmac.compare_digest refuses for plain strings.
+    """
+    return hmac.compare_digest(sent.encode(), expected.encode())
 
 
 def _signature(random_part: str, secret: str) -> str:
+    """The HMAC-SHA256 of the random part, as hex."""
     return hmac.new(secret.encode(), random_part.encode(), hashlib.sha256).hexdigest()

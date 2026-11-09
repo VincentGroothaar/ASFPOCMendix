@@ -54,7 +54,7 @@ All paths start with `/sap/opu/odata/sap/API_PURCHASEREQ_PROCESS_SRV`, as on SAP
 | `GET /` | Service document (list of entity sets) |
 | `GET /$metadata` | SAP's real `$metadata`, saved from the sandbox in `docs/sandbox/metadata/` (#7) |
 | `POST /A_PurchaseRequisitionHeader` | Create a requisition: one header with its items in `to_PurchaseReqnItem` (deep insert) |
-| `GET /A_PurchaseRequisitionHeader('<number>')` | Read one requisition back, always with its items |
+| `GET /A_PurchaseRequisitionHeader('<number>')` | Read one requisition back, always with its items. Only this key form is supported, not `(PurchaseRequisition='<number>')` |
 
 Every request needs the header `APIKey: <MOCK_API_KEY>`. Without it, or with a wrong key, the
 mock answers `401`.
@@ -97,8 +97,9 @@ use up a number.
 
 1. **Types and lengths.** Every field sent must exist in SAP's `$metadata` for the header
    (`A_PurchaseRequisitionHeaderType`) or the item (`A_PurchaseRequisitionItemType`), and must have
-   the right type: text no longer than its maximum length, `true`/`false` for booleans, decimals
-   as text (the OData V2 rule, e.g. `"12.5"`) with no more digits than the field allows, and dates
+   the right type: text no longer than its maximum length (and without NUL characters),
+   `true`/`false` for booleans, decimals as plain text (the OData V2 rule, e.g. `"12.5"`; no
+   spaces or exponents such as `"1e3"`) with no more digits than the field allows, and dates
    as `"/Date(<milliseconds since 1970 UTC>)/"` or ISO (`"2026-11-20T00:00:00"`). The mock answers
    with dates in the `/Date(...)/` form, as SAP does. `__metadata` blocks are ignored.
 2. **Required fields.** SAP's metadata marks almost nothing as required, but SAP rejects a
@@ -109,7 +110,8 @@ use up a number.
    | Header | `PurchaseRequisitionType` |
    | Each item | `Material`, `Plant`, `RequestedQuantity` (greater than 0), `BaseUnit`, `DeliveryDate`, `PurchasingGroup` |
 
-   A requisition needs at least one item.
+   A requisition needs at least one item and can have at most 9,999 (item numbers have at most
+   5 characters).
 3. **Not supported:** deep inserts below the item (`to_PurchaseReqnAcctAssgmt`,
    `to_PurchaseReqnDeliveryAddress`, `to_PurchaseReqnItemText`) are rejected with `400`. The mock
    assigns `PurchaseRequisition` and `PurchaseRequisitionItem` itself and ignores values sent for
@@ -119,9 +121,8 @@ use up a number.
 
 The Cockpit derives material, plant, quantity, unit and delivery date from the order (spec,
 "Requisition payload"). It cannot derive the fields below, so it sends these fixed values. They
-come from the SAP sandbox on 2026-11-09: the sandbox has no requisitions for plant AUC1, but among
-the 2,000 requisition items it returned (plants 1710, 1010, US20, US30), these were the most
-common values.
+are the most common values in the SAP sandbox; see "Purchase requisitions" in
+[docs/sandbox/findings.md](../docs/sandbox/findings.md).
 
 | Field | Where | Value | Sandbox evidence |
 |---|---|---|---|
@@ -186,8 +187,10 @@ Done by hand (#10 part 3), because it needs a Render account. Create the Postgre
    runtime Python. Render reads the Python version from `.python-version`.
 2. **Build command:**
    ```bash
-   pip install uv && uv sync --locked --no-dev
+   pip install uv && uv sync --locked --no-dev --inexact
    ```
+   `--inexact` keeps `uv` itself installed: without it, `uv sync` removes every package that is
+   not in `uv.lock`, including `uv`, and the start command fails.
 3. **Start command:**
    ```bash
    uv run --no-sync uvicorn mock_pr.main:create_app_from_env --factory --host 0.0.0.0 --port $PORT --forwarded-allow-ips '*'
