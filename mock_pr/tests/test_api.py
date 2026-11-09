@@ -206,6 +206,17 @@ def test_invalid_payload_returns_400_with_an_odata_error(client, body, expected)
     assert expected in error_message(response)
 
 
+def test_a_surrogate_in_a_property_name_returns_400(client) -> None:
+    response = client.post(
+        HEADERS_URL,
+        content=b'{"\\ud800": "x"}',
+        headers={"X-CSRF-Token": fetch_token(client), "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 400
+    assert "Property '?' is invalid" in error_message(response)
+
+
 @pytest.mark.parametrize(
     "content",
     [b"{not json", b'{"a": \xff}', b"[" * 100000, b"1" * 5000],

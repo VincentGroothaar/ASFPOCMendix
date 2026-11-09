@@ -28,9 +28,10 @@ REQUIRED_ITEM_FIELDS = [
 ]
 
 # OData V2 sends dates as "/Date(<milliseconds since 1970 UTC>)/", optionally with an offset.
-ODATA_DATE = re.compile(r"^/Date\((-?\d+)([+-]\d{4})?\)/$")
+# The patterns use [0-9], not \d, which would also match digits from other scripts.
+ODATA_DATE = re.compile(r"/Date\((-?[0-9]+)([+-][0-9]{4})?\)/")
 # OData V2 sends decimals as plain text: digits, optionally a point and more digits.
-PLAIN_DECIMAL = re.compile(r"^-?\d+(\.\d+)?$")
+PLAIN_DECIMAL = re.compile(r"-?[0-9]+(\.[0-9]+)?")
 # Characters Postgres cannot store in text: NUL and unpaired UTF-16 surrogates.
 UNSTORABLE_CHARACTERS = re.compile("[\x00\ud800-\udfff]")
 INT32_RANGE = range(-(2**31), 2**31)
@@ -151,7 +152,7 @@ def _check_decimal(prop: Property, value: object, problem: str) -> None:
     if isinstance(value, bool) or not isinstance(value, str | int):
         raise InvalidRequisition(f'{problem}: expected a number as text, e.g. "10.5".')
     text = str(value)
-    if not PLAIN_DECIMAL.match(text):
+    if not PLAIN_DECIMAL.fullmatch(text):
         raise InvalidRequisition(f'{problem}: not a number. Use digits and a point, e.g. "10.5".')
 
     scale = prop.scale or 0
@@ -170,11 +171,10 @@ def _odata_date(value: object, problem: str) -> str:
     """Accept "/Date(ms)/" or an ISO date-time and return the OData form "/Date(ms)/"."""
     if not isinstance(value, str):
         raise InvalidRequisition(f"{problem}: expected a date.")
-    odata_match = ODATA_DATE.match(value)
+    odata_match = ODATA_DATE.fullmatch(value)
     if odata_match:
-        milliseconds = int(odata_match.group(1))
         try:
-            datetime.fromtimestamp(milliseconds / 1000, UTC)
+            datetime.fromtimestamp(int(odata_match.group(1)) / 1000, UTC)
         except (OverflowError, ValueError, OSError):
             raise InvalidRequisition(f"{problem}: the date is out of range.") from None
         return value

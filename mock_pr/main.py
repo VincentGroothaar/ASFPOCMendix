@@ -99,11 +99,12 @@ def create_app(database_url: str, api_key: str, schema: str = DEFAULT_SCHEMA) ->
             )
         try:
             body = json.loads(await request.body())
-            requisition = validate_requisition(body, header_type, item_type)
         except (ValueError, RecursionError):
             # ValueError covers bad JSON, bytes that are not UTF-8 and over-long numbers;
             # RecursionError covers JSON nested too deeply.
             return odata_error(400, "INVALID_JSON", "The request body is not valid JSON.")
+        try:
+            requisition = validate_requisition(body, header_type, item_type)
         except InvalidRequisition as error:
             return odata_error(400, "INVALID_REQUISITION", str(error))
 
@@ -178,6 +179,11 @@ def header_uri(base_url: str, number: str) -> str:
 def odata_error(
     status_code: int, code: str, message: str, headers: dict | None = None
 ) -> JSONResponse:
-    """An OData V2 error response in SAP's shape."""
-    body = {"error": {"code": code, "message": {"lang": "en", "value": message}}}
+    """An OData V2 error response in SAP's shape.
+
+    Messages can repeat text the client sent, such as a property name. Characters that
+    cannot be sent as UTF-8 (unpaired surrogates) are replaced with "?".
+    """
+    safe_message = message.encode("utf-8", "replace").decode("utf-8")
+    body = {"error": {"code": code, "message": {"lang": "en", "value": safe_message}}}
     return JSONResponse(body, status_code=status_code, headers=headers)

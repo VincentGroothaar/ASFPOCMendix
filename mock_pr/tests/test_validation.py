@@ -67,6 +67,8 @@ def test_accepted_quantities(quantity) -> None:
         ("1e3", "not a number"),
         (" 12.5 ", "not a number"),
         ("12.", "not a number"),
+        ("12.5\n", "not a number"),
+        ("\u0661\u0662", "not a number"),
     ],
 )
 def test_rejected_quantities(quantity, expected) -> None:
@@ -89,6 +91,9 @@ def test_rejected_quantities(quantity, expected) -> None:
         ({**requisition(), "PurchaseRequisition": None}, "must not be null"),
         (requisition(DeliveryDate="tomorrow"), "expected a date"),
         (requisition(DeliveryDate="/Date(99999999999999999999999)/"), "out of range"),
+        (requisition(DeliveryDate="/Date(" + "9" * 5000 + ")/"), "out of range"),
+        (requisition(DeliveryDate="/Date(1762646400000)/\n"), "expected a date"),
+        (requisition(DeliveryDate="/Date(\u0661\u0662\u0663)/"), "expected a date"),
         ({**requisition(), "PurReqnDescription": 123}, "expected text"),
         (requisition(Material="AB\u0000C"), "not allowed"),
         (requisition(Material="\ud800"), "not allowed"),
