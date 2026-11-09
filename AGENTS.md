@@ -30,6 +30,23 @@ This repo is the high-code track of a PoC that compares Mendix + Maia Make with 
 - Review against [REVIEW.md](REVIEW.md).
 - End every PR description with the Metrics block below.
 
+## Issue status and comments
+
+Every issue sits on the GitHub Project "Factory" (number 2, owner `VincentGroothaar`). Keep its Status field and its comments up to date while you work, so the board and the issue always show where the work is. Change the status at the moment the stage changes, not at the end of the session.
+
+| Stage | Set Status to | Comment on the issue |
+|---|---|---|
+| Spec work starts | Creating Spec | What you will clarify or write |
+| Spec is agreed | Ready To Implement | Link to the spec or the updated issue body, and the decisions made |
+| Coding starts | Implementing | Branch name and short plan |
+| The spec turns out wrong | (stays) | What was wrong, the evidence, and the agreed correction, before you change the issue body or the spec |
+| PR is open | Reviewing | PR link, CI state, and that the independent review has started |
+| Review round done | (stays) | Verdict, number of findings, and what was fixed |
+| PR is merged | Done | PR link, and close the issue if the merge did not close it |
+
+- Keep comments short and factual: what happened, links, and what comes next. Never put secrets in a comment; issues are public.
+- Look up the field and option IDs with `gh project field-list 2 --owner VincentGroothaar --format json`, the item ID with `gh project item-list 2 --owner VincentGroothaar --format json`, and set the status with `gh project item-edit`.
+
 ## Metrics
 
 This repo is measured as part of the PoC. The PR history is the evidence, so every PR description ends with this block, filled in from what actually happened in the session:
