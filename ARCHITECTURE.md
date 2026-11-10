@@ -1,6 +1,6 @@
 # Material Shortage Cockpit architecture
 
-Status: Proposed. Built today: an empty Django project with CI (#4) and, in review, the switch to Postgres (#9). Not built yet: everything in this document beyond that.
+Status: Proposed. Built today: an empty Django project with CI on Postgres (#4, #9) and the requisition mock (#8). Not built yet: everything in this document beyond that.
 
 ## Intended system
 
@@ -38,13 +38,14 @@ Snapshot (owned by SAP, refreshed by sync, never edited in the app):
 - **PlantSnapshot**: plant, synced_at, last_sync_error, last_sync_error_at.
 - **ProductionOrder**: plant, order number (unique), material, quantity, unit, start date, is_active (false when no longer released in SAP), synced_at.
 - **Component**: order (FK), item number, material, description, required quantity, withdrawn quantity, unit.
-- **Stock**: plant, material, unrestricted quantity (summed over storage locations), stock unit, synced_at. Unique on plant + material.
+- **Stock**: plant, material, unrestricted quantity (summed over storage locations), stock unit, safety stock (change request), standard price per stock unit and currency (change request, empty when SAP has no price), synced_at. Unique on plant + material.
 
 Owned by the app:
 
 - **Requisition**: order (FK), material, quantity entered + unit entered, quantity sent + stock unit, delivery date, status (`awaiting_approval`, `sent`, `failed`, `rejected`), PR number, payload sent (JSON), response or error (JSON/text), created_by, created_at, decided_by, decided_at, reject_reason. Database constraint: at most one requisition per order + material with status `awaiting_approval` or `sent`.
-- **CockpitSettings** (change request): one row with the cover buffer percentage (default 10).
-- **MaterialSetting** (change request): plant, material, safety stock, approval threshold (both in stock unit, optional).
+- **CockpitSettings** (change request): one row with the cover buffer percentage (default 10), who changed it last and when.
+
+Safety stock and prices come from SAP and live in the snapshot; the approval limit is a constant in code (`APPROVAL_LIMIT`). None of them is edited in the app.
 
 Not stored: statuses, available stock and shortages. They are calculated from the snapshot and settings on every view, so they can never go stale relative to the data shown.
 
@@ -53,17 +54,17 @@ All quantities are `DecimalField` / `Decimal` (max 3 decimals for entered quanti
 ## Critical flows
 
 **Sync (Refresh, first open of a plant, or snapshot older than 5 minutes).** Runs inside the request, with an HTMX loading indicator.
-1. Read all released orders of the plant (filter confirmed by #7) with their components, in as few calls as paging allows.
-2. Read stock for all component materials of the plant in batches, and material descriptions.
+1. Read all released open orders of the plant with their components in one call (release filter and fields in [docs/sandbox/findings.md](docs/sandbox/findings.md)), following `__next` links if SAP ever pages.
+2. Read stock for all component materials of the plant in batches of 40 materials, and material descriptions. Change request: also safety stock (`A_ProductSupplyPlanning`) and prices (`A_ProductValuation`), about 0.5 s per call.
 3. In one database transaction: update existing orders, add new ones, mark orders not returned as inactive (their requisitions keep their link), replace stock rows, set synced_at.
 4. On any SAP error: roll back, keep the previous snapshot, store the error on PlantSnapshot. The page shows a warning banner with the last successful sync time, or an error page if there was never a successful sync.
 
-**Status calculation** (`services/shortage.py`, pure function). Input: active orders of the plant up to the end of the selected range, their components, stock, settings. Sort orders by start date, then order number. For each material keep a running balance in the stock unit; for each component convert the open requirement to the stock unit, compute available, shortage and status, then subtract the requirement (not the buffer) from the balance. Order status = worst component status. Unit mismatches are skipped from the balance and reported as such.
+**Status calculation** (`services/shortage.py`, pure function). Input: active orders of the plant up to the end of the selected range, their components, stock, settings. Sort orders by start date, then order number. For each material keep a running balance in the stock unit, starting at stock − safety stock (never below 0; safety stock is 0 before the change request); for each component convert the open requirement to the stock unit, compute available, shortage and status, then subtract the requirement (not the buffer) from the balance. Order status = worst component status. Unit mismatches are skipped from the balance and reported as such. Component lines of the same material within one order are allocated one after the other in item-number order.
 
 **Create requisition.**
 1. Planner clicks Request; the confirm form shows the prefilled shortage in the order's unit and the converted stock-unit quantity.
 2. On submit the server re-checks the role, the quantity rules and the one-per-order-and-material constraint.
-3. (Change request) If the quantity exceeds the material's approval threshold: store as `awaiting_approval` and stop.
+3. (Change request) If the value (quantity in stock unit × price per stock unit) is above `APPROVAL_LIMIT` (10,000 in the plant's currency), or the material has no price: store as `awaiting_approval` and stop.
 4. Otherwise the `sap/` requisition client fetches a CSRF token, POSTs the payload (fixed header constants from #8) and stores the outcome as `sent` with the PR number or `failed` with the error. Then the plant is re-synced.
 
 **Invariants every feature must follow**
@@ -100,7 +101,11 @@ All quantities are `DecimalField` / `Decimal` (max 3 decimals for entered quanti
 | Requisition target | Separate mock service with SAP-identical paths | Mock inside the Django app | Shared by both tracks; switching to real S/4 is a URL change | One more service to deploy |
 | Hosting | Render free tier | Azure; paid plans | Simple, free, enough for demo and jury | Sleep and wake-up delay; database expires after 30 days |
 
+## Configuration
+
+- `COCKPIT_PLANTS`: comma-separated plants for the selector, default `AUC1` (findings from #7: most released open orders, all three colours at component level, loads in 2–4 s). USC1 and DEC1 also fit the 5 s target; 1710 does not without fewer, larger calls.
+- `SAP_BASE_URL`, `SAP_API_KEY`, `MOCK_PR_BASE_URL`, `MOCK_API_KEY` (INV-3).
+
 ## Open decisions
 
-1. **Exact SAP field names, release filter and start-date field.** Recommended: take them from the sandbox data check (#7). Blocks the `sap/` client, not this document.
-2. **Plants offered in the selector.** Recommended: environment variable `COCKPIT_PLANTS` (comma-separated), defaulting to the plant chosen in #7. Does not block.
+None. SAP fields, the release filter, the start-date field and the default plant were closed in #12 from the sandbox data check.
