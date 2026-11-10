@@ -19,12 +19,33 @@ load_env_file(BASE_DIR / ".env")
 
 # --- Security ---------------------------------------------------------------
 
-# The fallback key is only for local development and tests. Set a real
-# DJANGO_SECRET_KEY in any shared or deployed environment.
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or "dev-only-insecure-key"
+# DJANGO_HTTPS=true means the app is hosted behind an HTTPS proxy, as on Render.
+# It is off locally and in CI, where the app runs over plain HTTP.
+HOSTED_BEHIND_HTTPS = env_bool("DJANGO_HTTPS", default=False)
+
+# The fallback key is only for local development and tests. A hosted app refuses
+# to start without a real DJANGO_SECRET_KEY.
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if HOSTED_BEHIND_HTTPS:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY is not set. A hosted app (DJANGO_HTTPS=true) needs a long "
+            'random key, e.g. from `python -c "import secrets; print(secrets.token_urlsafe(50))"`.'
+        )
+    SECRET_KEY = "dev-only-insecure-key"
 # DEBUG is off unless DJANGO_DEBUG says otherwise; .env.example turns it on locally.
 DEBUG = env_bool("DJANGO_DEBUG", default=False)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1")
+
+if HOSTED_BEHIND_HTTPS:
+    # Render's proxy handles HTTPS and tells the app so in the X-Forwarded-Proto header.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Send plain-HTTP visitors to HTTPS, and send cookies over HTTPS only.
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # No CSRF_TRUSTED_ORIGINS needed: with the proxy header above, Django already accepts
+    # forms posted from the app's own https://<host>.
 
 # --- SAP (consumed OData service) -------------------------------------------
 
@@ -45,6 +66,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves the static files (CSS, admin styles) when hosted; must come right after security.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -107,5 +130,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# `manage.py collectstatic` copies every static file here; WhiteNoise serves them from here.
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    # Also stores a compressed copy of each file, so pages load faster.
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

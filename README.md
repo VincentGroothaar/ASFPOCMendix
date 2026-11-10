@@ -47,9 +47,42 @@ Settings come from environment variables. Locally they are read from `.env`; see
 | `DATABASE_URL` | Postgres URL, required, e.g. `postgresql://cockpit:cockpit@localhost:5432/cockpit` |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Used by `docker compose` to create the local database |
 | `MOCK_PR_BASE_URL`, `MOCK_API_KEY` | Purchase requisition mock: its base URL (for the Cockpit) and its API key (for both); see `mock_pr/README.md` |
-| `DJANGO_SECRET_KEY` | Django signing key; a dev-only key is used if empty |
+| `DJANGO_SECRET_KEY` | Django signing key; a dev-only key is used if empty, except when `DJANGO_HTTPS=true` |
 | `DJANGO_DEBUG` | `true` shows debug pages; off when unset            |
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated host names, default `localhost,127.0.0.1` |
+| `DJANGO_HTTPS` | `true` when hosted behind an HTTPS proxy (Render): redirects to HTTPS and sends cookies over HTTPS only; off when unset |
+
+## Deploy on Render
+
+The app runs as its own Render web service next to the mock (see `mock_pr/README.md`) and uses the same free Postgres database `poc-db`. The app's tables live in the default `public` schema; the mock keeps its own schema `mock_pr`, so they never touch each other. Creating the service is done by hand, because it needs the Render login.
+
+1. **New → Web Service**, repository `ASFPOCMendix`, branch `main`, region Frankfurt (same as the database), Free plan, runtime Python. Render reads the Python version from `.python-version` and deploys again on every merge to `main`.
+2. **Build command:**
+   ```sh
+   pip install uv && uv sync --locked --no-dev --inexact && uv run --no-sync python manage.py collectstatic --no-input
+   ```
+   `--inexact` keeps `uv` itself installed (see `mock_pr/README.md`). `collectstatic` copies the CSS and admin styles into `staticfiles/`, where WhiteNoise serves them from.
+3. **Start command:**
+   ```sh
+   uv run --no-sync python manage.py migrate --no-input && uv run --no-sync gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+   ```
+   Migrations run at start-up because the free plan has no pre-deploy step; with nothing to migrate this takes a second. `--timeout 120` gives a slow SAP sync time to finish, since the sync runs inside the request.
+4. **Environment variables** (only here, never in the repository):
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | The Internal Database URL of `poc-db` (the same as the mock's) |
+   | `DJANGO_SECRET_KEY` | A long random string, e.g. `python -c "import secrets; print(secrets.token_urlsafe(50))"`. The app refuses to start without it |
+   | `DJANGO_HTTPS` | `true` |
+   | `DJANGO_DEBUG` | `false` |
+   | `DJANGO_ALLOWED_HOSTS` | The service's host name, e.g. `material-shortage-cockpit.onrender.com` |
+   | `SAP_BASE_URL`, `SAP_API_KEY` | As in your local `.env` |
+   | `MOCK_PR_BASE_URL` | The mock's public URL on Render, e.g. `https://<mock-service>.onrender.com` |
+   | `MOCK_API_KEY` | The same key as on the mock service |
+
+5. **Deploy**, then check the public URL: `/` answers, `/admin/` shows the login page with its styling, and `http://` redirects to `https://`.
+
+The test accounts per role come from the `create_test_users` command (#22). Free services sleep after 15 minutes idle, so the first request after a pause takes about a minute; that wake-up time does not count towards the 5-second load target (D-17). The free database expires 30 days after it was created (see #10 for the date).
 
 ## Where things live
 
