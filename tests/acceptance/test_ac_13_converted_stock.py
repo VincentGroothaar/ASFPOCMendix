@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from tests.acceptance.support import Stock, days, one_component_order
+from tests.acceptance.support import Stock, days, one_component_order, sync
 
 pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #19")
 
@@ -48,6 +48,8 @@ def test_ac_13_browser_converted_stock_shows_the_original_on_hover(
 
     fakes.sap.orders.append(one_component_order("1000101", days(1), "RM-1", "1", unit="KG"))
     fakes.sap.stock.append(Stock("RM-1", Decimal("1500"), unit="G"))
+
+    sync()
 
     page = browser_as("/orders/1000101/", role="Viewer")
     available = page.get_by_text("1.5 KG", exact=True).first

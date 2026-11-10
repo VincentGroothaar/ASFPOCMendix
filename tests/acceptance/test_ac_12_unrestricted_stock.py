@@ -19,6 +19,7 @@ from tests.acceptance.support import (
     read_live_sap,
     read_page,
     shows_quantity,
+    sync,
 )
 
 pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #26")
@@ -35,6 +36,8 @@ def test_ac_12_only_unrestricted_non_special_stock_counts(fakes, clock, client_a
         Stock("RM-1", Decimal("100"), special_stock="K"),  # consignment
         Stock("RM-1", Decimal("100"), plant="USC1"),  # another plant
     ]
+
+    sync()
 
     row = read_page(client_as("Viewer").get("/orders/1000101/")).row_with("RM-1")
 

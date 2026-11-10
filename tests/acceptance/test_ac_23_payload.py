@@ -15,6 +15,7 @@ from tests.acceptance.support import (
     one_component_order,
     parse_sap_date,
     posted_item,
+    sync,
 )
 
 pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #27")
@@ -27,7 +28,7 @@ def test_ac_23_payload_is_in_stock_unit_with_the_delivery_date(
     fakes.sap.orders.append(one_component_order("1000101", start, "RM-1", "2", unit="KG"))
     fakes.sap.stock.append(Stock("RM-1", Decimal("1500"), unit="G", price=Decimal("0.001")))
     client = client_as("Planner")
-    client.get("/orders/1000101/")
+    sync()
 
     client.post("/orders/1000101/requisitions/?material=RM-1", builders.requisition_form("0.5"))
 

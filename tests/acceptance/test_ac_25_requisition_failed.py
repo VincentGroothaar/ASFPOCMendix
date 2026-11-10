@@ -10,9 +10,9 @@ from decimal import Decimal
 import pytest
 
 from tests.acceptance import builders
-from tests.acceptance.support import MIXED_ORDER, load_mixed_order, read_page
+from tests.acceptance.support import MIXED_ORDER, load_mixed_order, read_page, sync
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #27")
+pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #28")
 
 MESSAGE = "Property 'PurchasingGroup' is required (item 1)."
 
@@ -24,7 +24,7 @@ def test_ac_25_error_is_shown_stored_as_failed_and_retry_makes_a_new_attempt(
     for stock in fakes.sap.stock:
         stock.price = Decimal("1")
     planner = client_as("Planner")
-    planner.get(f"/orders/{MIXED_ORDER}/")
+    sync()
     create = f"/orders/{MIXED_ORDER}/requisitions/?material=RM-SHORT"
     fakes.mock.error = MESSAGE
 

@@ -4,7 +4,7 @@ import pytest
 
 from tests.acceptance.support import PLANT, read_page
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #24")
+pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 
 def test_ac_8_first_sync_failure_shows_the_error_page(fakes, clock, client_as):

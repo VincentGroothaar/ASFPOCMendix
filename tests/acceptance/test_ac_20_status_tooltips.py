@@ -4,7 +4,7 @@ show the current buffer value. Browser test; texts word for word from ui-spec 5.
 import pytest
 
 from tests.acceptance import builders
-from tests.acceptance.support import MIXED_ORDER, load_mixed_order
+from tests.acceptance.support import MIXED_ORDER, load_mixed_order, sync
 
 TOOLTIPS = {
     "Short": (
@@ -37,6 +37,7 @@ def tooltip_shows(page, status: str, text: str, how: str) -> None:
 @pytest.mark.parametrize("how", ["hover", "focus"])
 def test_ac_20_browser_each_status_has_its_rule_tooltip(fakes, running_clock, browser_as, how):
     load_mixed_order(fakes.sap)
+    sync()
 
     page = browser_as(f"/orders/{MIXED_ORDER}/", role="Viewer")
 
@@ -47,6 +48,7 @@ def test_ac_20_browser_each_status_has_its_rule_tooltip(fakes, running_clock, br
 @pytest.mark.xfail(strict=True, reason="Not built yet: #34")
 def test_ac_20_browser_tooltips_show_the_current_buffer(fakes, running_clock, browser_as):
     load_mixed_order(fakes.sap)
+    sync()
     manager = builders.make_user("Manager")
     from django.test import Client
 

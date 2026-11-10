@@ -158,3 +158,25 @@ def test_shows_quantity_accepts_the_allowed_formats_only():
     assert not shows_quantity("Shortage 10.5 KG", Decimal("0.5"), "KG")
     assert not shows_quantity("Available 1,500 PC", Decimal("500"), "PC")
     assert not shows_quantity("Available 6 PCS", Decimal("6"), "PC")
+
+
+def test_fake_sap_accepts_any_header_case_and_refuses_unknown_filter_fields():
+    with fake_systems() as fakes:
+        fakes.sap.stock.append(Stock("RM-1", Decimal("3")))
+        lower_case = requests.get(
+            f"{ODATA}/API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod", headers={"apikey": SAP_KEY}
+        )
+        typo = sap_get(
+            "API_MATERIAL_STOCK_SRV/A_MatlStkInAcctMod", **{"$filter": "Materail eq 'RM-1'"}
+        )
+
+    assert lower_case.status_code == 200
+    assert typo.status_code == 400
+
+
+def test_submit_inputs_count_as_buttons():
+    page = read_page('<form><input type="submit" value="Send requisition"></form>')
+
+    assert page.has_button("Send requisition")
+    assert page.has_button("Send")
+    assert not page.has_button("Sen")

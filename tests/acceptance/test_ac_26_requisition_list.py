@@ -11,6 +11,7 @@ from tests.acceptance.support import (
     load_mixed_order,
     read_page,
     shows_quantity,
+    sync,
 )
 
 pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #29")
@@ -21,7 +22,7 @@ def test_ac_26_every_attempt_is_listed_with_its_details(fakes, clock, client_as)
     for stock in fakes.sap.stock:
         stock.price = Decimal("1")
     planner = client_as("Planner", "pat")
-    planner.get(f"/orders/{MIXED_ORDER}/")
+    sync()
     fakes.mock.error = "Property 'PurchasingGroup' is required (item 1)."
     planner.post(
         f"/orders/{MIXED_ORDER}/requisitions/?material=RM-SHORT", builders.requisition_form("30")

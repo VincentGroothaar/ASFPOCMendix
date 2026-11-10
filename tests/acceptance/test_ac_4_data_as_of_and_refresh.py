@@ -7,7 +7,7 @@ import pytest
 
 from tests.acceptance.support import NOW, PLANT, Order, days, read_page
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #24")
+pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 ORDERS = "A_ProductionOrder_2"
 

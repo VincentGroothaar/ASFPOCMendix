@@ -5,7 +5,7 @@ import pytest
 
 from tests.acceptance.support import read_page
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #22")
+pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #34")
 
 ADMIN_PAGES = ["/admin/auth/user/", "/admin/auth/group/", "/admin/auth/user/add/"]
 BUSINESS_PAGES = ["/orders/", "/requisitions/", "/dashboard/", "/settings/"]

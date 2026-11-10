@@ -19,6 +19,7 @@ from tests.acceptance.support import (
     read_live_sap,
     read_page,
     shows_quantity,
+    sync,
 )
 
 pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #26")
@@ -56,6 +57,8 @@ def test_ac_10_partly_withdrawn_component_shows_the_open_requirement(fakes, cloc
         Order("1000101", days(1), [Component("RM-1", Decimal("10"), withdrawn=Decimal("4"))])
     )
     fakes.sap.stock.append(Stock("RM-1", Decimal("100"), description="Steel frame"))
+
+    sync()
 
     page = read_page(client_as("Viewer").get("/orders/1000101/"))
 

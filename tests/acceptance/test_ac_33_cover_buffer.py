@@ -46,10 +46,13 @@ def test_ac_33_accepted_buffer_changes_statuses_at_once(
 @pytest.mark.parametrize("value", ["-1", "100.01", "10.555", "abc", ""])
 def test_ac_33_invalid_buffer_is_rejected_and_the_old_value_stays(fakes, clock, client_as, value):
     manager = client_as("Manager")
+    fresh = read_page(manager.get("/settings/"))
 
     response = manager.post("/settings/", builders.buffer_form(value))
 
     assert response.status_code in (200, 400, 422)
+    # The spec fixes no wording for the message; the page must show words it did not have.
+    assert set(read_page(response).text.split()) - set(fresh.text.split())
     # Buffer still 10: available 110 is Covered, 109.999 is Low cover.
     assert status_with_available(fakes, manager, "110") == builders.COVERED
     assert status_with_available(fakes, manager, "109.999") == builders.LOW_COVER

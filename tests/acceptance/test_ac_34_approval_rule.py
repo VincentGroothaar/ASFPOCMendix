@@ -93,6 +93,8 @@ def test_ac_34_browser_side_panel_shows_awaiting_approval(fakes, running_clock, 
 
     above_limit_plant(fakes.sap)
 
+    sync()
+
     page = browser_as("/orders/1000101/", role="Planner")
     page.get_by_role("row").filter(has_text="RM-1").get_by_role("button", name="Request").click()
     page.get_by_label("Quantity", exact=False).fill("60")

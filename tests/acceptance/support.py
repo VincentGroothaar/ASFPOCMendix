@@ -109,7 +109,7 @@ class SentRequest:
 
     method: str
     url: str
-    headers: dict[str, str]
+    headers: CaseInsensitiveDict  # header names are case-insensitive, as in HTTP
     body: str
 
     @property
@@ -156,7 +156,7 @@ class FakeHttp:
         body = request.body or ""
         if isinstance(body, bytes):
             body = body.decode()
-        sent = SentRequest(request.method, request.url, dict(request.headers), body)
+        sent = SentRequest(request.method, request.url, CaseInsensitiveDict(request.headers), body)
         self.sent.append(sent)
         handler = self.handlers.get(sent.host)
         if handler is None:
@@ -331,8 +331,21 @@ class FakeSap:
             return make_response(request, 405, {"error": "The sandbox is read only"})
         for entity_set, rows in self.entity_sets().items():
             if sent.path.endswith("/" + entity_set):
-                return make_response(request, 200, {"d": {"results": self._page(rows(), sent)}})
+                all_rows = rows()
+                unknown = self._unknown_filter_fields(all_rows, sent)
+                if unknown:
+                    message = f"Property {unknown[0]} not found in {entity_set}"
+                    return make_response(request, 400, sap_error("/IWBEP/CM_MGW_RT/022", message))
+                return make_response(request, 200, {"d": {"results": self._page(all_rows, sent)}})
         return make_response(request, 404, {"error": f"Unknown path {sent.path}"})
+
+    @staticmethod
+    def _unknown_filter_fields(rows: list[dict], sent: SentRequest) -> list[str]:
+        """Fields in the $filter that the entity set does not have (SAP answers 400)."""
+        if not rows:
+            return []
+        named = re.findall(r"(\w+) eq '", sent.query("$filter"))
+        return sorted({name for name in named if name not in rows[0]})
 
     @staticmethod
     def _page(rows: list[dict], sent: SentRequest) -> list[dict]:
@@ -437,7 +450,7 @@ def fake_systems() -> Iterator[Fakes]:
 
 
 class _PageParser(HTMLParser):
-    """Collects the text of the page, of each table row, and of each button or link."""
+    """Collects the text of the page, of each table row (<tr>), and of each button or link."""
 
     CLICKABLE = {"button", "a"}
 
@@ -455,12 +468,14 @@ class _PageParser(HTMLParser):
         attributes = {name: value or "" for name, value in attrs}
         if tag in {"script", "style"}:
             self._skip += 1
-        elif tag == "tr" or attributes.get("role") == "row":
+        elif tag == "tr":
             self._open_rows.append([])
         elif tag in self.CLICKABLE:
             self._open_clickables.append([])
         elif tag in {"input", "textarea", "select"}:
             self.inputs.append(attributes)
+            if tag == "input" and attributes.get("type") == "submit":
+                self.clickables.append([attributes.get("value", "")])
 
     def handle_endtag(self, tag):
         if tag in {"script", "style"}:
@@ -500,8 +515,9 @@ class Page:
         return any(all(needle in row for needle in needles) for row in self.rows)
 
     def has_button(self, label: str) -> bool:
-        """True when a button or link has exactly this label."""
-        return label in self.clickables
+        """True when a button or link is labelled `label`, alone or followed by more words
+        (so "Request" also finds "Request RM-1")."""
+        return any(text == label or text.startswith(label + " ") for text in self.clickables)
 
     def input_decimals(self) -> list[Decimal]:
         """The values of all form fields that hold a number."""

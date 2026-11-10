@@ -12,14 +12,14 @@ from tests.acceptance.support import (
     sync,
 )
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #22")
 
-
+@pytest.mark.xfail(strict=True, reason="Not built yet: #34")
 @pytest.mark.parametrize("path", ["/", "/orders/", "/dashboard/", "/requisitions/", "/settings/"])
 def test_inv_9_anonymous_requests_go_to_login(client, path):
     assert is_login_redirect(client.get(path))
 
 
+@pytest.mark.xfail(strict=True, reason="Not built yet: #34")
 @pytest.mark.parametrize("role", ["Viewer", "Planner"])
 def test_inv_9_only_a_manager_opens_and_saves_thresholds(client_as, role):
     client = client_as(role)
@@ -28,6 +28,7 @@ def test_inv_9_only_a_manager_opens_and_saves_thresholds(client_as, role):
     assert client.post("/settings/", builders.buffer_form("20")).status_code == 403
 
 
+@pytest.mark.xfail(strict=True, reason="Not built yet: #33")
 @pytest.mark.parametrize("role", ["Viewer", "Planner", "Admin"])
 @pytest.mark.parametrize("decision", ["approve", "reject"])
 def test_inv_9_only_a_manager_decides_requisitions(fakes, clock, client_as, role, decision):

@@ -16,6 +16,7 @@ from tests.acceptance.support import (
     SAP_URL,
     FakeMock,
     load_mixed_order,
+    sync,
 )
 
 WRITE_WORDS = ("post", "put", "patch", "delete", "merge", "create", "update", "write")
@@ -37,7 +38,7 @@ def test_ac_27_only_the_mock_receives_writes_with_csrf_and_api_key(fakes, clock,
     for stock in fakes.sap.stock:
         stock.price = Decimal("1")
     planner = client_as("Planner")
-    planner.get(f"/orders/{MIXED_ORDER}/")
+    sync()
 
     planner.post(
         f"/orders/{MIXED_ORDER}/requisitions/?material=RM-SHORT", builders.requisition_form("30")

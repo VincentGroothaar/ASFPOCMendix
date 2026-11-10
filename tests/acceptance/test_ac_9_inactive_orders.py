@@ -6,7 +6,7 @@ import pytest
 from tests.acceptance import builders
 from tests.acceptance.support import PLANT, Stock, days, one_component_order, read_page
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #27")
+pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #29")
 
 
 def test_ac_9_order_gone_from_sap_leaves_the_list_but_keeps_requisitions(fakes, clock, client_as):

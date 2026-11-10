@@ -16,9 +16,10 @@ from tests.acceptance.support import (
     load_mixed_order,
     read_page,
     shows_quantity,
+    sync,
 )
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #27")
+pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #29")
 
 
 def test_ac_24_successful_requisition_against_the_local_mock(fakes, clock, client_as, live_mock):
@@ -26,7 +27,7 @@ def test_ac_24_successful_requisition_against_the_local_mock(fakes, clock, clien
     for stock in fakes.sap.stock:
         stock.price = Decimal("1")  # below the approval limit
     planner = client_as("Planner")
-    planner.get(f"/orders/{MIXED_ORDER}/")
+    sync()
     create = f"/orders/{MIXED_ORDER}/requisitions/?material=RM-SHORT"
 
     planner.post(create, builders.requisition_form("30"))
