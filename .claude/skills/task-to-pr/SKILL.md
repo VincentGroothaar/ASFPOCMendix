@@ -3,7 +3,6 @@ name: task-to-pr
 description: "Delivers a spec, issue, or decided task as a pull request that passes its checks, CI, and an independent review. Leaves the PR open unless merging was explicitly authorized."
 user-invocable: true
 argument-hint: "<specs, tasks, issues, PRs, or milestone>"
-disable-model-invocation: true
 ---
 
 # Task to PR
