@@ -45,11 +45,12 @@ CHECK_CSRF = """
 import sys
 import django
 django.setup()
-from django.middleware.csrf import CsrfViewMiddleware, _get_new_csrf_string
+from django.middleware.csrf import CsrfViewMiddleware
 from django.test import RequestFactory
 
 host, origin = sys.argv[1], sys.argv[2]
-token = _get_new_csrf_string()
+# Any 32 letters or digits form a valid CSRF token; cookie and form must carry the same one.
+token = "testtokenonlyabcdefghijklmnopqrs"
 request = RequestFactory().post(
     "/admin/login/",
     {"csrfmiddlewaretoken": token},
