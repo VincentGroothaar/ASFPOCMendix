@@ -21,6 +21,13 @@ This repo is the high-code track of a PoC that compares Mendix + Maia Make with 
 - Keep business logic in plain functions in `services` modules, not in views or templates.
 - Prefer readable over clever: small functions, clear names, type hints, a short docstring on each service function.
 
+## UI
+
+- The UI follows [docs/ui/](docs/ui/): [ui-spec.md](docs/ui/ui-spec.md) for layout, states, roles and exact copy, [tokens.css](docs/ui/tokens.css) for every colour, size and spacing value, and [wireframes.pdf](docs/ui/wireframes.pdf) for the look.
+- When they disagree, `spec.md` wins over `ui-spec.md`, which wins over the wireframes. Report the conflict instead of guessing.
+- `docs/ui/source/*.html` is reference markup only. Read it; don't copy it in as app code.
+- Every PR that changes the UI includes a screenshot of each changed screen in its description.
+
 ## Pull requests
 
 - One PR per issue.

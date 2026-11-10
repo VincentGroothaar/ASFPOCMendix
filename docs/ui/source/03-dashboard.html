@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shortage dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:#1c2a2e;background:#f3f2ee}
+a{color:#0e5c63}a:hover{color:#0a3f44}
+.app{display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch}
+.side{flex:1 1 200px;background:#12404a;color:#d7e6e8;display:flex;flex-direction:column;gap:4px;padding:20px 12px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:15px;line-height:1.2;padding:4px 10px 20px}
+.logo svg{width:28px;height:28px;color:#7fd1d6}
+.side a{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:8px;color:#d7e6e8;text-decoration:none;font-size:14px}
+.side a:hover{background:#1a4f5a;color:#fff}
+.side a.on{background:#1f6470;color:#fff;font-weight:600}
+.side a svg{width:18px;height:18px;flex:none}
+.badge{margin-left:auto;background:#f2c94c;color:#3a2a00;border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
+.me{margin-top:auto;border-top:1px solid #2b5f69;padding:14px 12px 4px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.me b{color:#fff;font-size:14px}
+.main{flex:999 1 560px;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-0.01em}
+h2{margin:0;font-size:17px;font-weight:600}
+.card{background:#fff;border:1px solid #e2e0da;border-radius:14px;padding:20px}
+.kpi{background:#fff;border:1px solid #e2e0da;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.kpi b{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:#5b6668}
+.ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #e2e0da}
+.ico svg{width:20px;height:20px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;color:#5b6668;font-weight:600;padding:10px 8px;border-bottom:1px solid #e2e0da;white-space:nowrap}
+.tbl td{padding:12px 8px;border-bottom:1px solid #ecebe6;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sub{display:block;font-size:12px;color:#5b6668;margin-top:2px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.red{background:#fbe7e4;color:#a12a1d}.amber{background:#fdf0d5;color:#7a4a00}.green{background:#e2f2e7;color:#1b6334}.grey{background:#ecebe6;color:#3f4a4c}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #c9c6bd;background:#fff;font:inherit;font-size:14px;font-weight:500;color:#1c2a2e;cursor:pointer}
+.btn svg{width:16px;height:16px}
+.muted{color:#5b6668;font-size:13px}
+.scroll{overflow-x:auto}
+.leg{display:flex;align-items:center;gap:8px;font-size:14px}
+.leg i{width:10px;height:10px;border-radius:3px;flex:none}
+.leg b{margin-left:auto;font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div class="app">
+<nav class="side" aria-label="Main">
+<div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>Material Shortage Cockpit</div>
+<a href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Orders</a>
+<a class="on" href="Dashboard.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+<a href="Requisitions.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Requisitions<span class="badge">1</span></a>
+<a href="Thresholds.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Thresholds</a>
+<div class="me"><b>manager.a</b><span>Manager</span></div>
+<a href="States.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>Log out</a>
+</nav>
+<main class="main">
+<div class="head">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1>Shortage dashboard</h1>
+<span class="muted">Plant [PLANT] · start 02 Nov – 16 Nov 2026</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<span class="muted">Data as of 02 Nov 10:02</span>
+<button class="btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Refresh</button>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: stretch">
+<section class="card" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 16px" aria-labelledby="d1">
+<h2 id="d1">Orders by status</h2>
+<div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap">
+<div role="img" aria-label="12 orders: 3 short, 2 low cover, 6 covered, 1 unit mismatch" style="width: 140px; height: 140px; border-radius: 50%; background: conic-gradient(#c2412d 0deg 90deg, #e0a21b 90deg 150deg, #2f8a4c 150deg 330deg, #b9b6ad 330deg 360deg); display: flex; align-items: center; justify-content: center; flex: none">
+<div style="width: 96px; height: 96px; border-radius: 50%; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center"><b style="font-size: 26px">12</b><span class="muted" style="font-size: 12px">orders</span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px; flex: 1 1 140px">
+<div class="leg"><i style="background: #c2412d"></i>Short<b>3</b></div>
+<div class="leg"><i style="background: #e0a21b"></i>Low cover<b>2</b></div>
+<div class="leg"><i style="background: #2f8a4c"></i>Covered<b>6</b></div>
+<div class="leg"><i style="background: #b9b6ad"></i>Unit mismatch<b>1</b></div>
+</div>
+</div>
+</section>
+<div style="flex: 2 1 420px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px">
+<div class="kpi"><div class="ico" style="color: #a12a1d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg></div><b>3</b><span>Red orders</span></div>
+<div class="kpi"><div class="ico" style="color: #a12a1d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg></div><b>5</b><span>Short components · 4 materials</span></div>
+<div class="kpi"><div class="ico" style="color: #7a4a00"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 12h16"/><path d="M4 6h10M4 18h7"/></svg></div><b>2</b><span>Low cover components</span></div>
+<div class="kpi"><div class="ico" style="color: #0e5c63"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></div><b>3</b><span>Open requisitions · 2 awaiting approval</span></div>
+</div>
+</div>
+<p class="muted" style="margin: 0">Unit mismatch lines are excluded from component counts.</p>
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+<section class="card scroll" style="flex: 1 1 420px" aria-labelledby="d2">
+<h2 id="d2" style="margin-bottom: 8px">Shortage per material</h2>
+<table class="tbl">
+<thead><tr><th>Material</th><th class="num">Shortage</th><th class="num">Orders</th><th>First needed</th></tr></thead>
+<tbody>
+<tr><td><strong>RM-100</strong><span class="sub">Steel bracket</span></td><td class="num">41 PC</td><td class="num">2</td><td>29 Oct <span class="pill grey">Overdue</span></td></tr>
+<tr><td><strong>RM-130</strong><span class="sub">Polymer granulate</span></td><td class="num">14.000 KG</td><td class="num">2</td><td>03 Nov</td></tr>
+<tr><td><strong>RM-160</strong><span class="sub">O-ring 40mm</span></td><td class="num">120 PC</td><td class="num">1</td><td>04 Nov</td></tr>
+<tr><td><strong>RM-170</strong><span class="sub">Hydraulic oil</span></td><td class="num">5 L</td><td class="num">1</td><td>04 Nov</td></tr>
+</tbody>
+</table>
+</section>
+<section class="card scroll" style="flex: 1 1 420px" aria-labelledby="d3">
+<h2 id="d3" style="margin-bottom: 8px">Shortage per order</h2>
+<table class="tbl">
+<thead><tr><th>Order</th><th>Start</th><th class="num">Short</th><th class="num">Low</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td><a href="OrderDetail.dc.html"><strong>1000118</strong></a></td><td>29 Oct <span class="pill grey">Overdue</span></td><td class="num">1</td><td class="num">0</td><td><span class="pill red"><i></i>Short</span></td></tr>
+<tr><td><a href="OrderDetail.dc.html"><strong>1000123</strong></a></td><td>03 Nov</td><td class="num">2</td><td class="num">1</td><td><span class="pill red"><i></i>Short</span></td></tr>
+<tr><td><a href="OrderDetail.dc.html"><strong>1000124</strong></a></td><td>04 Nov</td><td class="num">2</td><td class="num">0</td><td><span class="pill red"><i></i>Short</span></td></tr>
+<tr><td><a href="OrderDetail.dc.html"><strong>1000130</strong></a></td><td>05 Nov</td><td class="num">0</td><td class="num">1</td><td><span class="pill amber"><i></i>Low cover</span></td></tr>
+</tbody>
+</table>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1080}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

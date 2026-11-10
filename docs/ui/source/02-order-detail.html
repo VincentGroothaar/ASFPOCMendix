@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Order detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:#1c2a2e;background:#f3f2ee}
+a{color:#0e5c63}a:hover{color:#0a3f44}
+.app{display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch}
+.side{flex:1 1 200px;background:#12404a;color:#d7e6e8;display:flex;flex-direction:column;gap:4px;padding:20px 12px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:15px;line-height:1.2;padding:4px 10px 20px}
+.logo svg{width:28px;height:28px;color:#7fd1d6}
+.side a{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:8px;color:#d7e6e8;text-decoration:none;font-size:14px}
+.side a:hover{background:#1a4f5a;color:#fff}
+.side a.on{background:#1f6470;color:#fff;font-weight:600}
+.side a svg{width:18px;height:18px;flex:none}
+.me{margin-top:auto;border-top:1px solid #2b5f69;padding:14px 12px 4px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.me b{color:#fff;font-size:14px}
+.main{flex:999 1 560px;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-0.01em}
+h2{margin:0;font-size:17px;font-weight:600}
+.card{background:#fff;border:1px solid #e2e0da;border-radius:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));background:#fff;border:1px solid #e2e0da;border-radius:14px}
+.tile{padding:12px 14px;text-align:center;border-left:1px solid #ecebe6}
+.tile:first-child{border-left:0}
+.tile span{display:block;font-size:12px;color:#4b5658}
+.tile b{display:block;font-size:20px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;color:#4b5658;font-weight:600;padding:12px;background:#faf9f6;border-bottom:1px solid #e2e0da;white-space:nowrap}
+.tbl td{padding:12px;border-bottom:1px solid #ecebe6;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.sel td{background:#eef5f5}
+.sel td:first-child{box-shadow:inset 3px 0 0 #0e5c63}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sub{display:block;font-size:12px;color:#4b5658;margin-top:2px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.red{background:#fbe7e4;color:#a12a1d}.amber{background:#fdf0d5;color:#7a4a00}.green{background:#e2f2e7;color:#1b6334}.grey{background:#ecebe6;color:#3f4a4c}.blue{background:#e3eef7;color:#1d4f7a}
+.ol{background:#fff;border:1px solid currentColor;cursor:pointer;font:inherit;font-size:12px;font-weight:600;min-height:32px}
+.st{position:relative;display:inline-flex;align-items:center;gap:2px}
+.info{width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:#4b5658;cursor:help;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.info:hover,.info:focus-visible{background:#eceae4;color:#1c2a2e}
+.info svg{width:15px;height:15px}
+.tipbox{display:none;position:absolute;z-index:5;top:34px;left:0;width:250px;background:#1c2a2e;color:#fff;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5;font-weight:400;box-shadow:0 8px 24px rgba(0,0,0,.18);white-space:normal}
+.info:hover + .tipbox,.info:focus + .tipbox{display:block}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #c9c6bd;background:#fff;font:inherit;font-size:14px;font-weight:500;color:#1c2a2e;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn.primary{background:#0e5c63;border-color:#0e5c63;color:#fff}
+.btn.sm{min-height:34px;padding:0 12px;font-size:13px}
+.btn svg{width:16px;height:16px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#4b5658;font-weight:600}
+.field input{min-height:44px;padding:0 12px;border:1px solid #c9c6bd;border-radius:8px;font:inherit;font-size:14px;color:#1c2a2e;background:#fff;box-sizing:border-box;width:100%}
+.muted{color:#4b5658;font-size:13px}
+.scroll{overflow-x:auto}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:14px;margin:0}
+.kv dt{color:#4b5658}
+.kv dd{margin:0;text-align:right}
+.ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.ico svg{width:20px;height:20px}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.45}
+pre{background:#faf9f6;border:1px solid #e2e0da;border-radius:8px;padding:10px;overflow-x:auto;font-size:12px;margin:0}
+</style>
+</helmet>
+<div class="app">
+<nav class="side" aria-label="Main">
+<div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>Material Shortage Cockpit</div>
+<a class="on" href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Orders</a>
+<a href="Dashboard.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+<a href="Requisitions.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Requisitions</a>
+<div class="me"><b>planner.a</b><span>Planner</span></div>
+<a href="States.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>Log out</a>
+</nav>
+<main class="main">
+<nav class="muted" aria-label="Breadcrumb"><a href="Main.dc.html">Orders</a> / 1000123</nav>
+<div class="head">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap"><h1>Order 1000123</h1><span class="pill red"><i></i>Short</span></div>
+<span class="muted">FG-210 · Pump assembly · Plant [PLANT] · Start 03 Nov 2026 · 20 PC · Released</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<span class="muted">Data as of 02 Nov 10:02</span>
+<button class="btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>Refresh</button>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+<section class="card scroll" style="flex: 999 1 520px; min-width: 0">
+<table class="tbl">
+<thead><tr><th>Component</th><th class="num">Required</th><th class="num">Available</th><th class="num">Shortage</th><th>Status</th><th>Requisition</th></tr></thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+<tr class="{{r.rowClass}}">
+<td><strong>{{r.mat}}</strong><span class="sub">{{r.desc}} · {{r.item}}</span></td>
+<td class="num">{{r.req}}</td>
+<td class="num" title="{{r.availTitle}}">{{r.avail}}</td>
+<td class="num">{{r.short}}</td>
+<td><span class="st"><span class="pill {{r.pc}}"><sc-if value="{{r.dot}}" hint-placeholder-val="{{ true }}"><i></i></sc-if>{{r.status}}</span><button class="info" type="button" aria-label="{{r.tipLabel}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button><span class="tipbox" role="tooltip">{{r.tip}}</span></span></td>
+<td>
+<sc-if value="{{r.canRequest}}" hint-placeholder-val="{{ false }}"><button class="btn primary sm" type="button" onClick="{{r.open}}">Request</button></sc-if>
+<sc-if value="{{r.hasPr}}" hint-placeholder-val="{{ false }}"><button class="pill ol {{r.prc}}" type="button" onClick="{{r.open}}">{{r.prLabel}}</button></sc-if>
+<sc-if value="{{r.none}}" hint-placeholder-val="{{ true }}"><span class="muted">–</span></sc-if>
+</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<p class="muted" style="margin: 0; padding: 12px 14px; border-top: 1px solid #ecebe6">Viewers see this table without Request buttons.</p>
+</section>
+<aside class="card" style="flex: 1 1 300px; padding: 20px; display: flex; flex-direction: column; gap: 16px" aria-live="polite">
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 24px 0">
+<h2>Requisition</h2>
+<p class="muted" style="margin: 0">Choose Request on a short or low-cover component, or open an existing requisition.</p>
+</div>
+</sc-if>
+<sc-if value="{{showReview}}" hint-placeholder-val="{{ true }}">
+<form style="display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; gap: 12px; align-items: flex-start">
+<div class="ico" style="background: #e3eff0; color: #0e5c63"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></div>
+<div><h2>Review requisition</h2><span class="muted">{{sel.mat}} · {{sel.desc}}</span></div>
+</div>
+<div class="tiles" style="grid-template-columns: repeat(3, minmax(0, 1fr))">
+<div class="tile"><span>Shortage</span><b style="color: {{sel.shortColor}}">{{sel.short}}</b></div>
+<div class="tile"><span>{{sel.suggestLabel}}</span><b>{{sel.suggest}}</b></div>
+<div class="tile"><span>Sent to SAP</span><b style="color: #0e5c63">{{sel.sap}}</b></div>
+</div>
+<label class="field">Quantity ({{sel.unitLabel}})
+<input type="text" inputmode="decimal" value="{{sel.qty}}">
+</label>
+<dl class="kv">
+<dt>Delivery date</dt><dd>03 Nov 2026</dd>
+<dt>Plant</dt><dd>[PLANT]</dd>
+</dl>
+<div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap">
+<button class="btn" type="button" onClick="{{close}}">Cancel</button>
+<button class="btn primary" type="button" onClick="{{send}}">Send requisition</button>
+</div>
+</form>
+</sc-if>
+<sc-if value="{{showSent}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 12px; align-items: center"><div class="ico" style="background: #e2f2e7; color: #1b6334"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></div><div><h2>PR sent</h2><span class="muted">{{sel.mat}} · {{sel.desc}}</span></div></div>
+<dl class="kv">
+<dt>PR number</dt><dd><strong>{{sel.prNo}}</strong></dd>
+<dt>Quantity</dt><dd>{{sel.sap}}</dd>
+<dt>Requested by</dt><dd>planner.a · 10:05</dd>
+</dl>
+<div style="display: flex; justify-content: flex-end"><button class="btn" type="button" onClick="{{close}}">Close</button></div>
+</div>
+</sc-if>
+<sc-if value="{{showApproval}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 12px; align-items: center"><div class="ico" style="background: #fdf0d5; color: #7a4a00"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><h2>Awaiting approval</h2><span class="muted">{{sel.mat}} · {{sel.desc}}</span></div></div>
+<dl class="kv">
+<dt>Quantity</dt><dd>{{sel.sap}}</dd>
+<dt>Requested by</dt><dd>planner.a · 10:05</dd>
+</dl>
+<p class="muted" style="margin: 0">Above the approval limit. Sent to SAP once a manager approves.</p>
+<div style="display: flex; justify-content: flex-end"><button class="btn" type="button" onClick="{{close}}">Close</button></div>
+</div>
+</sc-if>
+<sc-if value="{{showFailed}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; gap: 12px; align-items: center"><div class="ico" style="background: #fbe7e4; color: #a12a1d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></div><div><h2>PR failed</h2><span class="muted">{{sel.mat}} · {{sel.desc}}</span></div></div>
+<div class="note red" role="alert">HTTP 400 · Material {{sel.mat}} is not valid for plant [PLANT].</div>
+<details style="font-size: 13px">
+<summary style="cursor: pointer; min-height: 44px; display: flex; align-items: center">Request and response</summary>
+<pre>POST …/A_PurchaseRequisitionHeader
+← 400 { "error": { "code": "…", … } }</pre>
+</details>
+<div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap"><button class="btn" type="button" onClick="{{close}}">Close</button><button class="btn primary" type="button" onClick="{{retry}}">Retry</button></div>
+</div>
+</sc-if>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"outcome":{"editor":"enum","options":["sent","approval","failed"],"default":"sent","section":"Prototype"},"$preview":{"width":1280,"height":1050}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { sel: 'RM-130', view: 'review', prs: { 'RM-100': 'sent' } };
+}
+renderVals() {
+const tips = {
+short: 'Short: available stock is below the open requirement. Available = stock minus SAP safety stock, after earlier orders take their share.',
+low: 'Low cover: covered, but less than 10% to spare (available below 110% of required). Nothing is reserved.',
+ok: 'Covered: at least 10% to spare.',
+mismatch: 'Unit mismatch: order unit M and stock unit PC can’t be converted, so this component isn’t checked.',
+issued: 'Issued: no open requirement left, so it isn’t checked.'
+};
+const look = { short: ['red', 'Short', true], low: ['amber', 'Low cover', true], ok: ['green', 'Covered', true], mismatch: ['grey', 'Unit mismatch', false], issued: ['grey', 'Issued', false] };
+const prLook = { sent: ['blue', 'PR sent'], approval: ['amber', 'Awaiting approval'], failed: ['red', 'PR failed'] };
+const comps = [
+{ mat: 'RM-100', desc: 'Steel bracket', item: '0010', req: '100 PC', avail: '99 PC', short: '1 PC', s: 'short', suggest: '1 PC', qty: '1', unitLabel: 'order unit PC', sap: '1 PC', prNo: '10004566' },
+{ mat: 'RM-110', desc: 'Bolt M8', item: '0020', req: '100 PC', avail: '100 PC', short: '0 PC', s: 'low', suggest: '10 PC', qty: '10', unitLabel: 'order unit PC', sap: '10 PC', prNo: '10004568' },
+{ mat: 'RM-120', desc: 'Primer paint', item: '0030', req: '2.5 L', avail: '3.2 L', availTitle: 'Stock in SAP: 3200 ML', short: '0 L', s: 'ok' },
+{ mat: 'RM-130', desc: 'Polymer granulate', item: '0040', req: '12000 G', avail: '4000 G', availTitle: 'Stock in SAP: 4.000 KG', short: '8000 G', s: 'short', suggest: '8000 G', qty: '8000', unitLabel: 'order unit G', sap: '8.000 KG', prNo: '10004567' },
+{ mat: 'RM-140', desc: 'Cable harness', item: '0050', req: '20 M', avail: '35 PC', short: '–', s: 'mismatch' },
+{ mat: 'RM-150', desc: 'Gasket', item: '0060', req: '0 PC', avail: '–', short: '–', s: 'issued' }
+];
+const { sel, view, prs } = this.state;
+const rows = comps.map((c) => {
+const pr = prs[c.mat];
+const req = c.s === 'short' || c.s === 'low';
+return {
+...c, availTitle: c.availTitle || '',
+pc: look[c.s][0], status: look[c.s][1], dot: look[c.s][2],
+tip: tips[c.s], tipLabel: 'What does ' + look[c.s][1] + ' mean?',
+canRequest: req && !pr, hasPr: !!pr, none: !req && !pr,
+prc: pr ? prLook[pr][0] : '', prLabel: pr ? prLook[pr][1] : '',
+rowClass: sel === c.mat ? 'sel' : '',
+open: () => this.setState({ sel: c.mat, view: pr || 'review' })
+};
+});
+const s = comps.find((c) => c.mat === sel) || {};
+const selVals = {
+...s,
+shortColor: s.s === 'short' ? '#a12a1d' : '#1c2a2e',
+suggestLabel: s.s === 'low' ? 'To 110% cover' : 'Requested'
+};
+const outcome = this.props.outcome ?? 'sent';
+return {
+rows, sel: selVals,
+empty: !sel,
+showReview: !!sel && view === 'review',
+showSent: !!sel && view === 'sent',
+showApproval: !!sel && view === 'approval',
+showFailed: !!sel && view === 'failed',
+close: () => this.setState({ sel: null, view: 'review' }),
+send: () => this.setState({ view: outcome, prs: { ...prs, [sel]: outcome } }),
+retry: () => this.setState({ view: 'review' })
+};
+}
+}
+</script>
+</body>
+</html>

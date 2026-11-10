@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Requisition detail</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:#1c2a2e;background:#f3f2ee}
+a{color:#0e5c63}a:hover{color:#0a3f44}
+.app{display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch}
+.side{flex:1 1 200px;background:#12404a;color:#d7e6e8;display:flex;flex-direction:column;gap:4px;padding:20px 12px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:15px;line-height:1.2;padding:4px 10px 20px}
+.logo svg{width:28px;height:28px;color:#7fd1d6}
+.side a{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:8px;color:#d7e6e8;text-decoration:none;font-size:14px}
+.side a:hover{background:#1a4f5a;color:#fff}
+.side a.on{background:#1f6470;color:#fff;font-weight:600}
+.side a svg{width:18px;height:18px;flex:none}
+.badge{margin-left:auto;background:#f2c94c;color:#3a2a00;border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
+.me{margin-top:auto;border-top:1px solid #2b5f69;padding:14px 12px 4px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.me b{color:#fff;font-size:14px}
+.main{flex:999 1 560px;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px}
+h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-0.01em}
+h2{margin:0;font-size:17px;font-weight:600}
+.card{background:#fff;border:1px solid #e2e0da;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));background:#fff;border:1px solid #e2e0da;border-radius:14px}
+.tile{padding:14px 16px;text-align:center;border-left:1px solid #ecebe6}
+.tile:first-child{border-left:0}
+.tile span{display:block;font-size:12px;color:#4b5658}
+.tile b{display:block;font-size:22px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.tile small{display:block;font-size:12px;color:#4b5658;margin-top:2px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.red{background:#fbe7e4;color:#a12a1d}.amber{background:#fdf0d5;color:#7a4a00}.grey{background:#ecebe6;color:#3f4a4c}.blue{background:#e3eef7;color:#1d4f7a}.green{background:#e2f2e7;color:#1b6334}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;font-size:14px;margin:0}
+.kv dt{color:#4b5658}
+.kv dd{margin:0;text-align:right}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.step{display:flex;gap:12px;position:relative;padding-bottom:18px}
+.step:last-child{padding-bottom:0}
+.step:not(:last-child)::before{content:"";position:absolute;left:13px;top:28px;bottom:2px;width:2px;background:#e2e0da}
+.dot{width:28px;height:28px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center}
+.dot svg{width:16px;height:16px}
+.d-done{background:#e2f2e7;color:#1b6334}.d-wait{background:#fdf0d5;color:#7a4a00}.d-fail{background:#fbe7e4;color:#a12a1d}.d-todo{background:#fff;border:2px dashed #c9c6bd;box-sizing:border-box}
+.step b{display:block;font-size:14px}
+.step span{font-size:13px;color:#4b5658}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #c9c6bd;background:#fff;font:inherit;font-size:14px;font-weight:500;color:#1c2a2e;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn.primary{background:#0e5c63;border-color:#0e5c63;color:#fff}
+.muted{color:#4b5658;font-size:13px}
+.note{border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.45}
+pre{background:#faf9f6;border:1px solid #e2e0da;border-radius:8px;padding:10px;overflow-x:auto;font-size:12px;margin:0}
+summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600;font-size:14px}
+</style>
+</helmet>
+<div class="app">
+<nav class="side" aria-label="Main">
+<div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>Material Shortage Cockpit</div>
+<a href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Orders</a>
+<a href="Dashboard.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+<a class="on" href="Requisitions.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Requisitions<span class="badge">1</span></a>
+<a href="Thresholds.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Thresholds</a>
+<div class="me"><b>manager.a</b><span>Manager</span></div>
+<a href="States.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>Log out</a>
+</nav>
+<main class="main">
+<nav class="muted" aria-label="Breadcrumb"><a href="Requisitions.dc.html">Requisitions</a> / REQ-0016</nav>
+<div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap"><h1>REQ-0016</h1><span class="pill {{pc}}"><i></i>{{statusLabel}}</span></div>
+<span class="muted">RM-160 · O-ring 40mm · {{prLine}}</span>
+</div>
+<sc-if value="{{canDecide}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn" type="button">Reject</button><button class="btn primary" type="button">Approve and send</button></div>
+</sc-if>
+<sc-if value="{{canRetry}}" hint-placeholder-val="{{ false }}">
+<button class="btn primary" type="button">Retry</button>
+</sc-if>
+</div>
+<div class="tiles">
+<div class="tile"><span>Requested</span><b>500 PC</b></div>
+<div class="tile"><span>Shortage when requested</span><b style="color: #a12a1d">120 PC</b></div>
+<div class="tile"><span>Value / limit</span><b>€ [V] / [LIMIT]</b></div>
+<div class="tile"><span>Needed by</span><b>04 Nov</b></div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start">
+<section class="card" style="flex: 1 1 340px" aria-labelledby="h1">
+<h2 id="h1">Progress</h2>
+<ol class="steps">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
+<li class="step">
+<div class="dot {{s.cls}}" aria-hidden="true">
+<sc-if value="{{s.done}}" hint-placeholder-val="{{ true }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 12 4 4 8-8"/></svg></sc-if>
+<sc-if value="{{s.wait}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><path d="M12 8v4l2 2"/></svg></sc-if>
+<sc-if value="{{s.fail}}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 7l10 10M17 7 7 17"/></svg></sc-if>
+</div>
+<div><b>{{s.title}}</b><span>{{s.text}}</span></div>
+</li>
+</sc-for>
+</ol>
+<sc-if value="{{hasError}}" hint-placeholder-val="{{ false }}"><div class="note red" role="alert">SAP: material RM-160 is not valid for plant [PLANT].</div></sc-if>
+<sc-if value="{{isRejected}}" hint-placeholder-val="{{ false }}"><div class="note grey">Reason: quantity well above shortage.</div></sc-if>
+</section>
+<section class="card" style="flex: 1 1 340px" aria-labelledby="h2">
+<h2 id="h2">Details</h2>
+<dl class="kv">
+<dt>For order</dt><dd><a href="OrderDetail.dc.html">1000124</a> · item 0030</dd>
+<dt>Plant</dt><dd>[PLANT]</dd>
+<dt>Quantity sent to SAP</dt><dd>500 PC</dd>
+<dt>Requested by</dt><dd>planner.b · 02 Nov 10:11</dd>
+</dl>
+<sc-if value="{{isSent}}" hint-placeholder-val="{{ false }}">
+<details>
+<summary>Technical details</summary>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span class="muted">Request sent to SAP</span>
+<pre>POST …/A_PurchaseRequisitionHeader
+{ "PurchaseRequisitionType": "[NB]",
+  "to_PurchaseReqnItem": [{ "Material": "RM-160",
+    "Plant": "[PLANT]", "RequestedQuantity": "500",
+    "BaseUnit": "PC", "DeliveryDate": "2026-11-04" }] }</pre>
+<span class="muted">Response</span>
+<pre>{{response}}</pre>
+</div>
+</details>
+</sc-if>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"status":{"editor":"enum","options":["approval","sent","failed","rejected"],"default":"approval","section":"Prototype"},"$preview":{"width":1280,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() {
+const st = this.props.status ?? 'approval';
+const look = { sent: ['blue', 'PR sent'], approval: ['amber', 'Awaiting approval'], failed: ['red', 'PR failed'], rejected: ['grey', 'Rejected'] };
+const mk = (title, text, kind) => ({ title, text, cls: 'd-' + kind, done: kind === 'done', wait: kind === 'wait', fail: kind === 'fail' });
+const req = mk('Requested', 'planner.b · 02 Nov 10:11', 'done');
+const steps = {
+approval: [req, mk('Manager approval', 'Waiting for a manager', 'wait'), mk('Sent to SAP', 'After approval', 'todo')],
+sent: [req, mk('Approved', 'manager.a · 02 Nov 10:30', 'done'), mk('Sent to SAP', 'PR 10004569 · 02 Nov 10:30', 'done')],
+failed: [req, mk('Approved', 'manager.a · 02 Nov 10:30', 'done'), mk('Sent to SAP', 'Failed · 02 Nov 10:30', 'fail')],
+rejected: [req, mk('Rejected', 'manager.a · 02 Nov 10:30', 'fail')]
+}[st];
+const responses = {
+approval: 'Not sent yet',
+sent: '201 { "PurchaseRequisition": "10004569", … }',
+failed: '400 { "error": { "code": "…", "message": … } }',
+rejected: 'Not sent'
+};
+return {
+steps, pc: look[st][0], statusLabel: look[st][1],
+prLine: st === 'sent' ? 'PR 10004569' : 'No PR number yet',
+canDecide: st === 'approval', canRetry: st === 'failed',
+hasError: st === 'failed', isRejected: st === 'rejected', isSent: st === 'sent',
+response: responses[st]
+};
+}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>System states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:#1c2a2e;background:#f3f2ee}
+a{color:#0e5c63}a:hover{color:#0a3f44}
+.wrap{max-width:1200px;margin:0 auto;padding:28px 32px;display:flex;flex-direction:column;gap:18px;box-sizing:border-box;min-height:100vh}
+h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-0.01em}
+h2{margin:0;font-size:18px;font-weight:600}
+.frame{background:#fff;border:1px solid #e2e0da;border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.cap{font-size:12px;font-weight:600;color:#3f4a4c;padding:10px 14px;background:#faf9f6;border-bottom:1px solid #e2e0da}
+.shell{display:flex;min-height:240px}
+.rail{width:56px;background:#12404a;flex:none;display:flex;flex-direction:column;align-items:center;gap:12px;padding-top:14px}
+.rail span{width:22px;height:6px;border-radius:3px;background:#2b5f69}
+.rail span:first-child{background:#7fd1d6;width:24px;height:24px;border-radius:6px}
+.body{padding:20px;display:flex;flex-direction:column;gap:12px;flex:1;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #c9c6bd;background:#fff;font:inherit;font-size:14px;font-weight:500;color:#1c2a2e;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn.primary{background:#0e5c63;color:#fff;border-color:#0e5c63}
+.btn.primary:hover{color:#fff}
+.muted{color:#5b6668;font-size:13px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#5b6668;font-weight:600}
+.field input{min-height:44px;padding:0 12px;border:1px solid #c9c6bd;border-radius:8px;font:inherit;font-size:14px;color:#1c2a2e;background:#fff}
+.warn{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 14px;background:#fdf0d5;color:#5c3800;border-radius:10px;font-size:14px}
+.skel{height:14px;border-radius:6px;background:#ecebe6}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid #c9e2e4;border-top-color:#0e5c63}
+.role{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;font-size:14px;margin:0}
+.role dt{font-weight:600}
+.role dd{margin:0;color:#3f4a4c}
+</style>
+</helmet>
+<main class="wrap">
+<h1>System states</h1>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; align-items: start">
+<section class="frame" aria-labelledby="s1">
+<div class="cap" id="s1">A · Login (required for every page)</div>
+<div style="background: #12404a; padding: 32px 20px; display: flex; justify-content: center">
+<form style="background: #fff; border-radius: 14px; padding: 24px; width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 14px">
+<h2>Material Shortage Cockpit</h2>
+<label class="field">Username <input type="text" autocomplete="username"></label>
+<label class="field">Password <input type="password" autocomplete="current-password"></label>
+<a class="btn primary" href="Main.dc.html">Log in</a>
+<span class="muted">Accounts and roles: Admin in Django admin.</span>
+</form>
+</div>
+</section>
+<section class="frame" aria-labelledby="s2">
+<div class="cap" id="s2">B · Sync running (Refresh, first open, after PR, snapshot &gt; 5 min)</div>
+<div class="shell"><div class="rail" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+<div class="body">
+<div style="display: flex; align-items: center; gap: 10px" role="status"><div class="spin" aria-hidden="true"></div><span>Loading orders from SAP for [PLANT]…</span></div>
+<div class="skel" style="width: 90%"></div><div class="skel" style="width: 75%"></div><div class="skel" style="width: 82%"></div><div class="skel" style="width: 60%"></div>
+<span class="muted">Refresh disabled while running. Target: within 5 s on a cold sync.</span>
+</div></div>
+</section>
+<section class="frame" aria-labelledby="s3">
+<div class="cap" id="s3">C · Sync failed, older snapshot exists</div>
+<div class="shell"><div class="rail" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+<div class="body">
+<div class="warn" role="alert"><strong>SAP could not be reached.</strong> Showing data as of 02 Nov 09:51. <button class="btn" type="button" style="margin-left: auto">Try again</button></div>
+<div class="skel" style="width: 90%; background: #e2e0da"></div><div class="skel" style="width: 75%; background: #e2e0da"></div><div class="skel" style="width: 82%; background: #e2e0da"></div>
+<span class="muted">Table stays usable; requisitions can still be created.</span>
+</div></div>
+</section>
+<section class="frame" aria-labelledby="s4">
+<div class="cap" id="s4">D · First sync for a plant failed</div>
+<div class="shell"><div class="rail" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+<div class="body" style="justify-content: center">
+<h2>No data for plant [PLANT] yet</h2>
+<p style="margin: 0; font-size: 14px">The first sync with SAP failed, so there is nothing to show. This is usually temporary.</p>
+<span class="muted">Timeout after 10 s · 02 Nov 10:14</span>
+<div style="display: flex; gap: 8px; flex-wrap: wrap"><button class="btn primary" type="button">Try again</button><a class="btn" href="Main.dc.html">Choose another plant</a></div>
+</div></div>
+</section>
+<section class="frame" aria-labelledby="s5">
+<div class="cap" id="s5">E · Not allowed (e.g. Viewer posts a requisition directly)</div>
+<div class="shell"><div class="rail" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+<div class="body" style="justify-content: center">
+<span class="muted">403</span>
+<h2>You don't have permission for this</h2>
+<p style="margin: 0; font-size: 14px">Your role (Viewer) can view orders, the dashboard and requisitions. Ask an admin if you need to create requisitions.</p>
+<a class="btn" href="Main.dc.html" style="align-self: flex-start">Back to orders</a>
+</div></div>
+</section>
+<section class="frame" aria-labelledby="s6">
+<div class="cap" id="s6">F · Sidebar per role</div>
+<div class="body">
+<dl class="role">
+<dt>Viewer</dt><dd>Orders, Dashboard, Requisitions (read only)</dd>
+<dt>Planner</dt><dd>Same + Request and Retry buttons</dd>
+<dt>Manager</dt><dd>Same + approve in Requisitions (count badge) and Thresholds</dd>
+<dt>Admin</dt><dd>Django admin only: users and roles</dd>
+</dl>
+</div>
+</section>
+</div>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1250}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
