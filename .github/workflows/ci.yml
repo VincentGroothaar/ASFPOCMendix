@@ -52,14 +52,18 @@ jobs:
       # the system libraries the browser needs are installed on every run.
       - name: Read Playwright version
         id: playwright
-        run: echo "version=$(uv run playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(uv run playwright --version | cut -d' ' -f2)
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          # The suffix names what is installed below; change it if the install command changes.
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
 
       - name: Install Playwright browser
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -86,7 +90,7 @@ jobs:
       - name: Wait for write mock
         run: |
           for attempt in $(seq 1 30); do
-            if curl -sf -H "APIKey: $MOCK_API_KEY" \
+            if curl -sf --max-time 2 -H "APIKey: $MOCK_API_KEY" \
               "$MOCK_PR_BASE_URL/sap/opu/odata/sap/API_PURCHASEREQ_PROCESS_SRV/" > /dev/null; then
               echo "Write mock is up."
               exit 0
@@ -101,4 +105,4 @@ jobs:
 
       - name: Show write mock log
         if: failure()
-        run: cat mock_pr.log
+        run: cat mock_pr.log || echo "The write mock was not started."
