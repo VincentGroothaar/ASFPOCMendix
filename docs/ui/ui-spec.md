@@ -157,18 +157,19 @@ Vertical list of steps. Each step: 28px circle + bold title + muted sub-line (wh
 ### 4.2 Order detail (PDF page 2, all roles; Request only for Planner and Manager)
 - Breadcrumb, H1 `Order [id]` + order status pill, sub-line: `[material] · [description] · Plant [plant] · Start [date] · [qty unit] · Released`. Data as of + Refresh.
 - **Components table** (left): Component (bold ID + description · item), Required, Available, Shortage, Status (pill + ⓘ), Requisition.
-  - Available shows the converted value; when converted, hover shows the original stock value (`Stock in SAP: 3200 ML`, D-14).
-  - Requisition column: **Request** button (compact, primary) for Short and Low cover components without an open requisition; otherwise the requisition label (3.2); `–` for others.
+  - Available shows the converted value; when converted, hover shows the original stock value in the REQ-3 format (`3,200 ML (= 3.2 L)`, D-14).
+  - Requisition column: **Request** button (compact, primary) for Short and Low cover components without any requisition; otherwise the label of the latest requisition (3.2), including PR failed and Rejected; `–` for others.
   - Viewers see no Request buttons; the note under the table says so.
 - **Side panel** (right), one of these states:
 
 | State | Shown when | Content |
 |---|---|---|
 | Empty | nothing selected | Title "Requisition", hint text |
-| Review | Request clicked | Icon + "Review requisition" + material. Summary strip: **Shortage**, **Requested** (short) or **To 110% cover** (low cover), **Sent to SAP** (stock unit). Field **Quantity (order unit [U])**, prefilled (D-32). Delivery date, Plant. **Cancel** / **Send requisition**. |
+| Review | Request clicked | Icon + "Review requisition" + material. Summary strip: **Shortage**, **Requested** (short) or **To [100 + buffer]% cover** (low cover, e.g. `To 110% cover`; rounded up to 3 decimals), **Sent to SAP** (stock unit). Field **Quantity (order unit [U])**, prefilled (D-32). Delivery date, Plant. **Cancel** / **Send requisition**. |
 | PR sent | send succeeded below the limit | Green check icon, "PR sent", PR number, quantity, requested by + time. **Close**. |
 | Awaiting approval | value above the limit (CR) | Amber clock icon, "Awaiting approval", quantity, requested by + time, `Sent to SAP once a manager approves.` **Close**. |
 | PR failed | SAP error | Red icon, "PR failed", error note in plain words, collapsible "Request and response". **Close** / **Retry** (back to Review). |
+| Rejected | a manager rejected it (CR) | Grey cross icon, "Rejected", rejected by + time, `Reason: …` when given. **Close** / **Request again** (back to Review). |
 
   - The selected component row is highlighted while the panel shows it.
   - Clicking a component's requisition label opens that requisition's outcome state in the panel.
@@ -193,7 +194,7 @@ Vertical list of steps. Each step: 28px circle + bold title + muted sub-line (wh
 - Newest first.
 - **Approval slide-in** (3.10), opened by Review:
   - Header: Awaiting approval pill, `[REQ-n] · [material] [description]`, `For order [id] · needed by [date]`.
-  - Summary strip: **Requested**, **Shortage**, **Value / limit** (`[value] [currency] / 10,000 [currency]`, e.g. `12,400.00 EUR / 10,000 EUR`; without a price: `No price in SAP`). The Awaiting approval pill has the tooltip from 5.2.
+  - Summary strip: **Requested**, **Shortage**, **Value / limit** (`[value] [currency] / 10,000.00 [currency]`, e.g. `12,400.00 EUR / 10,000.00 EUR`; without a price: `No price in SAP`). The Awaiting approval pill has the tooltip from 5.2.
   - Requested by + time; **Open full details** link.
   - Footer: **Reject** / **Approve and send**.
   - Reject first shows **Reason (optional)** text area, then **Back** / **Confirm reject**.
@@ -217,7 +218,7 @@ Vertical list of steps. Each step: 28px circle + bold title + muted sub-line (wh
 - **Details** card: For order (link) · item, Plant, Quantity sent to SAP, Requested by.
 - **Technical details** (collapsed, only when status is PR sent or PR failed): request sent to SAP and the response.
 
-### 4.6 Thresholds (PDF page 6, Manager only)
+### 4.6 Thresholds (PDF page 6, Manager only, URL `/settings/`)
 Three cards:
 - **Cover buffer:** current value (large), field **New value (%)**, **Save**. Text: `Margin above the requirement before a component is Covered.` + `Last change: [user] · [date time]`. Validation: number from 0 to 100, max 2 decimals (AC-33).
 - **Approval limit:** `Requisition value above` + `10,000 in the plant's currency` (large), tag `Fixed for the PoC`, text `Value = quantity × standard price from SAP. Without a price, a manager always approves.` Read only.
@@ -236,7 +237,7 @@ Three cards:
 ## 5. Copy
 
 ### 5.1 Labels (word for word)
-Production orders · Shortage dashboard · Requisitions · Thresholds · Data as of · Refresh · Edit filters · Hide filters · Reset to default · [n] filters active: · All orders · Short · Low cover · Covered · Unit mismatch · Issued · Overdue · PR sent · Awaiting approval · PR failed · Rejected · Request · Review · Review requisition · Send requisition · Cancel · Close · Retry · Approve and send · Reject · Confirm reject · Back · Reason (optional) · Open full details · Technical details · Request and response · Only mine · Clear · Show · Progress · Details · Cover buffer · Approval limit · Safety stock · Fixed for the PoC · From SAP · Log out.
+Production orders · Shortage dashboard · Requisitions · Thresholds · Data as of · Refresh · Edit filters · Hide filters · Reset to default · [n] filters active: · All orders · Short · Low cover · Covered · Unit mismatch · Issued · Overdue · PR sent · Awaiting approval · PR failed · Rejected · Request · Review · Review requisition · Send requisition · Cancel · Close · Retry · Approve and send · Reject · Confirm reject · Request again · Back · Reason (optional) · Open full details · Technical details · Request and response · Only mine · Clear · Show · Progress · Details · Cover buffer · Approval limit · Safety stock · Fixed for the PoC · From SAP · Log out.
 
 ### 5.2 Tooltip texts
 | Where | Text |
@@ -244,15 +245,15 @@ Production orders · Shortage dashboard · Requisitions · Thresholds · Data as
 | Tile Short | At least one component has less stock available than it needs, after earlier orders take their share. |
 | Tile Low cover | All components are covered, but at least one has less than 10% to spare. |
 | Tile Covered | All components have at least 10% to spare. |
-| Component Short | Short: available stock is below the open requirement. Available = stock minus SAP safety stock, after earlier orders take their share. |
+| Component Short | Short: available stock is below the open requirement, after earlier orders take their share. |
 | Component Low cover | Low cover: covered, but less than 10% to spare (available below 110% of required). Nothing is reserved. |
 | Component Covered | Covered: at least 10% to spare. |
 | Component Unit mismatch | Unit mismatch: order unit [U1] and stock unit [U2] can't be converted, so this component isn't checked. |
 | Component Issued | Issued: no open requirement left, so it isn't checked. |
-| Awaiting approval, above the limit | Value [value] [currency] is above the approval limit of 10,000 [currency]. |
+| Awaiting approval, above the limit | Value [value] [currency] is above the approval limit of 10,000.00 [currency]. |
 | Awaiting approval, no price | No price in SAP, so a Manager must approve. |
 
-"10%" and "110%" always show the **current cover buffer** (editable in the CR, D-13). Before the CR, "SAP safety stock" is left out of the Short text.
+"10%" and "110%" always show the **current cover buffer** (editable in the CR, D-13). With the CR, when the material's safety stock is above 0, the Short text ends with: `Available = stock minus SAP safety stock of [n] [unit].`
 
 ## 6. Formats
 - Dates: `03 Nov 2026` in tables and headers; `04 Nov` in compact columns (Needed by, First needed, dashboard). Date and time: `02 Nov 10:11`.
