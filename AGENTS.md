@@ -33,7 +33,7 @@ This repo is the high-code track of a PoC that compares Mendix + Maia Make with 
 - One PR per issue.
 - Never merge without green CI.
 - Leave PRs open unless asked to merge.
-- If implementation shows the spec is wrong, stop and escalate (see [Escalation](#escalation)). Then update the spec in a separate small PR first.
+- If implementation shows the spec is wrong, stop and follow the wrong-spec rule in [Workflow](#workflow).
 - Review against [REVIEW.md](REVIEW.md).
 - End every PR description with the Metrics block below.
 
