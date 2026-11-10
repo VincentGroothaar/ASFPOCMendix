@@ -141,6 +141,28 @@ Description: entity set `A_ProductDescription`, key `Product` + `Language`, fiel
 `ProductDescription` (max 40 characters). Filter `Language eq 'EN'`. Every component material
 of every plant has an English description (e.g. `MZ-RM-C990-01` → "BKC-990 Frame").
 
+## Purchase requisitions (`API_PURCHASEREQ_PROCESS_SRV`)
+
+Read on 2026-11-09 for the write mock (#8), by hand with GET requests (not by the script):
+`A_PurchaseRequisitionItem?$top=2000` and a few headers with `$expand=to_PurchaseReqnItem`.
+
+- **No requisitions for AUC1.** All 2,000 items are in plants 1710 (1,950), 1010 (41), US20 (6)
+  and US30 (3).
+- **Numbers.** `PurchaseRequisition` is 8 digits without leading zeros (`10000000` to
+  `10002523` in these items; the newest headers are around `10301557`). `PurchaseRequisitionItem`
+  is `10`, `20`, …, also without leading zeros.
+- **Values the Cockpit cannot derive:**
+
+  | Field | Values on the 2,000 items |
+  |---|---|
+  | `PurchaseRequisitionType` | `NB` 1,835, `NBS` 156, `RV` 9 |
+  | `PurchasingGroup` | `001` 1,540, `002` 327, `Z09` 58, `003` 57, empty 18 |
+  | `PurchasingOrganization` | empty 1,402, `1710` 566, `1010` 28, other 4 |
+  | `AccountAssignmentCategory` | empty 1,567, `K` 240, `Y` 157, other 36 |
+  | `PurchasingDocumentItemCategory` | `0` 1,826, `5` 161, other 13 |
+
+  The mock's README turns these into the fixed values the Cockpit sends (`NB`, `001`).
+
 ## Calculation by hand (REQ-4)
 
 The script allocates unrestricted stock to all released open orders of the plant by
