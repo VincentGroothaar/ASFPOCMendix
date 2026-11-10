@@ -3,7 +3,6 @@ name: spec
 description: "Writes a spec for one feature: a short PRD (problem and user stories) plus the technical design an agent builds from. Use when decisions must be settled before building. The spec is the ticket."
 user-invocable: true
 argument-hint: "<feature, change, issue, or brief>"
-disable-model-invocation: true
 ---
 
 # Spec

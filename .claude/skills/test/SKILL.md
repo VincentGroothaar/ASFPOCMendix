@@ -3,7 +3,6 @@ name: test
 description: "Proves a code change works: runs every repository check until green, then proves each acceptance criterion with tests, and with a real browser for anything visible. Use to test or verify a diff, branch, PR, URL, or user flow."
 user-invocable: true
 argument-hint: "<task, acceptance criteria, diff, branch, PR, URL, or flow>"
-disable-model-invocation: true
 ---
 
 # Test
