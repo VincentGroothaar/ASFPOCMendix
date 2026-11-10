@@ -33,7 +33,7 @@ This repo is the high-code track of a PoC that compares Mendix + Maia Make with 
 - One PR per issue.
 - Never merge without green CI.
 - Leave PRs open unless asked to merge.
-- If implementation shows the spec is wrong, stop and update the spec in a separate small PR first.
+- If implementation shows the spec is wrong, stop and escalate (see [Escalation](#escalation)). Then update the spec in a separate small PR first.
 - Review against [REVIEW.md](REVIEW.md).
 - End every PR description with the Metrics block below.
 
@@ -45,19 +45,20 @@ Every issue goes through these steps in order. Each step runs a Blueprint skill 
 |---|---|---|---|---|---|
 | 1 | Spec | `spec` | The agent, when it picks up an issue in Ready For Spec, or the human with `/spec <issue>` | Creating Spec | The human has answered every behaviour, data, interface and security choice |
 | 2 | Architecture | `architecture` | The agent, right after the spec | Creating Spec | `ARCHITECTURE.md` matches the spec, or the comment says why no change is needed |
-| 3 | Design review | `architecture-review` | The agent, after step 2 | Creating Spec | Verdict is `Approve` |
-| 4 | Spec gate | none | The human | Ready To Implement | The human approves the spec in the chat |
-| 5 | Build | `task-to-pr` | The agent, after step 4 | Implementing | The PR is open |
-| 6 | Test | `test` (inside `task-to-pr`) | The agent | Implementing | All checks are green and every criterion is `Pass` |
-| 7 | Review | `review` (inside `task-to-pr`) | The agent | Reviewing | Verdict is `Approve` and CI is green |
-| 8 | Merge | none | The human asks | Done | The PR is merged |
+| 3 | Design review | `architecture-review` | The agent, after step 2 | Creating Spec | Verdict is `Approve`, and the human has decided each Blocker or Important finding |
+| 4 | Spec gate | none | The human approves in the chat, then the agent sets the status | Ready To Implement | The spec is Accepted and `[spec-gate]` is posted |
+| 5 | Build and test | `task-to-pr`, which runs `test` | The agent, after step 4 | Implementing | All checks are green, every criterion is `Pass`, and the PR is open |
+| 6 | Review | `review` (inside `task-to-pr`) | The agent | Reviewing | Verdict is `Approve` and CI is green |
+| 7 | Merge | none | The human asks | Done | The PR is merged |
 
-- In step 1, ask the human about each choice the spec needs, with your recommended answer, and wait for the reply. Never answer your own spec questions. A recommendation counts as a decision only after the human accepts it.
-- `requirements` and `plan` can only be started by the human.
-- Only the human moves an issue to Ready To Implement. Never start step 5 before the human has approved the spec in the chat.
+- In step 1, ask the human about each choice the spec needs, with your recommended answer, and wait for the reply. Never answer your own spec questions. A recommendation counts as a decision only after the human accepts it. Each answer is an escalation (see [Escalation](#escalation)), so it gets its own `[decision]` comment.
 - Step 2 always runs. If the spec changes no boundary, data ownership, interface, trust boundary or deployment, the step ends with a comment saying so and why.
 - If step 2 changes `ARCHITECTURE.md`, update the spec's technical design to match before step 3, and post that as a `[spec]` comment. The design review must see a spec and an architecture that agree.
-- When `task-to-pr` reaches its test and review steps, load the `test` and `review` skills as well. Repeat steps 6 and 7 until the review verdict is `Approve`.
+- Spec gate: only the human approves a spec, in the chat. After that approval the agent sets the issue to Ready To Implement, sets the spec's `Status:` to Accepted, and marks the `ARCHITECTURE.md` decisions the human approved as Accepted. It then posts `[spec-gate]` and starts step 5. Never start step 5 without that approval.
+- When `task-to-pr` reaches its test and review steps, load the `test` and `review` skills as well.
+- Fix rounds: when a review returns `Request changes`, set the issue back to Implementing, fix the findings, and run `test` again. Set it to Reviewing again when the next review starts. Repeat until the verdict is `Approve`.
+- `requirements` and `plan` can only be started by the human. If `task-to-pr` says to split the work with `plan`, escalate instead.
+- If the spec, `ARCHITECTURE.md` or `REQUIREMENTS.md` turns out wrong during steps 5 and 6, escalate. This rule overrides `task-to-pr` step 3: never fix them in the feature PR. After the human decides, fix a spec file in a separate small PR first. If the spec lives in the issue body, post the `[decision]` comment and then edit the body.
 - `review` and `architecture-review` run in a fresh reviewer that changes nothing and posts nothing. The agent that started the reviewer posts its result.
 - `review` uses [REVIEW.md](REVIEW.md) as this repo's review standard.
 
@@ -73,12 +74,12 @@ Each step and each skill run gets its own comment on the issue. Never combine tw
 | `[spec]` | Spec is written | Link to the spec or the issue body, and each decision with who made it |
 | `[architecture]` | Step 2 ends | Link to the `ARCHITECTURE.md` change and its main decisions, or why no change is needed |
 | `[architecture-review]` | Each design review round | Verdict, findings by severity, and what was changed |
-| `[spec-gate]` | The human approves | Who approved, when, and the link to the agreed spec |
+| `[spec-gate]` | The human approves | A quote of the approval, when it was given, the link to the agreed spec, and what was marked Accepted |
 | `[task-to-pr]` | Coding starts | Branch name and a short plan |
 | `[test]` | Each test run | Each criterion with Pass, Fail or Unverified, and the commands run |
 | `[task-to-pr]` | The PR is open | PR link and CI state |
 | `[review]` | Each review round | Verdict, findings by severity, what was fixed, and the reviewed commit |
-| `[decision]` | After every escalation (see below) | The question, the options, the choice, and who decided |
+| `[decision]` | After every escalation, including each spec or architecture answer | The step that raised it, the question, the options, the choice, and who decided |
 | `[spec]` | The spec turns out wrong | What was wrong, the evidence, and the agreed correction, before you change the issue body or the spec |
 | `[merge]` | The PR is merged | PR link, and close the issue if the merge did not close it |
 
@@ -89,9 +90,12 @@ Each step and each skill run gets its own comment on the issue. Never combine tw
 
 Some problems are for the human to decide. When a step runs into one, stop that step and raise it in the chat. Don't solve it yourself and carry on. These problems need the human:
 
-- A skill step says to ask the user, for example a design choice in `architecture`.
+- A skill step says to ask the user, for example each spec question in `spec` or a design choice in `architecture`.
 - `architecture-review` reports a Blocker or Important finding.
 - `review` reports a Must fix whose fix would change the spec.
+- The spec, `ARCHITECTURE.md` or `REQUIREMENTS.md` turns out wrong during the build.
+- `task-to-pr` wants to split the work with `plan`.
+- `test` leaves a criterion `Unverified`, for example because the live sandbox is down.
 - The spec, `ui-spec.md` and the wireframes disagree.
 - The same check fails three rounds in a row.
 - A reviewer returns `Blocked`.
@@ -131,5 +135,5 @@ Dependencies are managed with `uv`. Install them with `uv sync`.
 The workflow is [Blueprint](https://github.com/owainlewis/blueprint). Its skills are committed in [.claude/skills/](.claude/skills/), so refinement and development use the same version.
 
 - Pinned commit: `fb5a850965039d434343fa1b74f8c7f47eb2bd96`
-- The skills are copies of `skills/` at that commit, with one change: `spec`, `architecture`, `architecture-review`, `task-to-pr`, `test` and `review` don't have the `disable-model-invocation: true` frontmatter line, so agents can load them in the [Workflow](#workflow). All other skills are unmodified. Blueprint's MIT licence is in [.claude/skills/BLUEPRINT-LICENSE](.claude/skills/BLUEPRINT-LICENSE).
-- To upgrade, replace the skills with those from a newer commit, remove that line from the same six skills again, and update the SHA here in the same PR.
+- The skills are copies of `skills/` at that commit, with one change: `spec`, `architecture`, `architecture-review`, `task-to-pr`, `test` and `review` don't have the `disable-model-invocation: true` frontmatter line (for Claude Code), and their `agents/openai.yaml` sets `allow_implicit_invocation: true` (for Codex). This lets agents load them in the [Workflow](#workflow). All other skills are unmodified. Blueprint's MIT licence is in [.claude/skills/BLUEPRINT-LICENSE](.claude/skills/BLUEPRINT-LICENSE).
+- To upgrade, replace the skills with those from a newer commit, make both changes to the same six skills again, and update the SHA here in the same PR.
