@@ -5,6 +5,9 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Playwright traces and screenshots from failed browser tests
+test-results/
+
 # Local settings and secrets
 .env
 

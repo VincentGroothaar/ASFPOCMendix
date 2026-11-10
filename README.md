@@ -22,13 +22,19 @@ Open http://127.0.0.1:8000/.
 
 Postgres must be running (`docker compose up -d`); the tests create and remove their own `test_cockpit` database.
 
+Browser tests use [Playwright](https://playwright.dev/python/). Download its browser once, and again after Playwright is upgraded:
+
+```sh
+uv run playwright install chromium
+```
+
 ```sh
 uv run pytest                     # tests
 uv run ruff check                 # lint
 uv run ruff format                # format the code
 ```
 
-CI runs the same checks on every pull request and on `main`.
+CI runs the same checks on every pull request and on `main`. It also starts the write mock (`mock_pr/`) on `http://localhost:8001` before the tests, with a key made up for that run, and sets `MOCK_PR_BASE_URL` and `MOCK_API_KEY` for them.
 
 ## Configuration
 

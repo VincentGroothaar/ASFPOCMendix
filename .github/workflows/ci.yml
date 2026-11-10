@@ -48,5 +48,61 @@ jobs:
       - name: Missing migrations
         run: uv run python manage.py makemigrations --check --dry-run
 
+      # Browsers for the Playwright tests. The download is cached per Playwright version;
+      # the system libraries the browser needs are installed on every run.
+      - name: Read Playwright version
+        id: playwright
+        run: |
+          VERSION=$(uv run playwright --version | cut -d' ' -f2)
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          # The suffix names what is installed below; change it if the install command changes.
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
+
+      - name: Install Playwright browser
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: uv run playwright install --with-deps --only-shell chromium
+
+      - name: Install Playwright system libraries
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: uv run playwright install-deps chromium
+
+      # The purchase requisition write mock, so tests can post to it (D-24).
+      # The key is made up per run and only lives inside this job; it is not a secret.
+      # The mock runs from the virtual environment directly, not via `uv run`: a `uv` process
+      # left running holds uv's cache lock, and setup-uv's cleanup then times out.
+      - name: Start write mock
+        run: |
+          MOCK_API_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+          echo "::add-mask::$MOCK_API_KEY"
+          echo "MOCK_API_KEY=$MOCK_API_KEY" >> "$GITHUB_ENV"
+          echo "MOCK_PR_BASE_URL=http://localhost:8001" >> "$GITHUB_ENV"
+          export MOCK_API_KEY
+          nohup .venv/bin/python -m uvicorn mock_pr.main:create_app_from_env --factory --port 8001 \
+            > mock_pr.log 2>&1 &
+
+      - name: Wait for write mock
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -sf --max-time 2 -H "APIKey: $MOCK_API_KEY" \
+              "$MOCK_PR_BASE_URL/sap/opu/odata/sap/API_PURCHASEREQ_PROCESS_SRV/" > /dev/null; then
+              echo "Write mock is up."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Write mock did not start within 30 seconds."
+          exit 1
+
       - name: Tests
         run: uv run pytest
+
+      - name: Show write mock log
+        if: failure()
+        run: cat mock_pr.log || echo "The write mock was not started."
