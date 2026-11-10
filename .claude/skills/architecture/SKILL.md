@@ -3,7 +3,6 @@ name: architecture
 description: "Writes root ARCHITECTURE.md from a fixed template: the intended system, a data flow diagram, the data model, and the rules every feature must follow. Use for a new system or a change to its boundaries, data, or deployment."
 user-invocable: true
 argument-hint: "<system, requirements, or ARCHITECTURE.md>"
-disable-model-invocation: true
 ---
 
 # Architecture

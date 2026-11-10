@@ -3,7 +3,6 @@ name: architecture-review
 description: "Reviews a technical proposal before any code is written: an architecture, spec, RFC, ADR, or design issue. Finds choices that would make it wrong, unsafe, or impossible to prove, and the open questions that block building it."
 user-invocable: true
 argument-hint: "[architecture, spec, RFC, ADR, or issue]"
-disable-model-invocation: true
 ---
 
 # Architecture review
