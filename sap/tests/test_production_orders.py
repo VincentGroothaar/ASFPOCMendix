@@ -186,13 +186,14 @@ def test_components_are_sorted_by_item_number_as_a_number() -> None:
     assert [line.item for line in order.components] == ["1", "2", "10"]
 
 
-def test_component_item_that_is_not_a_number_raises_sap_data_error() -> None:
-    lines = [component_row("A1", "RM-A", "1", "0")]
+@pytest.mark.parametrize("item", ["A1", "²", "-1", " 1"])
+def test_component_item_that_is_not_a_number_raises_sap_data_error(item: str) -> None:
+    lines = [component_row(item, "RM-A", "1", "0")]
     sap = FakeSap(
         rows={"A_ProductionOrder_2": [order_row(to_ProductionOrderComponent={"results": lines})]}
     )
 
-    with pytest.raises(SapDataError, match="'A1'"):
+    with pytest.raises(SapDataError, match="not a number"):
         read_released_orders(client_for(sap), "AUC1")
 
 

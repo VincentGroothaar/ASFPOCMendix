@@ -4,6 +4,7 @@ Field names, the release filter and the start-date field come from the sandbox d
 docs/sandbox/findings.md (#7), as frozen in spec.md "SAP reads".
 """
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -132,6 +133,7 @@ def _component_from_row(row: object) -> Component:
 
 def _item_number(component: Component) -> int:
     """The item number as a number, so item 10 comes after item 9 ("10" < "9" as text)."""
-    if not component.item.isdigit():
+    # Only the digits 0-9: str.isdigit() would also accept characters such as "²".
+    if not re.fullmatch(r"[0-9]+", component.item):
         raise SapDataError(f"SAP sent component item {component.item!r}, which is not a number.")
     return int(component.item)
