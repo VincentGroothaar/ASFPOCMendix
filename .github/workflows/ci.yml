@@ -100,7 +100,12 @@ jobs:
           echo "Write mock did not start within 30 seconds."
           exit 1
 
+      # SAP_API_KEY is an Actions secret. Without it (for example on a fork) the tests that read
+      # the live SAP sandbox skip themselves; all other tests use a fake SAP.
       - name: Tests
+        env:
+          SAP_BASE_URL: https://sandbox.api.sap.com
+          SAP_API_KEY: ${{ secrets.SAP_API_KEY }}
         run: uv run pytest
 
       - name: Show write mock log
