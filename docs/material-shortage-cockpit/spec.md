@@ -48,7 +48,7 @@ The flow and the system boundaries follow [ARCHITECTURE.md](../../ARCHITECTURE.m
 | `cockpit/services/units.py` | `convert(quantity: Decimal, from_unit, to_unit) -> Decimal` for mass (G, KG, TO), volume (ML, L, M3) and length (MM, CM, M) with exact factors; raises `UnitMismatch` otherwise. Codes are SAP's commercial codes as the sandbox returns them (`PC`, `KG`, `TO`), not ISO codes. |
 | `cockpit/services/shortage.py` | `calculate(orders, stock, settings) -> PlantResult`: the allocation and status rules of REQ-4 (and REQ-8: each material's balance starts at stock − safety stock, never below 0), pure function, no database access. Returns per component: open requirement, available, shortage, status, tooltip text; per order: worst status, overdue flag, mismatch badge. |
 | `cockpit/services/sync.py` | `sync_plant(plant)`: calls `sap/`, writes the snapshot in one transaction (ARCHITECTURE.md, Sync flow); `ensure_fresh(plant)` syncs when missing or older than 5 minutes. |
-| `cockpit/services/requisitions.py` | `prepare(order, material)` (prefill), `create(user, order, material, quantity, unit)`, and for the change request `needs_approval(quantity, price) -> bool`, `approve(user, requisition)` and `reject(user, requisition, reason)`. `APPROVAL_LIMIT = Decimal("10000")` is a module constant. All rules live here; views only call them. |
+| `cockpit/services/requisitions.py` | `prepare(order, material)` (prefill), `create(user, order, material, quantity, unit)`, and for the change request `needs_approval(quantity, price) -> bool`, `approve(user, requisition)` and `reject(user, requisition, reason="")` (the reason is optional). `APPROVAL_LIMIT = Decimal("10000")` is a module constant. All rules live here; views only call them. |
 | `cockpit/models.py` | Models from ARCHITECTURE.md, Data model. Constraint for INV-7 as a conditional unique constraint. |
 | `cockpit/views.py`, `cockpit/urls.py`, `templates/cockpit/` | Thin views with `login_required` and a role check per view. HTMX for Refresh, the confirm step and tooltips. |
 | `cockpit/management/commands/create_test_users.py` | Creates the groups and one user per role plus a second Manager, with passwords from environment variables, for local use, CI and the jury. |
@@ -60,12 +60,13 @@ The flow and the system boundaries follow [ARCHITECTURE.md](../../ARCHITECTURE.m
 | `/` | business roles | Redirects to `/orders/` |
 | `/orders/?plant=&from=&to=&page=` | Viewer, Planner, Manager | Order list (REQ-1). Plant selector from `COCKPIT_PLANTS`; defaults today → +14 days; 50 per page; overdue orders listed first with a badge |
 | `POST /plants/<plant>/refresh/` | Viewer, Planner, Manager | Full sync, then reloads the list (HTMX) |
-| `/orders/<number>/` | Viewer, Planner, Manager | Components, stock and statuses (REQ-2 to REQ-4); Request button or "Requested: PR …" per material |
+| `/orders/<number>/` | Viewer, Planner, Manager | Components, stock and statuses (REQ-2 to REQ-4); Request button or requisition label (PR sent, Awaiting approval, PR failed, Rejected) per material |
 | `GET/POST /orders/<number>/requisitions/?material=` | Planner, Manager | Confirm step and create (REQ-5, REQ-10) |
 | `/requisitions/` | Viewer, Planner, Manager | All requisition attempts (REQ-5) |
 | `/dashboard/?plant=&from=&to=` | Viewer, Planner, Manager | REQ-6 |
 | `/settings/` | Manager | Cover buffer, editable (REQ-9); approval limit ("10,000 in the plant's currency, fixed for the PoC") and safety stock ("From SAP") read only (change request) |
-| `/approvals/`, `POST /approvals/<id>/approve`, `POST /approvals/<id>/reject` | Manager | Approval queue (REQ-10, change request) |
+| `/requisitions/<id>/` | Viewer, Planner, Manager | Requisition detail: status, progress, details; technical details when sent or failed (REQ-5, REQ-10) |
+| `POST /requisitions/<id>/approve/`, `POST /requisitions/<id>/reject/` | Manager | Approve or reject, from the Review slide-in on `/requisitions/` or the detail page (REQ-10, change request) |
 | `/admin/` | Admin | Django admin: users and groups only |
 | `/accounts/login/`, `/accounts/logout/` | everyone | Django auth views |
 
@@ -92,12 +93,7 @@ One header with one item, sent in the stock unit. Item fields: material, plant, 
 
 ### Status tooltips
 
-- Red: "Short by <shortage> <unit>. Available after earlier orders: <available> <unit>."
-- Amber: "Covered, but with less than a <buffer>% buffer (<available> available for <required> needed)."
-- Green: "Covered with at least a <buffer>% buffer."
-- Unit mismatch: "Order unit <A> and stock unit <B> cannot be compared."
-- Change request: when the material's safety stock is above 0, add "Available = stock minus SAP safety stock of <n> <unit>."
-- Change request, awaiting approval: "Value <value> <currency> is above the approval limit of 10,000 <currency>." or "No price in SAP, so a Manager must approve."
+The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md](../ui/ui-spec.md), section 5.2, and are used word for word. Each one shows the current buffer value; with the change request, the Short text also mentions SAP safety stock.
 
 ### Decisions a reviewer could question
 
@@ -127,7 +123,7 @@ One header with one item, sent in the stock unit. Item fields: material, plant, 
 | AC-7 | REQ-1: when a sync fails, the previous snapshot stays, and a banner shows the last successful sync time | Test with a failing fake SAP client after one successful sync |
 | AC-8 | REQ-1: when the first sync of a plant fails, an error page says SAP is unavailable | Test with a failing fake SAP client |
 | AC-9 | REQ-1: an order no longer released after a sync is marked inactive, disappears from the list, and keeps its requisitions | Test: sync, create requisition, sync without that order |
-| AC-10 | REQ-2: each component shows material, description, required, withdrawn, open requirement and unit | Acceptance test against the sandbox on one order |
+| AC-10 | REQ-2: each component shows material, description, open requirement (as Required) and unit; a partly withdrawn component shows required − withdrawn | Acceptance test against the sandbox on one order |
 | AC-11 | REQ-2: a component with open requirement 0 shows "issued" and has no status | Unit test |
 | AC-12 | REQ-3: stock is unrestricted-use stock summed over storage locations; inspection, blocked and special stock are excluded | Unit test on the stock mapping with mixed rows; acceptance test that the shown stock equals the filtered SAP sum |
 | AC-13 | REQ-3: stock in a different unit of the same dimension is shown converted, with the original in the tooltip | Unit + browser test (1,500 G shown as 1.5 KG) |
@@ -138,10 +134,10 @@ One header with one item, sent in the stock unit. Item fields: material, plant, 
 | AC-18 | REQ-4 / INV-6: narrowing the date range never changes any status shown | Acceptance test: same order, two ranges, same status |
 | AC-19 | REQ-4: 2 KG required with 1,500 G stock → red, shortage 0.5 KG; 10 PC required with stock in KG → unit mismatch | Unit test |
 | AC-20 | REQ-4: every status shows a tooltip with the rule and the buffer value | Browser test |
-| AC-21 | REQ-5: Planner and Manager see a Request button on short components; Viewer does not | Test per role |
-| AC-22 | REQ-5: the confirm step prefills the shortage; 0, negative, non-numeric and 4-decimal values are rejected with a message | Test |
+| AC-21 | REQ-5: Planner and Manager see a Request button on short and low cover components without an open requisition; Viewer does not | Test per role |
+| AC-22 | REQ-5: the confirm step prefills the shortage for a short component, and (100 + buffer)% × open requirement − available for a low cover component (requirement 100, available 104, buffer 10 → 6); 0, negative, non-numeric and 4-decimal values are rejected with a message | Test |
 | AC-23 | REQ-5: the payload sends the quantity converted to the stock unit, the stock unit, and the delivery date = start date, or today if past | Unit test on payload building with a fixed clock |
-| AC-24 | REQ-5: on success the PR number is stored and shown, the button becomes "Requested: PR <n>, <qty>", and a second request for the same order + material is refused (INV-7) | Acceptance test against the local mock |
+| AC-24 | REQ-5: on success the PR number is stored and shown, the button becomes a "PR sent" label that opens the requisition with PR number and quantity, and a second request for the same order + material is refused (INV-7) | Acceptance test against the local mock |
 | AC-25 | REQ-5: on an endpoint error the error message is shown, the attempt is stored as failed, and Retry creates a new attempt | Test with the mock returning 400 |
 | AC-26 | REQ-5: the requisition list shows number, order, material, quantity, unit, delivery date, user, time and outcome for every attempt | Test |
 | AC-27 | REQ-5 / INV-3 / INV-4: requisitions are sent only to `MOCK_PR_BASE_URL` with a CSRF token and the `APIKey` header; no request ever writes to `SAP_BASE_URL` | Acceptance test against the local mock; test that the SAP client has no write method |
@@ -153,7 +149,7 @@ One header with one item, sent in the stock unit. Item fields: material, plant, 
 | AC-33 | REQ-9 (change request): a Manager can set the buffer (0–100, at most 2 decimals); statuses and tooltips use it at once. 0, 12.5 and 100 are accepted; -1, 100.01, 10.555 and non-numbers are rejected with a message | Unit + test |
 | AC-34 | REQ-10 (change request): a requisition whose value (quantity in stock unit × price per stock unit) is above 10,000 in the plant's currency, or whose material has no price, is stored as awaiting approval and not sent. Value exactly 10,000 is sent | Unit tests at, below and above the limit and without a price; test with the local mock (no POST received) |
 | AC-35 | REQ-10: approving sends it and stores the outcome as in AC-24 / AC-25 | Acceptance test against the local mock |
-| AC-36 | REQ-10: rejecting requires a reason, shows it to the planner, and allows a new request for that order + material | Test |
+| AC-36 | REQ-10: rejecting takes an optional reason, shows it to the planner when given, and allows a new request for that order + material | Test |
 | AC-37 | REQ-10 / INV-8: Manager A cannot approve their own requisition (403); Manager B can | Test |
 | AC-38 | REQ-10 / INV-7: while a request awaits approval, no second request for the same order + material can be created | Test |
 

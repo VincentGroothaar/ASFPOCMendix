@@ -36,7 +36,7 @@ Done when:
 As a Planner, I want to open an order and see its components, so that I know what the order needs.
 
 Done when:
-- For each component: material, description, required quantity, withdrawn quantity, open requirement (required − withdrawn) and unit.
+- For each component: material, description, open requirement (required − withdrawn, shown as "Required") and unit. The withdrawn quantity is used for the calculation but not shown.
 - Components with no open requirement (fully withdrawn) are shown as "issued" and are left out of the status calculation.
 - Quantities always show their unit next to them.
 
@@ -58,7 +58,7 @@ Done when:
 - Status: **red** when available < open requirement; **amber** when available covers the requirement but by less than 10% (available < 1.1 × requirement); **green** otherwise.
 - The 10% buffer only affects the colour. Allocation takes only the real requirement from stock.
 - An order's status is the worst status of its components.
-- Each status has a tooltip explaining the rule, including the buffer value.
+- Each status has a tooltip explaining the rule, including the buffer value. The texts are in [docs/ui/ui-spec.md](docs/ui/ui-spec.md), section 5.2.
 - Quantities in different units of the same dimension (mass G/KG/TO, volume ML/L/M3, length MM/CM/M) are converted exactly. Any other unit difference shows a grey "unit mismatch" status with both units in the tooltip; the order gets a warning badge and the component counts as neither red nor green.
 
 ### REQ-5: Create a purchase requisition for a shortage
@@ -66,10 +66,10 @@ Done when:
 As a Planner, I want to request replenishment for a short material from the order view, so that purchasing can act without me leaving the cockpit.
 
 Done when:
-- A short component has a "Request" button. One requisition covers one order and one material (component lines with the same material are combined).
-- A confirm step shows material, plant, quantity, unit and delivery date. The quantity is prefilled with the shortage and can be changed: it must be greater than 0, may be above or below the shortage, and has at most 3 decimals. The planner enters it in the order's unit; the confirm step also shows the quantity in the stock unit that will be sent.
+- A short (red) or low cover (amber) component has a "Request" button. One requisition covers one order and one material (component lines with the same material are combined).
+- A confirm step shows material, plant, quantity, unit and delivery date. The quantity is prefilled with the shortage for a short component, and with the amount that brings available up to (100 + buffer)% of the open requirement for a low cover component. It can be changed: it must be greater than 0, may be above or below the shortage, and has at most 3 decimals. The planner enters it in the order's unit; the confirm step also shows the quantity in the stock unit that will be sent.
 - The delivery date is the order's start date, or today if that date has passed.
-- On success, the requisition number from SAP is shown and the button is replaced by "Requested: PR <number>, <quantity>". The component's status colour does not change, because stock has not changed.
+- On success, the requisition number from SAP is shown and the button is replaced by a "PR sent" label that opens the requisition with its PR number and quantity. The component's status colour does not change, because stock has not changed.
 - A second requisition for the same order and material cannot be created once one succeeded.
 - On failure, the error message from SAP is shown, the attempt is stored, and the planner can try again.
 - A requisition list shows every attempt: number, order, material, quantity, unit, delivery date, user, time and outcome.
@@ -121,8 +121,8 @@ Done when:
 - The value of a requisition is its quantity in the stock unit × the material's standard price ÷ its price unit, read from SAP during sync, in the plant's valuation currency.
 - A requisition with a value above the approval limit (10,000 in the plant's currency, fixed, not editable) or for a material without a price is stored as "awaiting approval" and not sent to SAP. The planner sees that status instead of a PR number.
 - The settings screen shows the approval limit as read only.
-- A Manager sees an approval queue and can approve or reject each request, with a reason when rejecting.
-- Approving sends the requisition to SAP and shows the result as in REQ-5. Rejecting closes it, shows the reason to the planner, and allows a new request for that order and material.
+- A Manager sees the requests awaiting approval in the requisition list and can approve or reject each one, optionally with a reason when rejecting.
+- Approving sends the requisition to SAP and shows the result as in REQ-5. Rejecting closes it, shows the reason (when given) to the planner, and allows a new request for that order and material.
 - A Manager cannot approve a requisition they created.
 - While a request is awaiting approval, no second request for the same order and material can be created.
 
