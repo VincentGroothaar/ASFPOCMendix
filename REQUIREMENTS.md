@@ -111,7 +111,7 @@ As a Manager, I want to change the cover buffer, so that the amber warning match
 Done when:
 - The Manager can change the global buffer percentage (default 10%) on the settings screen.
 - Statuses and tooltips use the new value immediately.
-- Values below 0% or above 100% are rejected with a message.
+- Values below 0% or above 100%, or with more than 2 decimals, are rejected with a message.
 
 ### REQ-10: Approve large requisitions (change request)
 

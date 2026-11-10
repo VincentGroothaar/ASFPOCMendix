@@ -12,7 +12,7 @@ This spec delivers every story in [REQUIREMENTS.md](../../REQUIREMENTS.md): REQ-
 
 - **Success:** order list with coloured statuses, an order page with components, stock and shortage, a confirm step and a PR number after requesting.
 - **Denial:** an "access denied" page (HTTP 403) for any action the role does not allow; the Request and approval buttons are not shown to roles that cannot use them.
-- **Invalid input:** the confirm form re-shows with a message next to the field (quantity ≤ 0, more than 3 decimals, not a number; buffer outside 0–100).
+- **Invalid input:** the confirm form re-shows with a message next to the field (quantity ≤ 0, more than 3 decimals, not a number; buffer outside 0–100 or more than 2 decimals).
 - **Failure:** SAP unreachable → last data with a warning banner, or an error page on a first load; requisition endpoint error → the SAP error message, the attempt stored, and a Retry button.
 
 ## Technical design
@@ -150,7 +150,7 @@ One header with one item, sent in the stock unit. Item fields: material, plant, 
 | AC-30 | REQ-7: Admin can manage users and groups in `/admin/` and gets 403 on business pages; business roles get 403 on `/admin/` user management | Test per role |
 | AC-31 | REQ-7 / INV-1: a direct POST to create a requisition as Viewer or Admin returns 403 and stores nothing | Test |
 | AC-32 | REQ-8 (change request): safety stock is read from SAP during sync and reserved before allocation. Stock 100, safety stock 30, order A needs 60, order B needs 20 → A available 70, green; B available 10, red, shortage 10. Safety stock above stock → available 0. The tooltip mentions it; `/settings/` shows it read only | Unit tests (safety stock above, equal to and below stock) + test that sync stores it |
-| AC-33 | REQ-9 (change request): a Manager can set the buffer (0–100); statuses and tooltips use it at once; other values are rejected | Unit + test |
+| AC-33 | REQ-9 (change request): a Manager can set the buffer (0–100, at most 2 decimals); statuses and tooltips use it at once. 0, 12.5 and 100 are accepted; -1, 100.01, 10.555 and non-numbers are rejected with a message | Unit + test |
 | AC-34 | REQ-10 (change request): a requisition whose value (quantity in stock unit × price per stock unit) is above 10,000 in the plant's currency, or whose material has no price, is stored as awaiting approval and not sent. Value exactly 10,000 is sent | Unit tests at, below and above the limit and without a price; test with the local mock (no POST received) |
 | AC-35 | REQ-10: approving sends it and stores the outcome as in AC-24 / AC-25 | Acceptance test against the local mock |
 | AC-36 | REQ-10: rejecting requires a reason, shows it to the planner, and allows a new request for that order + material | Test |
