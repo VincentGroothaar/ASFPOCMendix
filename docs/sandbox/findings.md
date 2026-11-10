@@ -163,6 +163,44 @@ Read on 2026-11-09 for the write mock (#8), by hand with GET requests (not by th
 
   The mock's README turns these into the fixed values the Cockpit sends (`NB`, `001`).
 
+## Safety stock and prices (change request, #12)
+
+Read on 2026-11-10 by hand with GET requests on `API_PRODUCT_SRV` (not by the script), to settle
+REQ-8 and REQ-10.
+
+**Safety stock.** `A_ProductSupplyPlanning` (key `Product` + `Plant`), field `SafetyStockQuantity`
+in the base unit. It is **0 for every product** in AUC1 (31 rows), USC1 (33) and DEC1 (31). Only
+1710 has non-zero values (33 of 2,308 rows, mostly finished goods). The effect of safety stock is
+therefore proven by unit tests only.
+
+**Prices.** `A_ProductValuation` (key `Product` + `ValuationArea` + `ValuationType`; the valuation
+area equals the plant), fields `StandardPrice`, `PriceUnitQty`, `Currency`.
+
+| Plant | Rows | Currency | Price 0 | Price units |
+|---|---|---|---|---|
+| AUC1 | 31 | AUD | 0 | 1 |
+| USC1 | 33 | USD | 0 | 1 |
+| DEC1 | 31 | EUR | 0 | 1 |
+| 1710 | 2,021 | USD | 278 | 1, 2, 10, 20, 100, 1000, 1500 |
+
+Raw materials in AUC1, USC1 and DEC1 are valued by moving average (`InventoryValuationProcedure`
+`V`); there `StandardPrice` equals `MovingAveragePrice` (one DEC1 material differs by 0.01). In
+1710 the two differ. The spec uses `StandardPrice ÷ PriceUnitQty`.
+
+**Requisition values.** Each order + material shortage after allocation, × price (what a planner
+would request with the prefilled shortage):
+
+| Plant | Requisitions | Median | 25th–75th percentile | Above 10,000 |
+|---|---|---|---|---|
+| AUC1 | 3,911 | 8,720 AUD | 3,807–21,053 | 1,753 (45%) |
+| DEC1 | 1,970 | 6,167 EUR | 2,907–11,760 | 588 (30%) |
+
+Every component material has a price. A fixed limit of 10,000 in the plant's currency gives both
+outcomes in the demo plant.
+
+**Load time.** One safety-stock or price call for AUC1 takes 0.2–0.5 s, so the change request
+adds about 1 s to a cold load of AUC1 (from 2.3–3.5 s to about 3.3–4.5 s, still within 5 s).
+
 ## Calculation by hand (REQ-4)
 
 The script allocates unrestricted stock to all released open orders of the plant by

@@ -10,7 +10,7 @@ Users (one role per user):
 
 - **Viewer**: sees orders, components, stock, statuses and the dashboard. Cannot change anything.
 - **Planner**: everything a Viewer can do, plus creating purchase requisitions.
-- **Manager**: all business functions, plus approving requisitions and maintaining safety stock and the cover buffer (change request).
+- **Manager**: all business functions, plus approving requisitions and changing the cover buffer (change request).
 - **Admin**: manages users and role assignment only. Has no access to business screens.
 
 This product is built twice in a PoC (Mendix + Maia Make and an agentic software factory) against the same requirements. Data comes from the public SAP S/4HANA Cloud sandbox (read only); requisitions go to a shared mock of the SAP purchase requisition API.
@@ -22,6 +22,7 @@ This product is built twice in a PoC (Mendix + Maia Make and an agentic software
 As a Planner, I want to select a plant and a start-date range and see the released production orders in it, so that I know which orders to check.
 
 Done when:
+- The plants offered are set by environment variable; the default is AUC1, the plant chosen in the sandbox data check.
 - The list shows released orders of the selected plant whose start date falls in the range (inclusive). The default range is today to today + 14 days.
 - Released orders with a start date before today are also shown, marked "overdue".
 - Each order shows its number, material, quantity, start date and an overall status (see REQ-4).
@@ -58,7 +59,7 @@ Done when:
 - The 10% buffer only affects the colour. Allocation takes only the real requirement from stock.
 - An order's status is the worst status of its components.
 - Each status has a tooltip explaining the rule, including the buffer value.
-- Quantities in different units of the same dimension (mass G/KG/T, volume ML/L/M3, length MM/CM/M) are converted exactly. Any other unit difference shows a grey "unit mismatch" status with both units in the tooltip; the order gets a warning badge and the component counts as neither red nor green.
+- Quantities in different units of the same dimension (mass G/KG/TO, volume ML/L/M3, length MM/CM/M) are converted exactly. Any other unit difference shows a grey "unit mismatch" status with both units in the tooltip; the order gets a warning badge and the component counts as neither red nor green.
 
 ### REQ-5: Create a purchase requisition for a shortage
 
@@ -93,30 +94,33 @@ Done when:
 - The Admin cannot open business screens. Business users cannot open user administration.
 - Every permission is checked on the server. A forbidden action returns an "access denied" page, also when the request is sent directly.
 
-### REQ-8: Maintain safety stock per material (change request)
+### REQ-8: Respect the SAP safety stock (change request)
 
-As a Manager, I want to set a safety stock per material, so that statuses warn me before stock drops below a level I want to keep.
+As a Manager, I want statuses to keep the safety stock set in SAP out of reach of orders, so that statuses warn me before stock drops below the level we want to keep.
 
 Done when:
-- The Manager can create, change and remove a safety stock quantity per material and plant, in the material's stock unit.
-- The status calculation uses it as defined in the spec (see Open decisions).
-- The tooltip mentions the safety stock when it affected the status.
+- The safety stock per material and plant is read from the SAP product master during sync. It cannot be edited in the cockpit.
+- Safety stock is reserved before allocation: the stock available to orders is unrestricted stock − safety stock (never below 0). A component that would only be covered by eating into safety stock turns red.
+- The tooltip mentions the safety stock when it is above 0.
+- The settings screen shows that safety stock comes from SAP.
 
 ### REQ-9: Maintain the cover buffer (change request)
 
 As a Manager, I want to change the cover buffer, so that the amber warning matches how much margin we need.
 
 Done when:
-- The Manager can change the global buffer percentage (default 10%) on the same screen as safety stock.
+- The Manager can change the global buffer percentage (default 10%) on the settings screen.
 - Statuses and tooltips use the new value immediately.
-- Values below 0% or above 100% are rejected with a message.
+- Values below 0% or above 100%, or with more than 2 decimals, are rejected with a message.
 
 ### REQ-10: Approve large requisitions (change request)
 
-As a Manager, I want requisitions above a set quantity to need my approval before they go to SAP, so that large orders are checked.
+As a Manager, I want requisitions above a set value to need my approval before they go to SAP, so that large orders are checked.
 
 Done when:
-- A requisition above the approval threshold is stored as "awaiting approval" and not sent to SAP. The planner sees that status instead of a PR number.
+- The value of a requisition is its quantity in the stock unit × the material's standard price ÷ its price unit, read from SAP during sync, in the plant's valuation currency.
+- A requisition with a value above the approval limit (10,000 in the plant's currency, fixed, not editable) or for a material without a price is stored as "awaiting approval" and not sent to SAP. The planner sees that status instead of a PR number.
+- The settings screen shows the approval limit as read only.
 - A Manager sees an approval queue and can approve or reject each request, with a reason when rejecting.
 - Approving sends the requisition to SAP and shows the result as in REQ-5. Rejecting closes it, shows the reason to the planner, and allows a new request for that order and material.
 - A Manager cannot approve a requisition they created.
@@ -132,7 +136,7 @@ Done when:
 | See orders, components, stock, status, dashboard, requisition list | yes | yes | yes | no |
 | Create a requisition | no | yes | yes | no |
 | Approve or reject a requisition (not own) | no | no | yes | no |
-| Maintain safety stock and cover buffer | no | no | yes | no |
+| Change the cover buffer | no | no | yes | no |
 | Manage users and roles | no | no | no | yes |
 
 - Statuses never depend on the date filter, only on the plant's data and the settings.
@@ -159,6 +163,4 @@ None yet. The PoC measures how each track delivers these requirements, not the p
 
 ## Open decisions
 
-1. **How safety stock affects the status (REQ-8).** Recommended: safety stock is reserved first, so the stock available for allocation is stock − safety stock (never below 0). A component that would only be covered by eating into safety stock turns red. Blocks the REQ-8 acceptance criteria, not day 1.
-2. **Approval threshold (REQ-10).** Recommended: a per-material approval quantity in the stock unit, maintained by the Manager on the same screen as safety stock; materials without a threshold never need approval. A single global quantity does not work across units. Blocks the REQ-10 acceptance criteria, not day 1.
-3. **Plants offered in the plant selector (REQ-1).** Recommended: a list set by environment variable, defaulting to the plant chosen in the sandbox data check (#7). Does not block.
+None. Closed in #12: safety stock comes from SAP and is reserved before allocation (REQ-8); approval is value-based with a fixed limit in the plant's currency (REQ-10); the plants offered are set by environment variable with AUC1 as the default (REQ-1).
