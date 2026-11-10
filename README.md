@@ -61,7 +61,7 @@ The app runs as its own Render web service next to the mock (see `mock_pr/README
    ```sh
    pip install uv && uv sync --locked --no-dev --inexact && uv run --no-sync python manage.py collectstatic --no-input
    ```
-   `--inexact` keeps `uv` itself installed (see `mock_pr/README.md`). `collectstatic` copies the CSS and admin styles into `staticfiles/`, where WhiteNoise serves them from.
+   `--inexact` keeps `uv` itself installed (see `mock_pr/README.md`). `collectstatic` copies the static files (for now the Django admin styles) into `staticfiles/`, where WhiteNoise serves them from.
 3. **Start command:**
    ```sh
    uv run --no-sync python manage.py migrate --no-input && uv run --no-sync gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120
@@ -75,12 +75,14 @@ The app runs as its own Render web service next to the mock (see `mock_pr/README
    | `DJANGO_SECRET_KEY` | A long random string, e.g. `python -c "import secrets; print(secrets.token_urlsafe(50))"`. The app refuses to start without it |
    | `DJANGO_HTTPS` | `true` |
    | `DJANGO_DEBUG` | `false` |
-   | `DJANGO_ALLOWED_HOSTS` | The service's host name, e.g. `material-shortage-cockpit.onrender.com` |
+   | `DJANGO_ALLOWED_HOSTS` | Optional: Render's own host name (`<service>.onrender.com`) is added automatically. Only for extra host names, without `https://` |
    | `SAP_BASE_URL`, `SAP_API_KEY` | As in your local `.env` |
    | `MOCK_PR_BASE_URL` | The mock's public URL on Render, e.g. `https://<mock-service>.onrender.com` |
    | `MOCK_API_KEY` | The same key as on the mock service |
 
 5. **Deploy**, then check the public URL: `/` answers, `/admin/` shows the login page with its styling, and `http://` redirects to `https://`.
+
+   Errors and refused requests appear in the service's **Logs** tab on Render.
 
 The test accounts per role come from the `create_test_users` command (#22). Free services sleep after 15 minutes idle, so the first request after a pause takes about a minute; that wake-up time does not count towards the 5-second load target (D-17). The free database expires 30 days after it was created (see #10 for the date).
 
