@@ -15,8 +15,10 @@ from sap.client import (
     SapUnavailable,
     any_of,
     batches,
+    check_plant,
     parse_date,
     parse_decimal,
+    parse_text,
     quote,
 )
 from sap.tests.fake_http import API_KEY, FakeSap, client_for, response
@@ -224,3 +226,80 @@ def test_parse_decimal_keeps_exact_decimals() -> None:
 def test_parse_decimal_rejects_non_numbers(value: object) -> None:
     with pytest.raises(SapDataError, match="Qty"):
         parse_decimal(value, "Qty")
+
+
+# --- Review round 1: paging that would never end, bad rows, the key in debug pages ----------
+
+
+def test_server_that_ignores_skip_raises_instead_of_reading_forever() -> None:
+    # Every answer is the same full page, whatever $skip says.
+    sap = FakeSap(answer=lambda call: response(200, {"d": {"results": ROWS[:3]}}))
+
+    with pytest.raises(SapDataError, match="same page"):
+        client_for(sap, page_size=3).get_all("SOME_SRV", "A_Set")
+    assert len(sap.calls) == 2
+
+
+def test_server_that_always_sends_next_with_the_same_row_raises() -> None:
+    answer = {"d": {"results": ROWS[:1], "__next": "https://sap.test/next"}}
+    sap = FakeSap(answer=lambda call: response(200, answer))
+
+    with pytest.raises(SapDataError, match="same page"):
+        client_for(sap).get_all("SOME_SRV", "A_Set")
+
+
+def test_reading_stops_at_max_rows(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sap.client.MAX_ROWS", 10)
+
+    def endless(call):
+        skip = int(call.param("$skip"))
+        return response(200, {"d": {"results": [{"Id": str(skip + n)} for n in range(3)]}})
+
+    with pytest.raises(SapDataError, match="more than 10 rows"):
+        client_for(FakeSap(answer=endless), page_size=3).get_all("SOME_SRV", "A_Set")
+
+
+@pytest.mark.parametrize("rows", [[None], ["text"], [{"Id": "1"}, 7]])
+def test_rows_that_are_not_objects_raise_sap_data_error(rows: list) -> None:
+    sap = FakeSap(answer=lambda call: response(200, {"d": {"results": rows}}))
+
+    with pytest.raises(SapDataError):
+        client_for(sap).get_all("SOME_SRV", "A_Set")
+
+
+@override_settings(DEBUG=True)
+def test_api_key_is_not_on_the_django_debug_error_page() -> None:
+    from django.views.debug import ExceptionReporter
+
+    def fail(call):
+        raise requests.ConnectionError("down")
+
+    try:
+        client_for(FakeSap(answer=fail)).get_all("SOME_SRV", "A_Set")
+    except SapUnavailable as error:
+        page = ExceptionReporter(None, type(error), error, error.__traceback__).get_traceback_html()
+
+    assert "could not be reached" in page
+    assert API_KEY not in page
+
+
+@pytest.mark.parametrize("value", ["/Date(253402300800000)/", "/Date(99999999999999999999)/"])
+def test_parse_date_rejects_dates_out_of_range(value: str) -> None:
+    with pytest.raises(SapDataError, match="out of range"):
+        parse_date(value)
+
+
+@pytest.mark.parametrize("row", [{}, {"F": None}, {"F": ""}, {"F": 12}])
+def test_parse_text_rejects_missing_empty_and_non_text_values(row: dict) -> None:
+    with pytest.raises(SapDataError, match="'F'"):
+        parse_text(row, "F")
+
+
+def test_parse_text_returns_the_value() -> None:
+    assert parse_text({"F": "AUC1"}, "F") == "AUC1"
+
+
+@pytest.mark.parametrize("plant", ["", "  ", None])
+def test_check_plant_rejects_an_empty_plant(plant: object) -> None:
+    with pytest.raises(ValueError, match="plant"):
+        check_plant(plant)

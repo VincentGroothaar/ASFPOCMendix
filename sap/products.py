@@ -3,7 +3,7 @@
 Field names come from the sandbox data check, docs/sandbox/findings.md (#7).
 """
 
-from sap.client import ODataClient, SapDataError, any_of, batches
+from sap.client import ODataClient, SapDataError, any_of, batches, parse_text
 
 SERVICE = "API_PRODUCT_SRV"
 DESCRIPTIONS = "A_ProductDescription"
@@ -25,9 +25,11 @@ def read_descriptions(client: ODataClient, materials: list[str]) -> dict[str, st
             select="Product,Language,ProductDescription",
         )
         for row in rows:
-            try:
-                if row["Language"] == LANGUAGE and row["Product"] in batch:
-                    descriptions[row["Product"]] = row["ProductDescription"]
-            except KeyError as missing:
-                raise SapDataError(f"SAP left out field {missing} in a description.") from None
+            # SAP already filtered these rows; checking again keeps the rule visible here.
+            product = parse_text(row, "Product")
+            if row.get("Language") == LANGUAGE and product in batch:
+                description = row.get("ProductDescription")
+                if not isinstance(description, str):
+                    raise SapDataError(f"SAP sent no description text for {product}.")
+                descriptions[product] = description
     return descriptions

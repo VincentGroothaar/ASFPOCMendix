@@ -170,3 +170,76 @@ def test_all_pages_are_read() -> None:
 
     assert len(orders) == 5
     assert len(sap.calls) == 3
+
+
+# --- Review round 1: item order and unusable rows ----------------------------------------------
+
+
+def test_components_are_sorted_by_item_number_as_a_number() -> None:
+    # The sandbox sends unpadded item numbers; as text "10" would come before "2".
+    lines = [component_row(item, "RM-A", "1", "0") for item in ["2", "10", "1"]]
+    row = order_row(to_ProductionOrderComponent={"results": lines})
+    sap = FakeSap(rows={"A_ProductionOrder_2": [row]})
+
+    [order] = read_released_orders(client_for(sap), "AUC1")
+
+    assert [line.item for line in order.components] == ["1", "2", "10"]
+
+
+def test_component_item_that_is_not_a_number_raises_sap_data_error() -> None:
+    lines = [component_row("A1", "RM-A", "1", "0")]
+    sap = FakeSap(
+        rows={"A_ProductionOrder_2": [order_row(to_ProductionOrderComponent={"results": lines})]}
+    )
+
+    with pytest.raises(SapDataError, match="'A1'"):
+        read_released_orders(client_for(sap), "AUC1")
+
+
+@pytest.mark.parametrize(
+    "components",
+    [None, {"results": None}, {"results": [None]}, "text"],
+)
+def test_unusable_component_list_raises_sap_data_error(components: object) -> None:
+    sap = FakeSap(rows={"A_ProductionOrder_2": [order_row(to_ProductionOrderComponent=components)]})
+
+    with pytest.raises(SapDataError):
+        read_released_orders(client_for(sap), "AUC1")
+
+
+def test_missing_component_list_raises_sap_data_error() -> None:
+    row = order_row()
+    del row["to_ProductionOrderComponent"]
+    sap = FakeSap(rows={"A_ProductionOrder_2": [row]})
+
+    with pytest.raises(SapDataError, match="component list"):
+        read_released_orders(client_for(sap), "AUC1")
+
+
+@pytest.mark.parametrize(
+    "field", ["ManufacturingOrder", "ProductionPlant", "Material", "ProductionUnit"]
+)
+def test_empty_order_field_raises_sap_data_error(field: str) -> None:
+    # apply_filter=False: a row without a plant would not pass the fake's plant filter.
+    sap = FakeSap(rows={"A_ProductionOrder_2": [order_row(**{field: None})]}, apply_filter=False)
+
+    with pytest.raises(SapDataError, match=field):
+        read_released_orders(client_for(sap), "AUC1")
+
+
+def test_null_item_number_raises_sap_data_error() -> None:
+    lines = [component_row("1", "RM-A", "1", "0"), component_row(None, "RM-B", "1", "0")]
+    sap = FakeSap(
+        rows={"A_ProductionOrder_2": [order_row(to_ProductionOrderComponent={"results": lines})]}
+    )
+
+    with pytest.raises(SapDataError, match="ReservationItem"):
+        read_released_orders(client_for(sap), "AUC1")
+
+
+def test_empty_plant_is_refused_before_calling_sap() -> None:
+    sap = FakeSap(rows={"A_ProductionOrder_2": [order_row()]})
+
+    with pytest.raises(ValueError):
+        read_released_orders(client_for(sap), "")
+    assert sap.calls == []

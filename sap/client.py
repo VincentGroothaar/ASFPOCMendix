@@ -19,6 +19,9 @@ ODATA_PATH = "/s4hanacloud/sap/opu/odata/sap"
 
 TIMEOUT_SECONDS = 10
 PAGE_SIZE = 1000
+# A safety limit: no read in the cockpit comes near this. Reaching it means SAP is not paging
+# the way we expect, and reading on would never end.
+MAX_ROWS = 100_000
 # Materials per call when filtering by material (spec.md: batches of 40).
 MATERIAL_BATCH_SIZE = 40
 
@@ -50,10 +53,12 @@ class ODataClient:
         session: requests.Session | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
-        self._api_key = api_key
         self._timeout = timeout
         self._page_size = page_size
         self._session = session or requests.Session()
+        # The key lives only in the session headers, never in a local variable, so it cannot
+        # show up in Django's debug error page (which lists the local variables of each frame).
+        self._session.headers.update({"APIKey": api_key, "Accept": "application/json"})
 
     @classmethod
     def from_settings(cls) -> "ODataClient":
@@ -76,7 +81,8 @@ class ODataClient:
 
         Pages are requested with $top and $skip. A page with fewer rows than asked for is the
         last one, unless SAP adds a `__next` link (SAP's own paging), in which case the next
-        page is read as well. Raises SapUnavailable when any call fails.
+        page is read as well. Raises SapUnavailable when any call fails, and SapDataError when
+        SAP sends the same page twice or more than MAX_ROWS rows (paging that would never end).
         """
         url = f"{self._base_url}{ODATA_PATH}/{service}/{entity_set}"
         params = {"$format": "json"}
@@ -90,22 +96,27 @@ class ODataClient:
                 params[name] = value
 
         rows: list[dict] = []
+        previous_page: list[dict] = []
         while True:
             page_params = {**params, "$top": str(self._page_size), "$skip": str(len(rows))}
             body = self._get_json(url, page_params)
             page = body.get("results")
-            if not isinstance(page, list):
+            if not isinstance(page, list) or not all(isinstance(row, dict) for row in page):
                 raise SapDataError(f"SAP answered {entity_set} without a list of results.")
+            if page and page == previous_page:
+                raise SapDataError(f"SAP sent the same page of {entity_set} twice.")
             rows += page
+            previous_page = page
+            if len(rows) > MAX_ROWS:
+                raise SapDataError(f"SAP sent more than {MAX_ROWS} rows of {entity_set}.")
             is_last_page = len(page) < self._page_size and not body.get("__next")
             if is_last_page or not page:
                 return rows
 
     def _get_json(self, url: str, params: dict[str, str]) -> dict:
         """One GET call; returns the `d` part of SAP's JSON answer."""
-        headers = {"APIKey": self._api_key, "Accept": "application/json"}
         try:
-            response = self._session.get(url, params=params, headers=headers, timeout=self._timeout)
+            response = self._session.get(url, params=params, timeout=self._timeout)
         except requests.Timeout:
             raise SapUnavailable(f"SAP did not answer within {self._timeout} s.") from None
         except requests.RequestException as error:
@@ -123,6 +134,13 @@ class ODataClient:
 
 
 # --- Helpers for the read functions ----------------------------------------------------------
+
+
+def check_plant(plant: object) -> str:
+    """Return the plant code, or raise ValueError when it is empty (a mistake in our own code)."""
+    if not isinstance(plant, str) or not plant.strip():
+        raise ValueError("A plant code such as 'AUC1' is needed to read from SAP.")
+    return plant
 
 
 def quote(value: str) -> str:
@@ -155,7 +173,18 @@ def parse_date(value: object) -> date | None:
     match = _ODATA_DATE.fullmatch(str(value))
     if not match:
         raise SapDataError(f"SAP sent a date in an unknown format: {value!r}.")
-    return datetime.fromtimestamp(int(match.group(1)) / 1000, tz=UTC).date()
+    try:
+        return datetime.fromtimestamp(int(match.group(1)) / 1000, tz=UTC).date()
+    except (ValueError, OverflowError, OSError):
+        raise SapDataError(f"SAP sent a date that is out of range: {value!r}.") from None
+
+
+def parse_text(row: dict, field: str) -> str:
+    """The value of a text field that must be filled, such as an order number or a unit."""
+    value = row.get(field)
+    if not isinstance(value, str) or not value:
+        raise SapDataError(f"SAP left out field {field!r} or sent it empty.")
+    return value
 
 
 def parse_decimal(value: object, field: str) -> Decimal:

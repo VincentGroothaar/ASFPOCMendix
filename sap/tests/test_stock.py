@@ -114,3 +114,20 @@ def test_quantity_that_is_not_a_number_raises_sap_data_error() -> None:
 
     with pytest.raises(SapDataError):
         read_unrestricted_stock(client_for(sap), "AUC1", ["RM-1"])
+
+
+def test_empty_stock_field_raises_sap_data_error() -> None:
+    row = stock_row("1")
+    row["MaterialBaseUnit"] = None
+    sap = FakeSap(rows={"A_MatlStkInAcctMod": [row]})
+
+    with pytest.raises(SapDataError, match="MaterialBaseUnit"):
+        read_unrestricted_stock(client_for(sap), "AUC1", ["RM-1"])
+
+
+def test_empty_plant_is_refused_before_calling_sap() -> None:
+    sap = FakeSap(rows={"A_MatlStkInAcctMod": MIXED_ROWS})
+
+    with pytest.raises(ValueError):
+        read_unrestricted_stock(client_for(sap), "", ["RM-1"])
+    assert sap.calls == []

@@ -8,7 +8,15 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from sap.client import ODataClient, SapDataError, parse_date, parse_decimal, quote
+from sap.client import (
+    ODataClient,
+    SapDataError,
+    check_plant,
+    parse_date,
+    parse_decimal,
+    parse_text,
+    quote,
+)
 
 SERVICE = "API_PRODUCTION_ORDER_2_SRV"
 ENTITY_SET = "A_ProductionOrder_2"
@@ -67,8 +75,10 @@ def read_released_orders(client: ODataClient, plant: str) -> list[ProductionOrde
     """Read all released open orders of one plant, with their components (REQ-1, REQ-2).
 
     One call with $expand, plus more pages only if the plant has more orders than one page.
-    Components are sorted by item number, the order in which they take stock.
+    Components are sorted by item number (as a number), the order in which they take
+    stock. Raises SapUnavailable when SAP fails and SapDataError when its data is unusable.
     """
+    check_plant(plant)
     select = ORDER_FIELDS + [f"{COMPONENTS}/{field}" for field in COMPONENT_FIELDS]
     rows = client.get_all(
         SERVICE,
@@ -78,15 +88,12 @@ def read_released_orders(client: ODataClient, plant: str) -> list[ProductionOrde
         select=",".join(select),
         orderby="ManufacturingOrder",
     )
-    try:
-        return [_order_from_row(row) for row in rows]
-    except KeyError as missing:
-        raise SapDataError(f"SAP left out field {missing} in a production order.") from None
+    return [_order_from_row(row) for row in rows]
 
 
 def _order_from_row(row: dict) -> ProductionOrder:
     """Map one SAP order row (with expanded components) to a ProductionOrder."""
-    number = row["ManufacturingOrder"]
+    number = parse_text(row, "ManufacturingOrder")
     # The scheduled start is the date production is planned to begin. Fall back to the basic
     # (planned) start if it is ever empty; in the sandbox both are always filled.
     start_date = parse_date(row.get("MfgOrderScheduledStartDate")) or parse_date(
@@ -95,25 +102,36 @@ def _order_from_row(row: dict) -> ProductionOrder:
     if start_date is None:
         raise SapDataError(f"Production order {number} has no start date in SAP.")
 
-    lines = row.get(COMPONENTS, {}).get("results", [])
-    components = sorted((_component_from_row(line) for line in lines), key=lambda c: c.item)
+    lines = row.get(COMPONENTS)
+    if not isinstance(lines, dict) or not isinstance(lines.get("results"), list):
+        raise SapDataError(f"SAP sent production order {number} without its component list.")
+    components = [_component_from_row(line) for line in lines["results"]]
     return ProductionOrder(
         number=number,
-        plant=row["ProductionPlant"],
-        material=row["Material"],
-        quantity=parse_decimal(row["TotalQuantity"], "TotalQuantity"),
-        unit=row["ProductionUnit"],
+        plant=parse_text(row, "ProductionPlant"),
+        material=parse_text(row, "Material"),
+        quantity=parse_decimal(row.get("TotalQuantity"), "TotalQuantity"),
+        unit=parse_text(row, "ProductionUnit"),
         start_date=start_date,
-        components=tuple(components),
+        components=tuple(sorted(components, key=_item_number)),
     )
 
 
-def _component_from_row(row: dict) -> Component:
+def _component_from_row(row: object) -> Component:
     """Map one SAP component row to a Component."""
+    if not isinstance(row, dict):
+        raise SapDataError("SAP sent a component that is not an object.")
     return Component(
-        item=row["ReservationItem"],
-        material=row["Material"],
-        required_quantity=parse_decimal(row["RequiredQuantity"], "RequiredQuantity"),
-        withdrawn_quantity=parse_decimal(row["WithdrawnQuantity"], "WithdrawnQuantity"),
-        unit=row["BaseUnit"],
+        item=parse_text(row, "ReservationItem"),
+        material=parse_text(row, "Material"),
+        required_quantity=parse_decimal(row.get("RequiredQuantity"), "RequiredQuantity"),
+        withdrawn_quantity=parse_decimal(row.get("WithdrawnQuantity"), "WithdrawnQuantity"),
+        unit=parse_text(row, "BaseUnit"),
     )
+
+
+def _item_number(component: Component) -> int:
+    """The item number as a number, so item 10 comes after item 9 ("10" < "9" as text)."""
+    if not component.item.isdigit():
+        raise SapDataError(f"SAP sent component item {component.item!r}, which is not a number.")
+    return int(component.item)

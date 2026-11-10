@@ -6,7 +6,16 @@ Field names and stock codes come from the sandbox data check, docs/sandbox/findi
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sap.client import ODataClient, SapDataError, any_of, batches, parse_decimal, quote
+from sap.client import (
+    ODataClient,
+    SapDataError,
+    any_of,
+    batches,
+    check_plant,
+    parse_decimal,
+    parse_text,
+    quote,
+)
 
 SERVICE = "API_MATERIAL_STOCK_SRV"
 ENTITY_SET = "A_MatlStkInAcctMod"
@@ -48,6 +57,7 @@ def read_unrestricted_stock(
     all storage locations. A material without stock rows is not in the result: the caller
     treats it as stock 0. Materials are read in batches of 40 per call.
     """
+    check_plant(plant)
     totals: dict[str, MaterialStock] = {}
     for batch in batches(sorted(set(materials))):
         rows = client.get_all(
@@ -77,12 +87,9 @@ def _counts_as_unrestricted(row: dict, plant: str, materials: list[str]) -> bool
 
 def _add_row(totals: dict[str, MaterialStock], row: dict) -> None:
     """Add one stock row (one storage location, batch, ...) to the material's total."""
-    try:
-        material = row["Material"]
-        unit = row["MaterialBaseUnit"]
-        quantity = parse_decimal(row["MatlWrhsStkQtyInMatlBaseUnit"], "stock quantity")
-    except KeyError as missing:
-        raise SapDataError(f"SAP left out field {missing} in a stock row.") from None
+    material = parse_text(row, "Material")
+    unit = parse_text(row, "MaterialBaseUnit")
+    quantity = parse_decimal(row.get("MatlWrhsStkQtyInMatlBaseUnit"), "stock quantity")
 
     current = totals.get(material)
     if current is None:

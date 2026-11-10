@@ -1,5 +1,8 @@
 """Tests for reading material descriptions."""
 
+import pytest
+
+from sap.client import SapDataError
 from sap.products import read_descriptions
 from sap.tests.fake_http import FakeSap, client_for
 
@@ -30,3 +33,20 @@ def test_reads_materials_in_batches_of_40() -> None:
     read_descriptions(client_for(sap), materials)
 
     assert [call.param("$filter").count("Product eq") for call in sap.calls] == [40, 1]
+
+
+def test_ignores_other_languages_and_materials_even_if_sap_sends_them() -> None:
+    rows = ROWS + [{"Product": "RM-OTHER", "Language": "EN", "ProductDescription": "Other"}]
+    sap = FakeSap(rows={"A_ProductDescription": rows}, apply_filter=False)
+
+    descriptions = read_descriptions(client_for(sap), ["RM-1"])
+
+    assert descriptions == {"RM-1": "BKC-990 Frame"}
+
+
+def test_null_description_raises_sap_data_error() -> None:
+    rows = [{"Product": "RM-1", "Language": "EN", "ProductDescription": None}]
+    sap = FakeSap(rows={"A_ProductDescription": rows})
+
+    with pytest.raises(SapDataError, match="RM-1"):
+        read_descriptions(client_for(sap), ["RM-1"])
