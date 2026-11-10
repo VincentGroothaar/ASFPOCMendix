@@ -1,14 +1,14 @@
 # UI spec: Material Shortage Cockpit
 
-> Status: draft for S0-14, 7 Nov 2026. Frozen with the spec (S0-05).
-> Source: the reviewed wireframes (D-29), exported as `wireframes.pdf` (7 pages), plus decisions D-10 to D-36 in the Sprint 0 backlog.
+> Status: agreed for S0-14 (#14), 10 Nov 2026. Where it conflicted with `spec.md`, each outcome is recorded on issue #14.
+> Source: the reviewed wireframes (D-29), exported as `wireframes.pdf` (7 pages), plus decisions D-10 to D-36 in the Sprint 0 backlog (not in this repo; their outcomes are in `spec.md` and this document).
 > Shared by both tracks. It describes what the user sees and does, not how to build it.
 
 ## 0. How to use this document
 
 - **Order of authority:** `spec.md` (AC-n, INV-n) > this document > the screenshots. When they disagree, the higher one wins; report the conflict instead of guessing.
-- **Values:** every colour, size, spacing, radius and shadow comes from `tokens.css`. No other values.
-- **Sample data in the screenshots is illustrative.** Numbers, order IDs and materials are made up and not always consistent across screens. `[PLANT]`, `[LIMIT]`, `[V]` and `[NB]` are placeholders filled from S0-06 and S0-07.
+- **Values:** every colour, size, spacing, radius and shadow comes from `tokens.css`. No other values, except the few fixed sizes named in this document (6px pill dot, 3px selection bar, 28px timeline circle, 900px breakpoint).
+- **Sample data in the screenshots is illustrative.** Numbers, order IDs and materials are made up and not always consistent across screens. `[PLANT]` is the selected plant and `[NB]` the requisition type from `mock_pr/README.md`. Where the wireframes show `€ [V] / [LIMIT]`, section 4 has the real content.
 - **Implementation is free** (templates, components, partial page updates), as long as behaviour, labels and look match.
 - **Exact copy:** labels and tooltip texts in section 5 are used word for word.
 
@@ -17,7 +17,7 @@
 | File | Content |
 |---|---|
 | `docs/ui/wireframes.pdf` | All 7 screens, default state |
-| `docs/ui/screens/*.png` | One image per screen, default state (section 7) |
+| `docs/ui/screens/*.png` | One image per PDF page (section 7) |
 | `docs/ui/source/*.html` | Wireframe source, for reference markup and CSS patterns. Written in the canvas's component format (`<x-dc>`, `{{…}}` placeholders, `<sc-for>`/`<sc-if>`, a `./support.js` runtime that is not included): read it, don't open or run it. The state logic at the bottom of each file shows the extra states. |
 | `docs/ui/tokens.css` | Design tokens |
 | `docs/ui/ui-spec.md` | This document |
@@ -25,7 +25,7 @@
 ## 2. Global layout
 
 ### 2.1 Page frame
-- Two columns: **sidebar** (left, min 200px, `--color-sidebar`) and **content** (rest, `--color-page`, padding `--space-8`, max content width `--content-max-width`).
+- Two columns: **sidebar** (left, min `--sidebar-min-width`, `--color-sidebar`) and **content** (rest, `--color-page`, padding `--space-8`, max content width `--content-max-width`).
 - Content is a vertical stack with `--space-section` between sections.
 - **Page header:** H1 title on the left. On data screens (Orders, Order detail, Dashboard) the right side shows `Data as of [dd Mon HH:MM]` (muted) and a **Refresh** button with a refresh icon (D-17).
 - **Breadcrumb** above the header on detail pages: `Orders / 1000123`, `Requisitions / REQ-0016`. Each part except the last is a link.
@@ -62,6 +62,8 @@ Rounded pill (`--radius-pill`), caption size, semibold, with a 6px dot in the te
 
 Order status = worst component status (D-12); unit mismatch and issued components don't count.
 
+`spec.md` and `REQUIREMENTS.md` name the statuses by colour: red = Short, amber = Low cover, green = Covered. "Issued" is a component with no open requirement and no status (AC-11).
+
 ### 3.2 Requisition label
 Outlined pill (white background, 1px border and text in the colour below), no dot.
 
@@ -87,7 +89,7 @@ Outlined pill (white background, 1px border and text in the colour below), no do
 - White card, `--radius-card`, label (small, muted) above a large number (`--font-size-kpi`, bold, coloured per status).
 - No sub-text.
 - ⓘ icon in the top-right corner (all tiles except "All orders").
-- **The tile is a toggle button:** click filters the list to that status; click again (or "All orders") clears it. Selected tile: border and 1px inner ring in `--color-primary`, pale teal background. Exposed as pressed/not pressed to screen readers.
+- **The tile is a toggle button:** click filters the list to that status; click again (or "All orders") clears it. Selected tile: border and 1px inner ring in `--color-primary`, `--color-row-selected` background. Exposed as pressed/not pressed to screen readers.
 
 ### 3.5 Summary tile strip
 Read-only numbers in one bordered strip, divided by thin vertical lines, centred label above value. Used in the requisition panel, the approval slide-in and the requisition detail.
@@ -137,7 +139,7 @@ Vertical list of steps. Each step: 28px circle + bold title + muted sub-line (wh
 | Not reached | white with a dashed border |
 
 ### 3.12 Notes and banners
-- **Banner** (full width, `--radius-group`): amber for "needs attention" (pending approvals, sync failed). Text plus an optional ghost action on the right.
+- **Banner** (full width, `--radius-group`): `--color-low` on `--color-low-bg` for "needs attention" (pending approvals, sync failed). Text plus an optional ghost action on the right.
 - **Error note** (inside a card): `--color-short-bg` / `--color-short`, plain-language message.
 
 ## 4. Screens
@@ -191,7 +193,7 @@ Vertical list of steps. Each step: 28px circle + bold title + muted sub-line (wh
 - Newest first.
 - **Approval slide-in** (3.10), opened by Review:
   - Header: Awaiting approval pill, `[REQ-n] · [material] [description]`, `For order [id] · needed by [date]`.
-  - Summary strip: **Requested**, **Shortage**, **Value / limit** (`€ [V] / [LIMIT]`; with the unit-free rule: the restore-buffer amount instead, D-36).
+  - Summary strip: **Requested**, **Shortage**, **Value / limit** (`[value] [currency] / 10,000 [currency]`, e.g. `12,400.00 EUR / 10,000 EUR`; without a price: `No price in SAP`). The Awaiting approval pill has the tooltip from 5.2.
   - Requested by + time; **Open full details** link.
   - Footer: **Reject** / **Approve and send**.
   - Reject first shows **Reason (optional)** text area, then **Back** / **Confirm reject**.
@@ -201,7 +203,7 @@ Vertical list of steps. Each step: 28px circle + bold title + muted sub-line (wh
 ### 4.5 Requisition detail (PDF page 5, all roles)
 - Breadcrumb, H1 `[REQ-n]` + status pill, sub-line `[material] · [description] · [PR number or "No PR number yet"]`.
 - Header actions: **Reject** / **Approve and send** (Manager, awaiting approval, not own); **Retry** (Planner or Manager, failed).
-- Summary strip: **Requested**, **Shortage when requested**, **Value / limit**, **Needed by**.
+- Summary strip: **Requested**, **Shortage when requested**, **Value / limit** (format as in 4.4), **Needed by**.
 - **Progress** card with timeline (3.11):
 
 | Status | Steps |
@@ -213,12 +215,12 @@ Vertical list of steps. Each step: 28px circle + bold title + muted sub-line (wh
 | Rejected | Requested ✓ · Rejected ✗ (who, when) + `Reason: …` note |
 
 - **Details** card: For order (link) · item, Plant, Quantity sent to SAP, Requested by.
-- **Technical details** (collapsed, only when status is PR sent, D-33): request sent to SAP and the response.
+- **Technical details** (collapsed, only when status is PR sent or PR failed): request sent to SAP and the response.
 
 ### 4.6 Thresholds (PDF page 6, Manager only)
-Three cards (D-36):
-- **Cover buffer:** current value (large), field **New value (%)**, **Save**. Text: `Margin above the requirement before a component is Covered.` + `Last change: [user] · [date time]`. Validation: number ≥ 0, max 2 decimals.
-- **Approval limit:** `Requisition value above` + `€ [LIMIT]` (large), tag `Fixed for the PoC`, text `Value = quantity × standard price from SAP.` Read only. With the unit-free rule this card instead reads `Approval needed above the amount that restores the cover buffer.`
+Three cards:
+- **Cover buffer:** current value (large), field **New value (%)**, **Save**. Text: `Margin above the requirement before a component is Covered.` + `Last change: [user] · [date time]`. Validation: number from 0 to 100, max 2 decimals (AC-33).
+- **Approval limit:** `Requisition value above` + `10,000 in the plant's currency` (large), tag `Fixed for the PoC`, text `Value = quantity × standard price from SAP. Without a price, a manager always approves.` Read only.
 - **Safety stock:** tag `From SAP`, text `Read per material and plant, and held back from available stock. Maintained in SAP, not here.` Read only.
 
 ### 4.7 System states (PDF page 7)
@@ -247,13 +249,15 @@ Production orders · Shortage dashboard · Requisitions · Thresholds · Data as
 | Component Covered | Covered: at least 10% to spare. |
 | Component Unit mismatch | Unit mismatch: order unit [U1] and stock unit [U2] can't be converted, so this component isn't checked. |
 | Component Issued | Issued: no open requirement left, so it isn't checked. |
+| Awaiting approval, above the limit | Value [value] [currency] is above the approval limit of 10,000 [currency]. |
+| Awaiting approval, no price | No price in SAP, so a Manager must approve. |
 
 "10%" and "110%" always show the **current cover buffer** (editable in the CR, D-13). Before the CR, "SAP safety stock" is left out of the Short text.
 
 ## 6. Formats
 - Dates: `03 Nov 2026` in tables and headers; `04 Nov` in compact columns (Needed by, First needed, dashboard). Date and time: `02 Nov 10:11`.
 - Quantities: number + space + unit code. Up to 3 decimals; trailing zeros only where the source has them (`8.000 KG` as sent to SAP).
-- Money: `€ 1,250.00`.
+- Money: amount + space + the plant's currency code, `1,250.00 EUR`. Never a hard-coded currency.
 - Units: order unit on order screens, stock unit for anything sent to SAP; show both in the review panel (D-16).
 
 ## 7. Screenshot map
