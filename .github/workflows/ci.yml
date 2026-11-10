@@ -71,6 +71,8 @@ jobs:
 
       # The purchase requisition write mock, so tests can post to it (D-24).
       # The key is made up per run and only lives inside this job; it is not a secret.
+      # The mock runs from the virtual environment directly, not via `uv run`: a `uv` process
+      # left running holds uv's cache lock, and setup-uv's cleanup then times out.
       - name: Start write mock
         run: |
           MOCK_API_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
@@ -78,7 +80,7 @@ jobs:
           echo "MOCK_API_KEY=$MOCK_API_KEY" >> "$GITHUB_ENV"
           echo "MOCK_PR_BASE_URL=http://localhost:8001" >> "$GITHUB_ENV"
           export MOCK_API_KEY
-          nohup uv run uvicorn mock_pr.main:create_app_from_env --factory --port 8001 \
+          nohup .venv/bin/python -m uvicorn mock_pr.main:create_app_from_env --factory --port 8001 \
             > mock_pr.log 2>&1 &
 
       - name: Wait for write mock
