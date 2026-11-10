@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Requisitions</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:#1c2a2e;background:#f3f2ee}
+a{color:#0e5c63}a:hover{color:#0a3f44}
+.app{display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch;position:relative}
+.side{flex:1 1 200px;background:#12404a;color:#d7e6e8;display:flex;flex-direction:column;gap:4px;padding:20px 12px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:15px;line-height:1.2;padding:4px 10px 20px}
+.logo svg{width:28px;height:28px;color:#7fd1d6}
+.side a{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:8px;color:#d7e6e8;text-decoration:none;font-size:14px}
+.side a:hover{background:#1a4f5a;color:#fff}
+.side a.on{background:#1f6470;color:#fff;font-weight:600}
+.side a svg{width:18px;height:18px;flex:none}
+.badge{margin-left:auto;background:#f2c94c;color:#3a2a00;border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
+.me{margin-top:auto;border-top:1px solid #2b5f69;padding:14px 12px 4px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.me b{color:#fff;font-size:14px}
+.main{flex:999 1 560px;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px}
+h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-0.01em}
+h2{margin:0;font-size:18px;font-weight:600}
+.card{background:#fff;border:1px solid #e2e0da;border-radius:14px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;color:#4b5658;font-weight:600;padding:12px 14px;background:#faf9f6;border-bottom:1px solid #e2e0da;white-space:nowrap}
+.tbl td{padding:12px 14px;border-bottom:1px solid #ecebe6;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.sel td{background:#eef5f5}
+.sel td:first-child{box-shadow:inset 3px 0 0 #0e5c63}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sub{display:block;font-size:12px;color:#4b5658;margin-top:2px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.red{background:#fbe7e4;color:#a12a1d}.amber{background:#fdf0d5;color:#7a4a00}.grey{background:#ecebe6;color:#3f4a4c}.blue{background:#e3eef7;color:#1d4f7a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #c9c6bd;background:#fff;font:inherit;font-size:14px;font-weight:500;color:#1c2a2e;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn.primary{background:#0e5c63;border-color:#0e5c63;color:#fff}
+.btn.primary:hover{color:#fff}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13px}
+.btn.ghost{border-color:transparent;color:#0e5c63}
+.btn:disabled{background:#ecebe6;border-color:#d6d3cb;color:#5f6668;cursor:not-allowed}
+.muted{color:#4b5658;font-size:13px}
+.scroll{overflow-x:auto}
+.check{display:flex;align-items:center;gap:8px;min-height:40px;font-size:14px}
+select{min-height:40px;padding:0 10px;border:1px solid #c9c6bd;border-radius:8px;font:inherit;font-size:14px;color:#1c2a2e;background:#fff}
+.banner{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px 10px 16px;background:#fdf0d5;color:#5c3800;border-radius:12px;font-size:14px}
+.scrim{position:absolute;inset:0;background:rgba(18,64,74,.25)}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(420px,100%);background:#fff;box-shadow:-12px 0 32px rgba(0,0,0,.14);display:flex;flex-direction:column;box-sizing:border-box}
+.dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 20px 16px;border-bottom:1px solid #ecebe6}
+.dbody{padding:20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;flex:1}
+.dfoot{padding:16px 20px;border-top:1px solid #ecebe6;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.x{width:40px;height:40px;border-radius:50%;border:0;background:transparent;color:#4b5658;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+.x:hover{background:#eceae4}
+.x svg{width:18px;height:18px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #e2e0da;border-radius:12px}
+.tile{padding:12px;text-align:center;border-left:1px solid #ecebe6}
+.tile:first-child{border-left:0}
+.tile span{display:block;font-size:12px;color:#4b5658}
+.tile b{display:block;font-size:20px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:14px;margin:0}
+.kv dt{color:#4b5658}
+.kv dd{margin:0;text-align:right}
+textarea{border:1px solid #c9c6bd;border-radius:8px;padding:10px 12px;font:inherit;font-size:14px;color:#1c2a2e;width:100%;box-sizing:border-box}
+</style>
+</helmet>
+<div class="app">
+<nav class="side" aria-label="Main">
+<div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>Material Shortage Cockpit</div>
+<a href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Orders</a>
+<a href="Dashboard.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+<a class="on" href="Requisitions.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Requisitions<span class="badge" aria-label="{{pendingCount}} awaiting your approval">{{pendingCount}}</span></a>
+<a href="Thresholds.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Thresholds</a>
+<div class="me"><b>manager.a</b><span>Manager</span></div>
+<a href="States.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>Log out</a>
+</nav>
+<main class="main">
+<h1>Requisitions</h1>
+<sc-if value="{{hasPending}}" hint-placeholder-val="{{ true }}">
+<div class="banner" role="status"><strong>{{pendingCount}} awaiting your approval</strong><button class="btn ghost sm" type="button" style="margin-left: auto" onClick="{{showPending}}">Show</button></div>
+</sc-if>
+<div class="card scroll">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #e2e0da">
+<span style="font-weight: 600; font-size: 15px">{{title}}</span>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px">
+<label class="muted" style="display: flex; align-items: center; gap: 8px; font-weight: 600">Status
+<select onChange="{{pick}}">
+<sc-for list="{{opts}}" as="o" hint-placeholder-count="5"><option value="{{o.key}}" selected="{{o.selected}}">{{o.label}}</option></sc-for>
+</select>
+</label>
+<label class="check"><input type="checkbox" style="width: 20px; height: 20px"> Only mine</label>
+</div>
+</div>
+<table class="tbl">
+<thead><tr><th>Requisition</th><th>Material</th><th class="num">Quantity</th><th>Needed by</th><th>For order</th><th>Requested by</th><th>Status</th><th><span style="position: absolute; left: -9999px">Action</span></th></tr></thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+<tr class="{{r.rowClass}}">
+<td><a href="RequisitionDetail.dc.html"><strong>{{r.ref}}</strong></a><span class="sub">{{r.pr}}</span></td>
+<td><strong>{{r.mat}}</strong><span class="sub">{{r.desc}}</span></td>
+<td class="num">{{r.qty}}</td>
+<td>{{r.need}}</td>
+<td><a href="OrderDetail.dc.html">{{r.order}}</a></td>
+<td>{{r.by}}<span class="sub">{{r.at}}</span></td>
+<td><span class="pill {{r.pc}}"><i></i>{{r.status}}</span></td>
+<td><sc-if value="{{r.reviewable}}" hint-placeholder-val="{{ false }}"><button class="btn primary sm" type="button" onClick="{{r.open}}">Review</button></sc-if></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<span class="muted">{{footer}}</span>
+</main>
+<sc-if value="{{drawerOpen}}" hint-placeholder-val="{{ true }}">
+<div class="scrim" onClick="{{close}}"></div>
+<aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dt">
+<div class="dhead">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="pill amber" style="align-self: flex-start"><i></i>Awaiting approval</span>
+<h2 id="dt">{{d.ref}} · {{d.mat}} {{d.desc}}</h2>
+<span class="muted">For order <a href="OrderDetail.dc.html">{{d.order}}</a> · needed by {{d.need}}</span>
+</div>
+<button class="x" type="button" aria-label="Close" onClick="{{close}}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+</div>
+<div class="dbody">
+<div class="tiles">
+<div class="tile"><span>Requested</span><b>{{d.qty}}</b></div>
+<div class="tile"><span>Shortage</span><b style="color: #a12a1d">{{d.short}}</b></div>
+<div class="tile"><span>Value / limit</span><b>€ [V] / [LIMIT]</b></div>
+</div>
+<dl class="kv">
+<dt>Requested by</dt><dd>{{d.by}} · {{d.at}}</dd>
+</dl>
+<sc-if value="{{rejecting}}" hint-placeholder-val="{{ false }}">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #4b5658; font-weight: 600">Reason (optional)
+<textarea rows="3"></textarea>
+</label>
+</sc-if>
+<a href="RequisitionDetail.dc.html" style="font-size: 14px">Open full details</a>
+</div>
+<div class="dfoot">
+<sc-if value="{{d.own}}" hint-placeholder-val="{{ false }}">
+<span class="muted" style="margin-right: auto">Your own request: another manager decides.</span>
+</sc-if>
+<sc-if value="{{rejecting}}" hint-placeholder-val="{{ false }}">
+<button class="btn" type="button" onClick="{{cancelReject}}">Back</button>
+<button class="btn primary" type="button" onClick="{{close}}">Confirm reject</button>
+</sc-if>
+<sc-if value="{{deciding}}" hint-placeholder-val="{{ true }}">
+<button class="btn" type="button" disabled="{{d.own}}" onClick="{{startReject}}">Reject</button>
+<button class="btn primary" type="button" disabled="{{d.own}}" onClick="{{close}}">Approve and send</button>
+</sc-if>
+</div>
+</aside>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { f: 'all', open: 'REQ-0016', rejecting: false };
+}
+renderVals() {
+const look = { sent: ['blue', 'PR sent'], approval: ['amber', 'Awaiting approval'], failed: ['red', 'PR failed'], rejected: ['grey', 'Rejected'] };
+const all = [
+{ ref: 'REQ-0017', pr: 'No PR number yet', mat: 'RM-180', desc: 'Valve seat', qty: '300 PC', short: '300 PC', need: '07 Nov', order: '1000131', by: 'manager.a', at: '02 Nov 10:20', s: 'approval', own: true },
+{ ref: 'REQ-0016', pr: 'No PR number yet', mat: 'RM-160', desc: 'O-ring 40mm', qty: '500 PC', short: '120 PC', need: '04 Nov', order: '1000124', by: 'planner.b', at: '02 Nov 10:11', s: 'approval' },
+{ ref: 'REQ-0015', pr: 'No PR number', mat: 'RM-100', desc: 'Steel bracket', qty: '40 PC', need: '04 Nov', order: '1000124', by: 'planner.a', at: '02 Nov 10:07', s: 'failed' },
+{ ref: 'REQ-0014', pr: 'PR 10004567', mat: 'RM-130', desc: 'Polymer granulate', qty: '8 KG', need: '03 Nov', order: '1000123', by: 'planner.a', at: '02 Nov 10:05', s: 'sent' },
+{ ref: 'REQ-0013', pr: 'PR 10004566', mat: 'RM-100', desc: 'Steel bracket', qty: '1 PC', need: '03 Nov', order: '1000123', by: 'planner.a', at: '02 Nov 09:58', s: 'sent' },
+{ ref: 'REQ-0011', pr: 'No PR number', mat: 'RM-170', desc: 'Hydraulic oil', qty: '900 L', need: '02 Nov', order: '1000118', by: 'planner.a', at: '01 Nov 16:40', s: 'rejected' }
+];
+const { f, open, rejecting } = this.state;
+const rows = all.filter((r) => f === 'all' || r.s === f).map((r) => ({
+...r, pc: look[r.s][0], status: look[r.s][1],
+reviewable: r.s === 'approval',
+rowClass: open === r.ref ? 'sel' : '',
+open: () => this.setState({ open: r.ref, rejecting: false })
+}));
+const pendingCount = all.filter((r) => r.s === 'approval' && !r.own).length;
+const defs = [['all', 'All'], ['approval', 'Awaiting approval'], ['sent', 'PR sent'], ['failed', 'PR failed'], ['rejected', 'Rejected']];
+const d = all.find((r) => r.ref === open) || {};
+return {
+rows, pendingCount,
+hasPending: pendingCount > 0 && f !== 'approval',
+showPending: () => this.setState({ f: 'approval' }),
+opts: defs.map(([k, l]) => ({ key: k, label: l, selected: f === k })),
+pick: (e) => this.setState({ f: e.target.value }),
+title: f === 'all' ? 'All requisitions' : look[f][1],
+footer: 'Showing ' + rows.length + ' of ' + all.length + ' · newest first',
+drawerOpen: !!open,
+d: { ...d, own: !!d.own },
+rejecting, deciding: !rejecting,
+close: () => this.setState({ open: null, rejecting: false }),
+startReject: () => this.setState({ rejecting: true }),
+cancelReject: () => this.setState({ rejecting: false })
+};
+}
+}
+</script>
+</body>
+</html>

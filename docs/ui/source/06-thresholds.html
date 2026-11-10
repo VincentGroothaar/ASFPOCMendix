@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Thresholds</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:"Inter",system-ui,sans-serif;color:#1c2a2e;background:#f3f2ee}
+a{color:#0e5c63}a:hover{color:#0a3f44}
+.app{display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch}
+.side{flex:1 1 200px;background:#12404a;color:#d7e6e8;display:flex;flex-direction:column;gap:4px;padding:20px 12px;box-sizing:border-box}
+.logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:15px;line-height:1.2;padding:4px 10px 20px}
+.logo svg{width:28px;height:28px;color:#7fd1d6}
+.side a{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-radius:8px;color:#d7e6e8;text-decoration:none;font-size:14px}
+.side a:hover{background:#1a4f5a;color:#fff}
+.side a.on{background:#1f6470;color:#fff;font-weight:600}
+.side a svg{width:18px;height:18px;flex:none}
+.badge{margin-left:auto;background:#f2c94c;color:#3a2a00;border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px}
+.me{margin-top:auto;border-top:1px solid #2b5f69;padding:14px 12px 4px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.me b{color:#fff;font-size:14px}
+.main{flex:999 1 560px;min-width:0;padding:28px 32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px}
+h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-0.01em}
+h2{margin:0;font-size:17px;font-weight:600}
+.card{background:#fff;border:1px solid #e2e0da;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.big{font-size:40px;font-weight:700;color:#0e5c63;font-variant-numeric:tabular-nums;line-height:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #c9c6bd;background:#fff;font:inherit;font-size:14px;font-weight:500;color:#1c2a2e;cursor:pointer;white-space:nowrap}
+.btn.primary{background:#0e5c63;border-color:#0e5c63;color:#fff}
+.muted{color:#4b5658;font-size:13px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#4b5658;font-weight:600}
+.field input{min-height:44px;padding:0 12px;border:1px solid #c9c6bd;border-radius:8px;font:inherit;font-size:14px;color:#1c2a2e;background:#fff;box-sizing:border-box}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;background:#ecebe6;color:#3f4a4c;align-self:flex-start}
+.ico{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e3eff0;color:#0e5c63;flex:none}
+.ico svg{width:20px;height:20px}
+</style>
+</helmet>
+<div class="app">
+<nav class="side" aria-label="Main">
+<div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>Material Shortage Cockpit</div>
+<a href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Orders</a>
+<a href="Dashboard.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+<a href="Requisitions.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Requisitions<span class="badge">1</span></a>
+<a class="on" href="Thresholds.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Thresholds</a>
+<div class="me"><b>manager.a</b><span>Manager</span></div>
+<a href="States.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>Log out</a>
+</nav>
+<main class="main">
+<h1>Thresholds</h1>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: start">
+<form class="card" aria-labelledby="t1">
+<h2 id="t1">Cover buffer</h2>
+<div style="display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap">
+<div><span class="muted">Current</span><div class="big">10%</div></div>
+<label class="field">New value (%)
+<input type="text" inputmode="decimal" value="10" style="width: 120px">
+</label>
+<button class="btn primary" type="button">Save</button>
+</div>
+<span class="muted">Margin above the requirement before a component is Covered. Last change: manager.b · 02 Nov 09:40</span>
+</form>
+<section class="card" aria-labelledby="t2">
+<h2 id="t2">Approval limit</h2>
+<div><span class="muted">Requisition value above</span><div class="big">€ [LIMIT]</div></div>
+<span class="tag">Fixed for the PoC</span>
+<span class="muted">Value = quantity × standard price from SAP.</span>
+</section>
+<section class="card" aria-labelledby="t3">
+<div style="display: flex; gap: 12px; align-items: center"><div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg></div><h2 id="t3">Safety stock</h2></div>
+<span class="tag">From SAP</span>
+<span class="muted">Read per material and plant, and held back from available stock. Maintained in SAP, not here.</span>
+</section>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
