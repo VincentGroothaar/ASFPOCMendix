@@ -58,20 +58,21 @@ Done when:
 - Status: **red** when available < open requirement; **amber** when available covers the requirement but by less than 10% (available < 1.1 × requirement); **green** otherwise.
 - The 10% buffer only affects the colour. Allocation takes only the real requirement from stock.
 - An order's status is the worst status of its components.
-- Each status has a tooltip explaining the rule, including the buffer value. The texts are in [docs/ui/ui-spec.md](docs/ui/ui-spec.md), section 5.2.
+- Each status has a tooltip explaining the rule; the Low cover and Covered texts include the current buffer value. The texts are in [docs/ui/ui-spec.md](docs/ui/ui-spec.md), section 5.2.
 - Quantities in different units of the same dimension (mass G/KG/TO, volume ML/L/M3, length MM/CM/M) are converted exactly. Any other unit difference shows a grey "unit mismatch" status with both units in the tooltip; the order gets a warning badge and the component counts as neither red nor green.
 
 ### REQ-5: Create a purchase requisition for a shortage
 
-As a Planner, I want to request replenishment for a short material from the order view, so that purchasing can act without me leaving the cockpit.
+As a Planner, I want to request replenishment for a short or low cover material from the order view, so that purchasing can act without me leaving the cockpit.
 
 Done when:
 - A short (red) or low cover (amber) component has a "Request" button. One requisition covers one order and one material (component lines with the same material are combined).
-- A confirm step shows material, plant, quantity, unit and delivery date. The quantity is prefilled with the shortage for a short component, and with the amount that brings available up to (100 + buffer)% of the open requirement for a low cover component. It can be changed: it must be greater than 0, may be above or below the shortage, and has at most 3 decimals. The planner enters it in the order's unit; the confirm step also shows the quantity in the stock unit that will be sent.
+- A confirm step shows material, plant, quantity, unit and delivery date. The quantity is prefilled with the shortage for a short component, and with the amount that brings available up to (100 + buffer)% of the open requirement for a low cover component, rounded up to 3 decimals in the order unit. It can be changed: it must be greater than 0, may be above or below the prefilled value, and has at most 3 decimals. The planner enters it in the order's unit; the confirm step also shows the quantity in the stock unit that will be sent.
 - The delivery date is the order's start date, or today if that date has passed.
 - On success, the requisition number from SAP is shown and the button is replaced by a "PR sent" label that opens the requisition with its PR number and quantity. The component's status colour does not change, because stock has not changed.
 - A second requisition for the same order and material cannot be created once one succeeded.
 - On failure, the error message from SAP is shown, the attempt is stored, and the planner can try again.
+- A component without any requisition shows the Request button. A component whose latest requisition failed or was rejected shows that label instead; opening it offers Retry (failed) or shows the reason and Request again (rejected).
 - A requisition list shows every attempt: number, order, material, quantity, unit, delivery date, user, time and outcome.
 - A Viewer never sees the Request button, and a direct request by a Viewer is refused.
 

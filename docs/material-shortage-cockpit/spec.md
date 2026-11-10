@@ -61,10 +61,10 @@ The flow and the system boundaries follow [ARCHITECTURE.md](../../ARCHITECTURE.m
 | `/orders/?plant=&from=&to=&page=` | Viewer, Planner, Manager | Order list (REQ-1). Plant selector from `COCKPIT_PLANTS`; defaults today → +14 days; 50 per page; overdue orders listed first with a badge |
 | `POST /plants/<plant>/refresh/` | Viewer, Planner, Manager | Full sync, then reloads the list (HTMX) |
 | `/orders/<number>/` | Viewer, Planner, Manager | Components, stock and statuses (REQ-2 to REQ-4); Request button or requisition label (PR sent, Awaiting approval, PR failed, Rejected) per material |
-| `GET/POST /orders/<number>/requisitions/?material=` | Planner, Manager | Confirm step and create (REQ-5, REQ-10) |
+| `GET/POST /orders/<number>/requisitions/?material=` | Planner, Manager | Confirm step and create (REQ-5, REQ-10); also reached from Retry and Request again |
 | `/requisitions/` | Viewer, Planner, Manager | All requisition attempts (REQ-5) |
 | `/dashboard/?plant=&from=&to=` | Viewer, Planner, Manager | REQ-6 |
-| `/settings/` | Manager | Cover buffer, editable (REQ-9); approval limit ("10,000 in the plant's currency, fixed for the PoC") and safety stock ("From SAP") read only (change request) |
+| `/settings/` | Manager | Screen title "Thresholds". Cover buffer, editable (REQ-9); approval limit ("10,000 in the plant's currency, fixed for the PoC") and safety stock ("From SAP") read only (change request) |
 | `/requisitions/<id>/` | Viewer, Planner, Manager | Requisition detail: status, progress, details; technical details when sent or failed (REQ-5, REQ-10) |
 | `POST /requisitions/<id>/approve/`, `POST /requisitions/<id>/reject/` | Manager | Approve or reject, from the Review slide-in on `/requisitions/` or the detail page (REQ-10, change request) |
 | `/admin/` | Admin | Django admin: users and groups only |
@@ -93,7 +93,7 @@ One header with one item, sent in the stock unit. Item fields: material, plant, 
 
 ### Status tooltips
 
-The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md](../ui/ui-spec.md), section 5.2, and are used word for word. Each one shows the current buffer value; with the change request, the Short text also mentions SAP safety stock.
+The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md](../ui/ui-spec.md), section 5.2, and are used word for word. The Low cover and Covered texts show the current buffer value; with the change request, the Short text adds the SAP safety stock and its amount when it is above 0.
 
 ### Decisions a reviewer could question
 
@@ -133,9 +133,9 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-17 | REQ-4: an order's status is its worst component status; unit mismatch alone gives a warning badge, not red | Unit test |
 | AC-18 | REQ-4 / INV-6: narrowing the date range never changes any status shown | Acceptance test: same order, two ranges, same status |
 | AC-19 | REQ-4: 2 KG required with 1,500 G stock → red, shortage 0.5 KG; 10 PC required with stock in KG → unit mismatch | Unit test |
-| AC-20 | REQ-4: every status shows a tooltip with the rule and the buffer value | Browser test |
-| AC-21 | REQ-5: Planner and Manager see a Request button on short and low cover components without an open requisition; Viewer does not | Test per role |
-| AC-22 | REQ-5: the confirm step prefills the shortage for a short component, and (100 + buffer)% × open requirement − available for a low cover component (requirement 100, available 104, buffer 10 → 6); 0, negative, non-numeric and 4-decimal values are rejected with a message | Test |
+| AC-20 | REQ-4: every status shows a tooltip with the rule; the Low cover and Covered texts show the current buffer value | Browser test |
+| AC-21 | REQ-5: Planner and Manager see a Request button on short and low cover components without a requisition; a component whose latest requisition failed or was rejected shows that label, which offers Retry or Request again; Viewer sees no Request, Retry or Request again | Test per role |
+| AC-22 | REQ-5: the confirm step prefills the shortage for a short component, and (100 + buffer)% × open requirement − available for a low cover component (requirement 100, available 104, buffer 10 → 6), rounded up to 3 decimals (requirement 0.333, available 0.35, buffer 12.25 → 0.0237925 → 0.024); 0, negative, non-numeric and 4-decimal values are rejected with a message | Test |
 | AC-23 | REQ-5: the payload sends the quantity converted to the stock unit, the stock unit, and the delivery date = start date, or today if past | Unit test on payload building with a fixed clock |
 | AC-24 | REQ-5: on success the PR number is stored and shown, the button becomes a "PR sent" label that opens the requisition with PR number and quantity, and a second request for the same order + material is refused (INV-7) | Acceptance test against the local mock |
 | AC-25 | REQ-5: on an endpoint error the error message is shown, the attempt is stored as failed, and Retry creates a new attempt | Test with the mock returning 400 |
@@ -145,7 +145,7 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-29 | REQ-7 / INV-9: every URL redirects an anonymous user to login | Test over all URL names |
 | AC-30 | REQ-7: Admin can manage users and groups in `/admin/` and gets 403 on business pages; business roles get 403 on `/admin/` user management | Test per role |
 | AC-31 | REQ-7 / INV-1: a direct POST to create a requisition as Viewer or Admin returns 403 and stores nothing | Test |
-| AC-32 | REQ-8 (change request): safety stock is read from SAP during sync and reserved before allocation. Stock 100, safety stock 30, order A needs 60, order B needs 20 → A available 70, green; B available 10, red, shortage 10. Safety stock above stock → available 0. The tooltip mentions it; `/settings/` shows it read only | Unit tests (safety stock above, equal to and below stock) + test that sync stores it |
+| AC-32 | REQ-8 (change request): safety stock is read from SAP during sync and reserved before allocation. Stock 100, safety stock 30, order A needs 60, order B needs 20 → A available 70, green; B available 10, red, shortage 10. Safety stock above stock → available 0. The tooltip mentions it, with the amount, when it is above 0; `/settings/` shows it read only | Unit tests (safety stock above, equal to and below stock) + test that sync stores it |
 | AC-33 | REQ-9 (change request): a Manager can set the buffer (0–100, at most 2 decimals); statuses and tooltips use it at once. 0, 12.5 and 100 are accepted; -1, 100.01, 10.555 and non-numbers are rejected with a message | Unit + test |
 | AC-34 | REQ-10 (change request): a requisition whose value (quantity in stock unit × price per stock unit) is above 10,000 in the plant's currency, or whose material has no price, is stored as awaiting approval and not sent. Value exactly 10,000 is sent | Unit tests at, below and above the limit and without a price; test with the local mock (no POST received) |
 | AC-35 | REQ-10: approving sends it and stores the outcome as in AC-24 / AC-25 | Acceptance test against the local mock |
