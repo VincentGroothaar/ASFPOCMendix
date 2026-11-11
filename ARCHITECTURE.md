@@ -36,13 +36,13 @@ Dependencies point inward: views → services → `sap/` and models. Services ta
 Snapshot (owned by SAP, refreshed by sync, never edited in the app):
 
 - **PlantSnapshot**: plant, synced_at, last_sync_error, last_sync_error_at.
-- **ProductionOrder**: plant, order number (unique), material, quantity, unit, start date, is_active (false when no longer released in SAP), synced_at.
+- **ProductionOrder**: plant, order number (unique), material, material description, quantity, unit, start date, is_active (false when no longer released in SAP), synced_at.
 - **Component**: order (FK), item number, material, description, required quantity, withdrawn quantity, unit.
 - **Stock**: plant, material, unrestricted quantity (summed over storage locations), stock unit, safety stock (change request), standard price per stock unit and currency (change request, empty when SAP has no price), synced_at. Unique on plant + material.
 
 Owned by the app:
 
-- **Requisition**: order (FK, protected: an order with requisitions is never deleted), material, quantity entered + unit entered, quantity sent + stock unit, shortage at request time (order unit), delivery date, status (`awaiting_approval`, `sent`, `failed`, `rejected`), PR number, payload sent (JSON), response (JSON), error message (text), created_by, created_at, decided_by, decided_at, reject_reason, sent_at. The app reference `REQ-n` is not stored: it is the id, zero-padded to 4 digits (`REQ-0016`). Database constraint: at most one requisition per order + material with status `awaiting_approval` or `sent`; failed and rejected rows never block, and a retry is a new row.
+- **Requisition**: order (FK, protected: an order with requisitions is never deleted), material, item numbers of the order's lines for that material (at request time), quantity entered + unit entered, quantity sent + stock unit, shortage at request time (order unit), delivery date, status (`awaiting_approval`, `sent`, `failed`, `rejected`), PR number, payload sent (JSON), response (JSON), error message (text), created_by, created_at, decided_by, decided_at, reject_reason, sent_at. The app reference `REQ-n` is not stored: it is `REQ-` + the id, unpadded (`REQ-16`). Database constraint: at most one requisition per order + material with status `awaiting_approval` or `sent`; failed and rejected rows never block, and a retry is a new row. Sending happens in one transaction: insert as `sent` with no PR number, POST, then store the PR number or switch to `failed`. A parallel second request blocks on the uncommitted row and then fails, so it never reaches the mock.
 - **BufferChange**: a log with one row per change of the cover buffer: value (0–100, 2 decimals), changed_by, changed_at. The current buffer is the newest row, or 10 when there is none. Changing it from the screen is the change request (REQ-9).
 
 Safety stock and prices come from SAP and live in the snapshot; the approval limit is a constant in code (`APPROVAL_LIMIT`). None of them is edited in the app.
@@ -99,7 +99,8 @@ All quantities are `DecimalField(max_digits=15, decimal_places=3)` / `Decimal`, 
 | Sync execution | Synchronous, in the request | Background worker (Celery/Redis) | No extra moving parts to host or explain | A slow SAP response blocks that request |
 | Statuses | Calculated on read | Stored | Always consistent with the data shown | Recalculated on every view (cheap at this size) |
 | Cover buffer | Log table, current value = newest row (Proposed, #21) | One settings row with the last change | Keeps every change with who and when; no singleton row to seed | One query per read |
-| Requisition reference | `REQ-n` derived from the id (Proposed, #21) | A stored sequence number | Unique and ordered with no locking code | Numbers can have gaps |
+| Requisition reference | `REQ-n` derived from the id, unpadded (Proposed, #21) | A stored sequence number | Unique and ordered with no locking code | Numbers can have gaps |
+| Duplicate PR guard | Insert as `sent`, then POST, in one transaction (Proposed, #21) | A `sending` status; insert after the POST | The database constraint blocks a double submit before the mock is called | Transaction open during the HTTP call (max 10 s) |
 | Requisition target | Separate mock service with SAP-identical paths | Mock inside the Django app | Shared by both tracks; switching to real S/4 is a URL change | One more service to deploy |
 | Hosting | Render free tier | Azure; paid plans | Simple, free, enough for demo and jury | Sleep and wake-up delay; database expires after 30 days |
 
