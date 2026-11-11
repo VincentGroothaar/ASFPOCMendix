@@ -9,14 +9,17 @@ This repository is the high-code track: the **Material Shortage Cockpit**, built
 You need [uv](https://docs.astral.sh/uv/), which installs the right Python version and all dependencies, and [Docker](https://docs.docker.com/get-docker/), which runs the local Postgres database. The app uses Postgres in every environment; there is no SQLite fallback.
 
 ```sh
-cp .env.example .env              # then fill in SAP_API_KEY
+cp .env.example .env              # then fill in SAP_API_KEY and the TEST_PASSWORD_* values
 docker compose up -d              # start Postgres (data is kept in a Docker volume)
 uv sync                           # install Python and dependencies
 uv run python manage.py migrate   # create the tables in Postgres
+uv run python manage.py create_test_users   # one account per role, see below
 uv run python manage.py runserver
 ```
 
-Open http://127.0.0.1:8000/.
+Open http://127.0.0.1:8000/ and log in. Every page needs a login.
+
+**Accounts and roles.** `create_test_users` creates or resets five accounts: `viewer`, `planner`, `manager_a`, `manager_b` (two Managers, to check that nobody approves their own requisition) and `admin`. Each password comes from its own variable (`TEST_PASSWORD_VIEWER`, `TEST_PASSWORD_PLANNER`, `TEST_PASSWORD_MANAGER_A`, `TEST_PASSWORD_MANAGER_B`, `TEST_PASSWORD_ADMIN`) and must pass Django's password rules (at least 8 characters, not too common, not only digits). If one is missing or too weak, the command stops and changes nothing. A user's role is the one role group they are in; what each role may do is fixed in `cockpit/services/roles.py`. `admin` manages users and roles at `/admin/` and cannot open business pages.
 
 ## Run tests and checks
 
@@ -50,6 +53,7 @@ Settings come from environment variables. Locally they are read from `.env`; see
 | `DJANGO_SECRET_KEY` | Django signing key; a dev-only key is used if empty, except when `DJANGO_HTTPS=true` |
 | `DJANGO_DEBUG` | `true` shows debug pages; off when unset            |
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated host names, default `localhost,127.0.0.1` |
+| `TEST_PASSWORD_VIEWER`, `TEST_PASSWORD_PLANNER`, `TEST_PASSWORD_MANAGER_A`, `TEST_PASSWORD_MANAGER_B`, `TEST_PASSWORD_ADMIN` | Passwords of the five PoC accounts, read by `create_test_users` |
 | `DJANGO_HTTPS` | `true` when hosted behind an HTTPS proxy (Render): redirects to HTTPS and sends cookies over HTTPS only; off when unset |
 
 ## Deploy on Render
@@ -64,9 +68,9 @@ The app runs as its own Render web service next to the mock (see `mock_pr/README
    `--inexact` keeps `uv` itself installed (see `mock_pr/README.md`). `collectstatic` copies the static files (for now the Django admin styles) into `staticfiles/`, where WhiteNoise serves them from.
 3. **Start command:**
    ```sh
-   uv run --no-sync python manage.py migrate --no-input && uv run --no-sync gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+   uv run --no-sync python manage.py migrate --no-input && uv run --no-sync python manage.py create_test_users && uv run --no-sync gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120
    ```
-   Migrations run at start-up because the free plan has no pre-deploy step; with nothing to migrate this takes a second. `--timeout 120` gives a slow SAP sync time to finish, since the sync runs inside the request.
+   Migrations and `create_test_users` run at start-up because the free plan has no pre-deploy step or shell; with nothing to migrate this takes a second. **Any change made to the five PoC accounts (password, role, active) is undone on every restart, and a free service restarts every time it wakes from sleep.** Other users are never touched. `--timeout 120` gives a slow SAP sync time to finish, since the sync runs inside the request.
 4. **Environment variables** (only here, never in the repository):
 
    | Variable | Value |
@@ -79,12 +83,13 @@ The app runs as its own Render web service next to the mock (see `mock_pr/README
    | `SAP_BASE_URL`, `SAP_API_KEY` | As in your local `.env` |
    | `MOCK_PR_BASE_URL` | The mock's public URL on Render, e.g. `https://<mock-service>.onrender.com` |
    | `MOCK_API_KEY` | The same key as on the mock service |
+   | `TEST_PASSWORD_VIEWER`, `TEST_PASSWORD_PLANNER`, `TEST_PASSWORD_MANAGER_A`, `TEST_PASSWORD_MANAGER_B`, `TEST_PASSWORD_ADMIN` | One strong password per PoC account. The service does not start if one is missing or too weak |
 
-5. **Deploy**, then check the public URL: `/` answers, `/admin/` shows the login page with its styling, and `http://` redirects to `https://`.
+5. **Deploy**, then check the public URL: `/` and `/admin/` both end on the login page with its styling, `admin` can log in and reaches user administration, and `http://` redirects to `https://`.
 
    Errors and refused requests appear in the service's **Logs** tab on Render.
 
-The test accounts per role come from the `create_test_users` command (#22). Free services sleep after 15 minutes idle, so the first request after a pause takes about a minute; that wake-up time does not count towards the 5-second load target (D-17). The free database expires 30 days after it was created (see #10 for the date).
+Free services sleep after 15 minutes idle, so the first request after a pause takes about a minute; that wake-up time does not count towards the 5-second load target (D-17). The free database expires 30 days after it was created (see #10 for the date).
 
 ## Where things live
 

@@ -36,8 +36,8 @@ ISSUED = "Issued"
 def make_user(role: str, username: str | None = None) -> User:
     """Create a user with one role (ARCHITECTURE.md: one Django group per role).
 
-    #22 adjusts this if a role needs more than group membership (for example, staff status
-    for Admin), using the same setup as `create_test_users`.
+    Group membership is all a role needs (#22): Admin does not need staff status, because the
+    admin site checks the role itself. This matches what `create_test_users` sets up.
     """
     assert role in ROLES, f"Unknown role {role}"
     user = User.objects.create_user(username or role.lower(), password="not-used")

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% comment %}
+  E · Not allowed (ui-spec 4.7 E). Rendered by cockpit.views for every refused page or action,
+  for CSRF failures, and for HTMX requests (where it replaces the whole page).
+  Three cases: a user with a role, a logged-in user without a usable role, a logged-out user.
+{% endcomment %}
+
+{% block title %}No permission · Material Shortage Cockpit{% endblock %}
+
+{% block content %}
+  <section class="denied" aria-labelledby="denied-title">
+    <span class="muted">403</span>
+    <h1 id="denied-title">You don't have permission for this</h1>
+    {% if role %}
+      <p>You are logged in as {{ role.value }}. This role cannot open this page or do this action.</p>
+      {% if is_admin %}
+        <a class="btn" href="{% url 'admin:index' %}">Go to user administration</a>
+      {% else %}
+        <a class="btn" href="/orders/">Back to orders</a>
+      {% endif %}
+    {% elif logged_in %}
+      <p>Your account has no role. Ask an Admin to assign one.</p>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button class="btn" type="submit">Log out</button>
+      </form>
+    {% else %}
+      <p>Your session has expired or the form was out of date. Log in again.</p>
+      <a class="btn" href="{% url 'login' %}">Log in</a>
+    {% endif %}
+  </section>
+{% endblock %}
