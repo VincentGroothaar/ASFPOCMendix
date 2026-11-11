@@ -21,6 +21,9 @@ def delete_role_groups(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("auth", "0012_alter_user_first_name_max_length")]
+    dependencies = [
+        ("auth", "0012_alter_user_first_name_max_length"),
+        ("cockpit", "0001_initial"),
+    ]
 
     operations = [migrations.RunPython(create_role_groups, delete_role_groups)]
