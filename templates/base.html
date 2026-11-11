@@ -1,14 +1,25 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Material Shortage Cockpit{% endblock %}</title>
+    {% comment %}
+      responseHandling: a 403 to an HTMX request replaces the whole page with the 403 page,
+      whatever the clicked element's own hx-swap or hx-select say (#22). htmx drops the <body>
+      tag of a full-page response, so the rule selects #page inside it. The three entries
+      after it are htmx 2.0.4's defaults, unchanged.
+    {% endcomment %}
+    <meta name="htmx-config" content='{"responseHandling": [{"code": "403", "swap": true, "target": "body", "swapOverride": "innerHTML", "select": "#page"}, {"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": false, "error": true}]}'>
+    <link rel="stylesheet" href="{% static 'cockpit/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'cockpit/access.css' %}">
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
   </head>
   <body>
-    <main>
-      {% block content %}{% endblock %}
-    </main>
+    <div id="page">
+      <main>
+        {% block content %}{% endblock %}
+      </main>
+    </div>
   </body>
 </html>

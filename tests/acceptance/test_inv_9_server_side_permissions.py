@@ -12,9 +12,19 @@ from tests.acceptance.support import (
     sync,
 )
 
+NOT_BUILT_34 = pytest.mark.xfail(strict=True, reason="Not built yet: #34")
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #34")
-@pytest.mark.parametrize("path", ["/", "/orders/", "/dashboard/", "/requisitions/", "/settings/"])
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/",  # built in #22
+        pytest.param("/orders/", marks=NOT_BUILT_34),
+        pytest.param("/dashboard/", marks=NOT_BUILT_34),
+        pytest.param("/requisitions/", marks=NOT_BUILT_34),
+        pytest.param("/settings/", marks=NOT_BUILT_34),
+    ],
+)
 def test_inv_9_anonymous_requests_go_to_login(client, path):
     assert is_login_redirect(client.get(path))
 

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% comment %}A · Login (ui-spec 4.7 A). Django's LoginView renders this page.{% endcomment %}
+
+{% block title %}Log in · Material Shortage Cockpit{% endblock %}
+
+{% block content %}
+  <div class="login-page">
+    <form class="login-card" method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      <h1>Material Shortage Cockpit</h1>
+      {% for message in messages %}
+        <p class="form-message" role="status">{{ message }}</p>
+      {% endfor %}
+      {% if form.non_field_errors %}
+        <p class="form-error" role="alert">{{ form.non_field_errors|join:" " }}</p>
+      {% endif %}
+      <label class="field">Username
+        <input type="text" name="username" autocomplete="username" required autofocus
+               value="{{ form.username.value|default:'' }}">
+        {% for error in form.username.errors %}<span class="form-field-error">{{ error }}</span>{% endfor %}
+      </label>
+      <label class="field">Password
+        <input type="password" name="password" autocomplete="current-password" required>
+        {% for error in form.password.errors %}<span class="form-field-error">{{ error }}</span>{% endfor %}
+      </label>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="btn btn-primary" type="submit">Log in</button>
+      <span class="muted">Accounts and roles: Admin in Django admin.</span>
+    </form>
+  </div>
+{% endblock %}

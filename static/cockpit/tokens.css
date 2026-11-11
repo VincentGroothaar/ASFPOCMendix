@@ -1,0 +1,96 @@
+/*
+  Material Shortage Cockpit: design tokens
+  Source: reviewed wireframes (D-29), 7 Nov 2026. Spec, not app code (S0-14).
+  Use these variables for every colour, size and spacing value in the app.
+*/
+:root {
+  /* Font */
+  --font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-size-h1: 28px;        /* page title, weight 700, letter-spacing -0.01em */
+  --font-size-h2: 17px;        /* card title, weight 600 */
+  --font-size-kpi: 28px;       /* tile number, weight 700, tabular numbers */
+  --font-size-body: 14px;
+  --font-size-small: 13px;     /* muted text, meta lines */
+  --font-size-caption: 12px;   /* table headers, pills, field labels, sub-lines */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Page and surfaces */
+  --color-page: #f3f2ee;
+  --color-surface: #ffffff;
+  --color-surface-muted: #faf9f6;     /* table header, code blocks */
+  --color-border: #e2e0da;            /* cards, table header line */
+  --color-border-subtle: #ecebe6;     /* row dividers, tile dividers */
+  --color-border-control: #c9c6bd;    /* inputs, secondary buttons */
+  /* Borders are 1px hairlines everywhere; 1px is the one raw size allowed, so it has no token. */
+  --color-row-selected: #eef5f5;      /* selected row, plus 3px inset left bar in --color-primary */
+
+  /* Text */
+  --color-text: #1c2a2e;
+  --color-text-muted: #4b5658;
+
+  /* Primary (buttons, links, focus) */
+  --color-primary: #0e5c63;
+  --color-primary-hover: #0a3f44;
+  --color-on-primary: #ffffff;
+
+  /* Sidebar */
+  --color-sidebar: #12404a;
+  --color-sidebar-hover: #1a4f5a;
+  --color-sidebar-active: #1f6470;
+  --color-sidebar-text: #d7e6e8;
+  --color-sidebar-divider: #2b5f69;
+  --color-sidebar-accent: #7fd1d6;    /* logo mark */
+  --color-badge: #f2c94c;             /* count badge (pending approvals) */
+  --color-on-badge: #3a2a00;
+
+  /* Status pills: background / text. Text colours pass 4.5:1 on their background. */
+  --color-short-bg: #fbe7e4;      --color-short: #a12a1d;      /* Short, PR failed */
+  --color-low-bg: #fdf0d5;        --color-low: #7a4a00;        /* Low cover, Awaiting approval */
+  --color-covered-bg: #e2f2e7;    --color-covered: #1b6334;    /* Covered */
+  --color-neutral-bg: #ecebe6;    --color-neutral: #3f4a4c;    /* Unit mismatch, Issued, Overdue, Rejected */
+  --color-info-bg: #e3eef7;       --color-info: #1d4f7a;       /* PR sent */
+
+  /* Chart colours (dashboard donut) */
+  --chart-short: #c2412d;
+  --chart-low: #e0a21b;
+  --chart-covered: #2f8a4c;
+  --chart-mismatch: #b9b6ad;
+
+  /* Tooltip */
+  --color-tooltip: #1c2a2e;
+  --color-on-tooltip: #ffffff;
+  --tooltip-width: 260px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;     /* card padding */
+  --space-6: 24px;
+  --space-8: 32px;     /* page side padding */
+  --space-section: 18px;  /* gap between page sections and cards */
+
+  /* Radius */
+  --radius-control: 8px;   /* buttons, inputs, selects, notes */
+  --radius-group: 12px;    /* segmented controls, banners, tile strips inside cards */
+  --radius-card: 14px;     /* cards, tiles, tables */
+  --radius-tooltip: 10px;
+  --radius-pill: 999px;
+
+  /* Sizes */
+  --touch-target: 44px;        /* minimum height for buttons, inputs, nav items */
+  --control-compact: 36px;     /* small buttons inside table rows */
+  --sidebar-min-width: 200px;
+  --drawer-width: 420px;       /* approval slide-in */
+  --login-card-width: 300px;   /* login card (ui-spec 4.7 A, wireframe width) */
+  --content-max-width: 1200px;
+
+  /* Elevation */
+  --shadow-tooltip: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-drawer: -12px 0 32px rgba(0, 0, 0, 0.14);
+  --color-scrim: rgba(18, 64, 74, 0.25);
+}

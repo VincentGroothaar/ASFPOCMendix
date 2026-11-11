@@ -10,7 +10,6 @@ ADMIN_PAGES = ["/admin/auth/user/", "/admin/auth/group/", "/admin/auth/user/add/
 BUSINESS_PAGES = ["/orders/", "/requisitions/", "/dashboard/", "/settings/"]
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #34")
 def test_ac_30_admin_manages_users_and_groups(client_as):
     admin = client_as("Admin")
 

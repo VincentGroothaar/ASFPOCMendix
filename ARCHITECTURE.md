@@ -1,6 +1,6 @@
 # Material Shortage Cockpit architecture
 
-Status: Proposed. Built today: an empty Django project with CI on Postgres (#4, #9), the requisition mock (#8) and the SAP read client with its read functions (`sap/`, #18). Not built yet: everything in this document beyond that.
+Status: Proposed. Built today: an empty Django project with CI on Postgres (#4, #9), the requisition mock (#8) and the SAP read client with its read functions (`sap/`, #18), and roles, login, access control and user administration (#22). Not built yet: everything in this document beyond that.
 
 ## Intended system
 
@@ -17,7 +17,7 @@ flowchart LR
     mock -->|stores requisitions, number sequence| db
 ```
 
-Trust boundary: SAP and the mock are external systems reached over HTTPS with an API key; the browser only talks to the Django app, which checks login and role on every request.
+Trust boundary: SAP and the mock are external systems reached over HTTPS with an API key; the browser only talks to the Django app, which checks login (closed by default) and role on every request on the server.
 
 ## Responsibilities
 
@@ -86,9 +86,10 @@ All quantities are `DecimalField(max_digits=15, decimal_places=3)` / `Decimal`, 
 
 ## Security and operations
 
-- **Auth:** Django's built-in authentication. One group per role (Viewer, Planner, Manager, Admin); each user is in exactly one group. Permissions are explicit per group, not inherited. Admin uses the built-in Django admin for users and groups only; business models are not registered in it.
+- **Auth (Accepted, #22):** Django's built-in authentication. A subclass of `LoginRequiredMiddleware` makes every view need a login by default; only the login page is public (INV-9). An anonymous HTMX request gets `HX-Redirect` to the login page (with `next` = the page the user was on, from `HX-Current-URL`, own host only) instead of a redirect pasted into a fragment. One group per role (Viewer, Planner, Manager, Admin). A user's role is the one role group they are in; a user with zero or several role groups, or inactive, has no role and gets 403 everywhere (fail closed). What each role may do is a fixed table in code (`cockpit/services/roles.py`, matching REQUIREMENTS.md "Business rules"), not Django permissions on groups, so it can't be changed at runtime. Each view declares its action with `cockpit/access.py` `requires(action)`; a forbidden request, whether normal, HTMX (the 403 replaces the whole page, whatever the element's own swap settings) or direct (including a CSRF failure, via `CSRF_FAILURE_VIEW`), gets the 403 page and changes nothing. The page names the role, or says the account has no role, or (logged out) that the session expired. Rules that depend on the record (INV-7, INV-8) stay in `services/requisitions.py`.
+- **User administration (Accepted, #22):** Django admin at `/admin/` is open only to the Admin role, checked in code by a custom `AdminSite` that uses Django's plain login form (not `is_staff` or stored permissions); its logout is the cockpit logout. It manages users only: each user must have exactly one role (on the add and the change form), role groups are read-only, and business models are not registered. The four groups are created by a data migration. `create_test_users` creates or fully resets the five PoC accounts (viewer, planner, manager_a, manager_b, admin: password from `TEST_PASSWORD_*`, exactly one role, active, not staff or superuser) and touches no other user; because it runs on every start, changes to those five accounts revert on every restart or wake.
 - **Secrets:** environment variables locally (`.env`, git-ignored), GitHub Actions secrets in CI, Render environment variables when hosted.
-- **Hosting:** Render free tier. One web service for the app (built on day 2), one for the mock, and one free Postgres shared by both in separate schemas. The app runs under gunicorn, WhiteNoise serves its static files, and `DJANGO_HTTPS=true` makes it trust Render's HTTPS proxy; the steps are in the README ("Deploy on Render"). Free services sleep after 15 minutes idle and take about a minute to wake; the free database expires 30 days after creation and has no backups.
+- **Hosting:** Render free tier. One web service for the app (built on day 2), one for the mock, and one free Postgres shared by both in separate schemas. The app runs under gunicorn, WhiteNoise serves its static files, and `DJANGO_HTTPS=true` makes it trust Render's HTTPS proxy; the steps are in the README ("Deploy on Render"). The start command runs `migrate`, then `create_test_users`, then gunicorn, because the free plan has no shell or pre-deploy step (#22). Free services sleep after 15 minutes idle and take about a minute to wake; the free database expires 30 days after creation and has no backups.
 - **CI:** GitHub Actions on every PR: ruff, Django checks, migrations check, pytest against a Postgres service, the mock's tests, and Playwright for a few browser flows. Branch protection requires CI to pass before merging.
 - **Monitoring and recovery:** none beyond Render's logs. All SAP data can be rebuilt by a sync; requisitions are lost only if the free database expires.
 
@@ -105,12 +106,16 @@ All quantities are `DecimalField(max_digits=15, decimal_places=3)` / `Decimal`, 
 | Requisition reference | `REQ-n` derived from the id, unpadded (Accepted, #21) | A stored sequence number | Unique and ordered with no locking code | Numbers can have gaps |
 | Duplicate PR guard | Insert as `sent`, then POST, in one transaction (Accepted, #21) | A `sending` status; insert after the POST | The database constraint blocks a double submit before the mock is called; approve and reject lock the row, so a race cannot send twice | Transaction open during the HTTP call (max 10 s) |
 | Requisition target | Separate mock service with SAP-identical paths | Mock inside the Django app | Shared by both tracks; switching to real S/4 is a URL change | One more service to deploy |
+| Login enforcement | `LoginRequiredMiddleware`, closed by default (Accepted, #22) | `@login_required` on each view | A forgotten decorator can't leave a page open | Public views must be marked explicitly |
+| Role permissions | Fixed role → action table in code (Accepted, #22) | Django permissions stored on groups | Reviewable, testable without a database, can't drift from REQUIREMENTS.md | Group permission fields in admin are hidden and unused |
+| Admin access | By role, checked in a custom `AdminSite` (Accepted, #22) | Django's `is_staff` and stored auth permissions | One source of truth for roles; exactly one role per user | Small custom admin classes |
 | Hosting | Render free tier | Azure; paid plans | Simple, free, enough for demo and jury | Sleep and wake-up delay; database expires after 30 days |
 
 ## Configuration
 
 - `COCKPIT_PLANTS`: comma-separated plants for the selector, default `AUC1` (findings from #7: most released open orders, all three colours at component level, loads in 2–4 s). USC1 and DEC1 also fit the 5 s target; 1710 does not without fewer, larger calls.
 - `SAP_BASE_URL`, `SAP_API_KEY`, `MOCK_PR_BASE_URL`, `MOCK_API_KEY` (INV-3).
+- `TEST_PASSWORD_VIEWER`, `TEST_PASSWORD_PLANNER`, `TEST_PASSWORD_MANAGER_A`, `TEST_PASSWORD_MANAGER_B`, `TEST_PASSWORD_ADMIN`: passwords of the PoC accounts, read by `create_test_users` (#22).
 
 ## Open decisions
 

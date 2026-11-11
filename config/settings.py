@@ -67,7 +67,8 @@ SAP_API_KEY = os.environ.get("SAP_API_KEY", "")
 # --- Apps -------------------------------------------------------------------
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    # Django admin with the cockpit's role-based admin site (user administration, #22).
+    "config.apps.CockpitAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -84,6 +85,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Every page needs a login unless a view is marked public (only the login page is).
+    # HTMX requests get a whole-page redirect to the login page (#22, INV-9).
+    "cockpit.access.HtmxLoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -130,6 +134,15 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# --- Login and access (#22) ------------------------------------------------
+
+LOGIN_URL = "/accounts/login/"
+# After login everyone goes to "/": Admin is sent on to /admin/, business roles see the cockpit.
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/accounts/login/"
+# A POST without a valid CSRF token gets the same 403 page as any other refusal.
+CSRF_FAILURE_VIEW = "cockpit.views.csrf_failure"
 
 # --- Language and time ------------------------------------------------------
 
