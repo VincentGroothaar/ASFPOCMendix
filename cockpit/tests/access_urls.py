@@ -18,7 +18,7 @@ from config.urls import urlpatterns as app_urlpatterns
 STORED_GROUP_NAME = "stored-by-protected-post"
 
 HTMX_PAGE = Template(
-    """{% extends "base.html" %}
+    """{% extends "layouts/frame.html" %}
 {% block content %}
   <h1>Test page</h1>
   <p id="target">Untouched</p>

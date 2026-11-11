@@ -1,0 +1,1 @@
+{% if not label %}<span class="muted">–</span>{% elif panel_url %}<button type="button" class="req-label req-label-{{ label.tone }}" hx-get="{{ panel_url }}" hx-target="#side-panel">{{ label.label }}</button>{% else %}<span class="req-label req-label-{{ label.tone }}">{{ label.label }}</span>{% endif %}
