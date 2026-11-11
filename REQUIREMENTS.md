@@ -53,7 +53,7 @@ Done when:
 As a Planner, I want each component and order to show whether it is short, at risk or covered, so that I can act on the riskiest orders first.
 
 Done when:
-- Stock is allocated to orders by start date (earliest first; ties by order number) across all released orders of the plant up to the end of the selected range, regardless of the current filter. Narrowing the filter never changes a status.
+- Stock is allocated to orders by start date (earliest first; ties by order number) across all released orders of the plant, regardless of the current filter. Narrowing the filter never changes a status.
 - For each component: available = stock left after earlier orders took their open requirement (never below 0); shortage = max(0, open requirement − available).
 - Status: **red** when available < open requirement; **amber** when available covers the requirement but by less than 10% (available < 1.1 × requirement); **green** otherwise.
 - The 10% buffer only affects the colour. Allocation takes only the real requirement from stock.
