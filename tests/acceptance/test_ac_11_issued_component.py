@@ -3,12 +3,8 @@ Unit test: the sandbox has no issued components in AUC1."""
 
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import Component, Order, Stock, days
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #20")
 
 
 def test_ac_11_fully_withdrawn_component_is_issued_and_does_not_count():

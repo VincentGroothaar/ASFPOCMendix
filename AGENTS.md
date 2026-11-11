@@ -84,6 +84,7 @@ Each step and each skill run gets its own comment on the issue. Never combine tw
 | `[merge]` | The PR is merged | PR link, and close the issue if the merge did not close it |
 
 - Keep comments short and factual: what happened, links, and what comes next. Never put secrets in a comment; issues are public.
+- End every comment with two lines: `Session: <id>` and `Tokens: <output>`. The session id is `$CLAUDE_CODE_SESSION_ID`. The output comes from `uv run python scripts/token_usage.py --since <time>`, where `<time>` is when this session posted its previous comment on this issue; leave out `--since` on this session's first comment on the issue. The count includes the subagents this session started. If the script cannot run, for example outside Claude Code, write `Tokens: unknown` and say why.
 - Look up the field and option IDs with `gh project field-list 2 --owner VincentGroothaar --format json`, the item ID with `gh project item-list 2 --owner VincentGroothaar --format json`, and set the status with `gh project item-edit`.
 
 ## Escalation
@@ -114,9 +115,11 @@ This repo is measured as part of the PoC. The PR history is the evidence, so eve
 - Repair rounds: <times checks or CI failed and were fixed before the PR was ready>
 - Review findings fixed: <count from the independent review, or 0>
 - Blocked by: <what slowed or stopped the work, e.g. sandbox down from 10:20 to 10:45, or none>
+- Tokens: <output of scripts/token_usage.py for every session listed in this issue's comments>
 ```
 
 - Report only facts from this session. Write "unknown" rather than estimating.
+- For `Tokens`, collect the `Session:` ids from the issue's comments and run `uv run python scripts/token_usage.py --session <id> --session <id> ...` once with all of them, so spec, build and review sessions are all counted. The cost in that line is computed from API list prices, not an invoice; leave the wording as the script prints it. If any session has no transcript on this machine, say which ones are missing.
 - Do not report human effort, confidence, or how much code the human reviewed. The person steering logs those separately.
 - Do not write to Notion or any other metrics store. The PR description is the only record you keep.
 
@@ -135,5 +138,5 @@ Dependencies are managed with `uv`. Install them with `uv sync`.
 The workflow is [Blueprint](https://github.com/owainlewis/blueprint). Its skills are committed in [.claude/skills/](.claude/skills/), so refinement and development use the same version.
 
 - Pinned commit: `fb5a850965039d434343fa1b74f8c7f47eb2bd96`
-- The skills are copies of `skills/` at that commit, with one change: `spec`, `architecture`, `architecture-review`, `task-to-pr`, `test` and `review` don't have the `disable-model-invocation: true` frontmatter line (for Claude Code), and their `agents/openai.yaml` sets `allow_implicit_invocation: true` (for Codex). This lets agents load them in the [Workflow](#workflow). All other skills are unmodified. Blueprint's MIT licence is in [.claude/skills/BLUEPRINT-LICENSE](.claude/skills/BLUEPRINT-LICENSE).
+- The skills are copies of `skills/` at that commit, with these changes: `spec`, `architecture`, `architecture-review`, `task-to-pr`, `test` and `review` don't have the `disable-model-invocation: true` frontmatter line (for Claude Code), and their `agents/openai.yaml` sets `allow_implicit_invocation: true` (for Codex). This lets agents load them in the [Workflow](#workflow). Two further edits cut token use: `spec` asks for a diagram only when the flow changes, and `architecture` checks the Mermaid text instead of rendering it. All other skills are unmodified. Blueprint's MIT licence is in [.claude/skills/BLUEPRINT-LICENSE](.claude/skills/BLUEPRINT-LICENSE).
 - To upgrade, replace the skills with those from a newer commit, make both changes to the same six skills again, and update the SHA here in the same PR.

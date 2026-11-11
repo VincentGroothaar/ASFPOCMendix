@@ -20,6 +20,7 @@ from django.contrib.auth.models import Group, User
 from django.test import override_settings
 
 from cockpit.models import ProductionOrder, Requisition
+from cockpit.services import shortage
 from tests.acceptance.support import Order, Stock
 
 ROLES = ("Viewer", "Planner", "Manager", "Admin")
@@ -152,7 +153,7 @@ class ComponentOutcome:
 
 @dataclass
 class OrderOutcome:
-    status: str  # worst component status; SHORT, LOW_COVER or COVERED
+    status: str | None  # worst component status; SHORT, LOW_COVER, COVERED, or None
     unit_mismatch: bool  # the warning badge
 
 
@@ -171,6 +172,55 @@ def calculate(
     """Run `cockpit.services.shortage.calculate` on plain test data (spec.md, Modules).
 
     Translates `orders`, `stock` (including safety stock) and the buffer into the input types
-    of `calculate`, and its PlantResult back into a PlantOutcome. #20 fills this in.
+    of `calculate`, and its PlantResult back into a PlantOutcome. Safety stock is not passed
+    yet (#31). `today` is the frozen test date, so overdue is not part of the outcome.
     """
-    raise NotImplementedError("shortage.calculate not built yet (#20)")
+    result = shortage.calculate(
+        orders=[
+            shortage.OrderLine(
+                number=order.number,
+                start_date=order.start,
+                components=tuple(
+                    shortage.ComponentLine(
+                        item=line.item,
+                        material=line.material,
+                        required=line.required,
+                        withdrawn=line.withdrawn,
+                        unit=line.unit,
+                    )
+                    for line in order.components
+                ),
+            )
+            for order in orders
+        ],
+        stock=[shortage.StockLine(row.material, row.quantity, row.unit) for row in stock],
+        settings=shortage.ShortageSettings(buffer_percent=buffer),
+        today=date.today(),
+    )
+    return PlantOutcome(
+        components={
+            (order.number, line.item): ComponentOutcome(
+                status=_STATUS_NAMES[line.status],
+                available=line.available,
+                shortage=line.shortage,
+            )
+            for order in result.orders.values()
+            for line in order.components
+        },
+        orders={
+            order.number: OrderOutcome(
+                status=_STATUS_NAMES[order.status] if order.status else None,
+                unit_mismatch=order.unit_mismatch,
+            )
+            for order in result.orders.values()
+        },
+    )
+
+
+_STATUS_NAMES = {
+    shortage.Status.SHORT: SHORT,
+    shortage.Status.LOW_COVER: LOW_COVER,
+    shortage.Status.COVERED: COVERED,
+    shortage.Status.UNIT_MISMATCH: UNIT_MISMATCH,
+    shortage.Status.ISSUED: ISSUED,
+}
