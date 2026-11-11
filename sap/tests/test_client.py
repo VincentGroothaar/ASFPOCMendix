@@ -228,6 +228,18 @@ def test_parse_decimal_rejects_non_numbers(value: object) -> None:
         parse_decimal(value, "Qty")
 
 
+@pytest.mark.parametrize("value", ["1E+1000000", "1E-1000000", "1E+101", "1E-101"])
+def test_parse_decimal_rejects_numbers_far_out_of_range(value: str) -> None:
+    # Adding such a value would raise decimal.Overflow instead of SapDataError (#24 review).
+    with pytest.raises(SapDataError, match="out of range"):
+        parse_decimal(value, "Qty")
+
+
+@pytest.mark.parametrize("value", ["1E+100", "1E-100", "999999999999.999", "0.001"])
+def test_parse_decimal_accepts_numbers_in_range(value: str) -> None:
+    assert parse_decimal(value, "Qty") == Decimal(value)
+
+
 # --- Review round 1: paging that would never end, bad rows, the key in debug pages ----------
 
 
