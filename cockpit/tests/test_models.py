@@ -29,6 +29,7 @@ Status = Requisition.Status
 
 @pytest.fixture
 def planner() -> User:
+    """A user to store as requester or changer; roles do not matter for the model."""
     return User.objects.create_user("planner", password="not-used")
 
 
@@ -185,6 +186,14 @@ def test_buffer_is_the_newest_change(planner) -> None:
 
     assert current_buffer() == Decimal("12.50")
     assert last_change().changed_by == planner
+
+
+def test_buffer_with_equal_change_times_is_the_last_saved(planner) -> None:
+    same_time = timezone.now()
+    BufferChange.objects.create(value=Decimal("15"), changed_by=planner, changed_at=same_time)
+    BufferChange.objects.create(value=Decimal("25"), changed_by=planner, changed_at=same_time)
+
+    assert current_buffer() == Decimal("25")
 
 
 @pytest.mark.parametrize("value", ["0", "100"])

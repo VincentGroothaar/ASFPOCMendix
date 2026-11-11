@@ -8,6 +8,8 @@ Two groups of models:
 Every quantity is a Decimal with 3 decimals, as in SAP (INV-5).
 """
 
+from typing import Any
+
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
@@ -22,7 +24,7 @@ UNIT_LENGTH = 3
 ITEM_LENGTH = 4
 
 
-def quantity_field(**options) -> models.DecimalField:
+def quantity_field(**options: Any) -> models.DecimalField:
     """A quantity column: 15 digits, 3 of them decimals (decision 5 on #21)."""
     return models.DecimalField(max_digits=15, decimal_places=3, **options)
 
@@ -121,8 +123,6 @@ class Requisition(models.Model):
         FAILED = "failed", "PR failed"
         REJECTED = "rejected", "Rejected"
 
-    OPEN_STATUSES = [Status.AWAITING_APPROVAL, Status.SENT]
-
     order = models.ForeignKey(
         ProductionOrder, on_delete=models.PROTECT, related_name="requisitions"
     )
@@ -159,6 +159,7 @@ class Requisition(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["order", "material"],
+                # Open = awaiting approval or sent; failed and rejected never block.
                 condition=Q(status__in=["awaiting_approval", "sent"]),
                 name="one_open_requisition_per_order_material",
             )
