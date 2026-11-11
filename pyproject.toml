@@ -7,9 +7,11 @@ requires-python = ">=3.12"
 dependencies = [
     "django>=5.2,<6",
     "fastapi>=0.162.2",
+    "gunicorn>=27.0.0",
     "psycopg[binary]>=3.2",
     "requests>=2.32",
     "uvicorn>=0.54.0",
+    "whitenoise>=6.12.0",
 ]
 
 [dependency-groups]
@@ -19,6 +21,7 @@ dev = [
     "pytest-django>=4.9",
     "pytest-playwright>=0.10.0",
     "ruff>=0.6",
+    "time-machine>=3.6.0",
 ]
 
 [tool.uv]

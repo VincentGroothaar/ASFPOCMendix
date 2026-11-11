@@ -3,7 +3,6 @@ name: review
 description: "Runs an independent, read-only review of a code change in two parts: does it match the spec, and does it work. Tries bad input, checks security, and checks that the tests would catch a regression. Use for a diff, branch, commit, or PR."
 user-invocable: true
 argument-hint: "[diff, branch, commit, PR, or file path]"
-disable-model-invocation: true
 ---
 
 # Review
