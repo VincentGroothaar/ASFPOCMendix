@@ -222,3 +222,10 @@ def test_the_user_list_loads_roles_without_a_query_per_user(client_as, make_user
 
     assert response.status_code == 200
     assert len(many_users) == len(few_users)
+
+
+def test_anonymous_head_on_the_admin_login_page_is_sent_to_the_cockpit_login(db) -> None:
+    response = Client().head("/admin/login/")
+
+    assert response.status_code == 302
+    assert response["Location"] == "/accounts/login/?next=/admin/"
