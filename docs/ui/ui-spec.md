@@ -28,7 +28,7 @@
 - Two columns: **sidebar** (left, min `--sidebar-min-width`, `--color-sidebar`) and **content** (rest, `--color-page`, padding `--space-8`, max content width `--content-max-width`).
 - Content is a vertical stack with `--space-section` between sections.
 - **Page header:** H1 title on the left. On data screens (Orders, Order detail, Dashboard) the right side shows `Data as of [dd Mon HH:MM]` (muted) and a **Refresh** button with a refresh icon (D-17).
-- **Breadcrumb** above the header on detail pages: `Orders / 1000123`, `Requisitions / REQ-0016`. Each part except the last is a link.
+- **Breadcrumb** above the header on detail pages: `Orders / 1000123`, `Requisitions / REQ-16`. Each part except the last is a link. A requisition reference is `REQ-` + its number, not zero-padded; the `REQ-0016` style in the wireframes and `source/` is only illustrative (#21).
 - **Below 900px wide:** sidebar stacks above content; card rows stack into one column; wide tables scroll horizontally inside their card. No horizontal page scroll.
 
 ### 2.2 Sidebar
