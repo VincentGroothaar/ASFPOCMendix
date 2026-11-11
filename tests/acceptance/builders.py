@@ -19,6 +19,7 @@ from decimal import Decimal
 from django.contrib.auth.models import Group, User
 from django.test import override_settings
 
+from cockpit.models import ProductionOrder, Requisition
 from tests.acceptance.support import Order, Stock
 
 ROLES = ("Viewer", "Planner", "Manager", "Admin")
@@ -97,16 +98,44 @@ class RequisitionRecord:
 
 
 def requisitions() -> list[RequisitionRecord]:
-    """All stored requisitions, oldest first. #21 / #27 fill this in."""
-    raise NotImplementedError("Requisition model not built yet (#21)")
+    """All stored requisitions, oldest first (#21)."""
+    rows = Requisition.objects.select_related("order", "created_by").order_by("id")
+    return [
+        RequisitionRecord(
+            id=row.id,
+            order=row.order.number,
+            material=row.material,
+            status=row.status,
+            pr_number=row.pr_number,
+            quantity_sent=row.quantity_sent,
+            unit_sent=row.unit_sent,
+            delivery_date=row.delivery_date,
+            created_by=row.created_by.username,
+            reject_reason=row.reject_reason,
+        )
+        for row in rows
+    ]
 
 
 def store_requisition(order: str, material: str, status: str, created_by: User) -> None:
     """Write a requisition straight to the database, bypassing the service (only for INV-7).
 
-    The order must already be in the snapshot (sync first). #21 fills this in.
+    The order must already be in the snapshot (sync first). Quantities and dates are
+    placeholders: INV-7 only looks at order, material and status.
     """
-    raise NotImplementedError("Requisition model not built yet (#21)")
+    production_order = ProductionOrder.objects.get(number=order)
+    Requisition.objects.create(
+        order=production_order,
+        material=material,
+        items="0010",
+        quantity_entered=Decimal("1"),
+        unit_entered="PC",
+        quantity_sent=Decimal("1"),
+        unit_sent="PC",
+        delivery_date=production_order.start_date,
+        status=status,
+        created_by=created_by,
+    )
 
 
 # --- Status calculation -------------------------------------------------------------------------
