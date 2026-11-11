@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load ui %}
+{% comment %}
+  The page frame (ui-spec 2.1, 2.2): sidebar on the left, content on the right.
+  Pages extend this and fill: breadcrumb (detail pages), page_title (call page_header there),
+  header_actions (header buttons, shown on the right), content.
+  sidebar_items and user_role come from cockpit.context_processors.sidebar.
+{% endcomment %}
+
+{% block body %}
+  <div class="app">
+    <nav class="sidebar" aria-label="Main">
+      <div class="sidebar-logo">{% icon "cube" 28 %}<span>Material Shortage Cockpit</span></div>
+      {% if sidebar_items %}
+        <ul class="sidebar-nav">
+          {% for item in sidebar_items %}
+            <li>
+              <a href="{{ item.url }}" class="sidebar-link{% if item.active %} is-active{% endif %}"{% if item.active %} aria-current="page"{% endif %}>
+                {% icon item.icon %}<span>{{ item.label }}</span>
+                {% if item.badge_count %}<span class="badge" aria-label="{{ item.badge_count }} awaiting approval">{{ item.badge_count }}</span>{% endif %}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if user.is_authenticated %}
+        <div class="sidebar-user">
+          <b>{{ user.get_username }}</b>
+          {% if user_role %}<span>{{ user_role.value }}</span>{% endif %}
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="sidebar-link sidebar-logout">{% icon "log-out" %}<span>Log out</span></button>
+          </form>
+        </div>
+      {% endif %}
+    </nav>
+    <main class="content">
+      {% block breadcrumb %}{% endblock %}
+      <header class="page-header">
+        {% block page_title %}{% endblock %}
+        <div class="header-actions">{% block header_actions %}{% endblock %}</div>
+      </header>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+{% endblock %}
