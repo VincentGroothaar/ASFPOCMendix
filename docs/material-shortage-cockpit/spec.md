@@ -167,7 +167,7 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-51 | Formats follow ui-spec 6: `03 Nov 2026`, `04 Nov`, `02 Nov 10:11`, `1,500 G`, `20 PC` (from a stored `20.000`), `1.235 KG` (from `1.234567`), `8.000 KG` as sent to SAP, `1,250.00 EUR`; a float quantity is refused | Unit test (#23) |
 | AC-52 | Below 900px the sidebar is above the content, card rows stack, wide tables scroll inside their card, and the page has no horizontal scroll | Browser test (#23) |
 | AC-53 | The login page matches ui-spec 4.7 A, with a wrong password shown in an error note; the 403 page shows inside the frame for business roles | Test + screenshots (#23) |
-| AC-54 | ui-spec 8: visible focus outline in `--color-primary`; nav items and buttons at least `--touch-target` high, except compact row buttons and the ⓘ; icon-only buttons have an accessible name | Browser test (#23) |
+| AC-54 | ui-spec 8: visible focus outline in `--color-primary`, or `--color-sidebar-accent` inside the sidebar; nav items and buttons at least `--touch-target` high, except compact row buttons and the ⓘ; icon-only buttons have an accessible name | Browser test (#23) |
 | AC-55 | HTMX POSTs carry the CSRF token, also after a 403 page has replaced the page | Browser test (#23) |
 
 ### Proven by unit tests only
