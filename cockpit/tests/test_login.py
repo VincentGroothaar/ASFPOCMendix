@@ -64,3 +64,9 @@ def test_logout_by_get_does_not_log_out(client_as) -> None:
 
     assert client.get("/accounts/logout/").status_code == 405
     assert client.get("/").status_code == 200
+
+
+def test_an_empty_field_shows_a_message(db) -> None:
+    response = Client().post("/accounts/login/", {"username": "", "password": ""})
+
+    assertContains(response, "Enter your username and password.")

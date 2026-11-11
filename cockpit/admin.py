@@ -50,7 +50,11 @@ class CockpitUserCreationForm(AdminUserCreationForm):
 
 
 class CockpitUserChangeForm(UserChangeForm):
-    """The Change user form, with the role required."""
+    """The Change user form, with the role required.
+
+    Only role groups are offered, so saving replaces all of the user's groups with the one
+    chosen role: groups that are not roles are removed. The cockpit uses no other groups.
+    """
 
     groups = role_field()
 
@@ -94,6 +98,10 @@ class CockpitUserAdmin(AdminRoleOnly, UserAdmin):
     list_display = ("username", "first_name", "last_name", "role", "is_active")
     list_filter = ("is_active", "groups")
     filter_horizontal = ()
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[User]:
+        """Load each user's groups with the list, so the Role column needs no query per row."""
+        return super().get_queryset(request).prefetch_related("groups")
 
     @admin.display(description="Role")
     def role(self, user: User) -> str:

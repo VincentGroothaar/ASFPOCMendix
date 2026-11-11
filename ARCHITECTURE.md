@@ -1,6 +1,6 @@
 # Material Shortage Cockpit architecture
 
-Status: Proposed. Built today: an empty Django project with CI on Postgres (#4, #9), the requisition mock (#8) and the SAP read client with its read functions (`sap/`, #18). Not built yet: everything in this document beyond that. Roles and access control (#22) are Accepted, not built yet.
+Status: Proposed. Built today: an empty Django project with CI on Postgres (#4, #9), the requisition mock (#8) and the SAP read client with its read functions (`sap/`, #18), and roles, login, access control and user administration (#22). Not built yet: everything in this document beyond that.
 
 ## Intended system
 

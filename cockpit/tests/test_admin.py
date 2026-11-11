@@ -2,7 +2,9 @@
 
 import pytest
 from django.contrib.auth.models import Group, User
+from django.db import connection
 from django.test import Client
+from django.test.utils import CaptureQueriesContext
 from pytest_django.asserts import assertContains, assertNotContains
 
 from cockpit.admin import EXACTLY_ONE_ROLE, CockpitUserChangeForm
@@ -63,9 +65,11 @@ def test_anonymous_admin_visitors_end_on_the_cockpit_login_page(db, path) -> Non
 def test_admin_logout_goes_back_to_the_cockpit_login(client_as) -> None:
     client = client_as("Admin")
 
-    response = client.post("/admin/logout/")
+    response = client.post("/admin/logout/", follow=True)
 
-    assert response["Location"] == "/accounts/login/"
+    # The message proves the cockpit logout ran, not Django's own admin logout.
+    assert response.redirect_chain[-1][0] == "/accounts/login/"
+    assertContains(response, "You are logged out.")
     assert client.get("/admin/", follow=True).redirect_chain[-1][0].startswith("/accounts/login/")
 
 
@@ -203,3 +207,18 @@ def test_role_groups_cannot_be_added_renamed_or_deleted(client_as) -> None:
     )
     assert client.post(f"/admin/auth/group/{viewer.pk}/delete/", {"post": "yes"}).status_code == 403
     assert Group.objects.filter(name="Viewer").exists()
+
+
+def test_the_user_list_loads_roles_without_a_query_per_user(client_as, make_user) -> None:
+    client = client_as("Admin")
+    client.get("/admin/auth/user/")  # warm up the session and content types
+
+    with CaptureQueriesContext(connection) as few_users:
+        client.get("/admin/auth/user/")
+    for _ in range(10):
+        make_user("Viewer")
+    with CaptureQueriesContext(connection) as many_users:
+        response = client.get("/admin/auth/user/")
+
+    assert response.status_code == 200
+    assert len(many_users) == len(few_users)

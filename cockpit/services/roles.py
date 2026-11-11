@@ -57,9 +57,8 @@ def role_of(user: AbstractBaseUser | AnonymousUser) -> Role | None:
     """
     if not user.is_authenticated or not user.is_active:
         return None
-    role_names = [
-        name for name in user.groups.values_list("name", flat=True) if name in ROLE_GROUP_NAMES
-    ]
+    # groups.all() (not values_list) so a list page that prefetched the groups needs no query.
+    role_names = [group.name for group in user.groups.all() if group.name in ROLE_GROUP_NAMES]
     if len(role_names) != 1:
         return None
     return Role(role_names[0])

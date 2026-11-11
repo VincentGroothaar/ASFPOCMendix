@@ -194,3 +194,9 @@ def test_a_stale_login_form_tells_a_logged_out_user_to_log_in_again(db) -> None:
         response, '<a class="btn" href="/accounts/login/">Log in</a>', html=True, status_code=403
     )
     assertNotContains(response, NO_ROLE_TEXT, status_code=403)
+
+
+def test_htmx_login_redirect_from_a_query_only_url_keeps_a_path(db) -> None:
+    response = Client().get("/", HTTP_HX_CURRENT_URL="http://testserver?x=1", **HTMX)
+
+    assert response["HX-Redirect"] == "/accounts/login/?next=" + quote("/?x=1", safe="")

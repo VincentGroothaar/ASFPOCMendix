@@ -41,7 +41,7 @@ class CockpitAdminSite(AdminSite):
         sees the admin login page, which says they are not authorised. Logging in here by POST
         still works.
         """
-        if request.method == "GET" and not request.user.is_authenticated:
+        if request.method in ("GET", "HEAD") and not request.user.is_authenticated:
             next_url = request.GET.get(REDIRECT_FIELD_NAME) or reverse(
                 "admin:index", current_app=self.name
             )

@@ -51,7 +51,8 @@ def page_before_htmx_request(request: HttpRequest) -> str | None:
     ):
         return None
     parts = urlsplit(current_url)
-    return f"{parts.path}?{parts.query}" if parts.query else parts.path or "/"
+    path = parts.path or "/"
+    return f"{path}?{parts.query}" if parts.query else path
 
 
 class HtmxLoginRequiredMiddleware(LoginRequiredMiddleware):

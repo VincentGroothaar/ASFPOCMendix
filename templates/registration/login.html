@@ -11,8 +11,10 @@
       {% for message in messages %}
         <p class="form-message" role="status">{{ message }}</p>
       {% endfor %}
-      {% if form.non_field_errors %}
-        <p class="form-error" role="alert">{{ form.non_field_errors|join:" " }}</p>
+      {% if form.errors %}
+        <p class="form-error" role="alert">
+          {% if form.non_field_errors %}{{ form.non_field_errors|join:" " }}{% else %}Enter your username and password.{% endif %}
+        </p>
       {% endif %}
       <label class="field">Username
         <input type="text" name="username" autocomplete="username" required autofocus
