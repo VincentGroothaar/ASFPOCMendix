@@ -227,13 +227,17 @@ def _check_text(model: type[models.Model], field: str, value: str) -> None:
     """Raise SapDataError when `value` is longer than the model's column for `field`."""
     max_length = model._meta.get_field(field).max_length
     if len(value) > max_length:
-        raise SapDataError(f"SAP sent a {field} longer than {max_length} characters: {value!r}.")
+        # Only the start of the text: the message is stored and can be shown on screen.
+        raise SapDataError(
+            f"SAP sent a {field} longer than {max_length} characters: {value[:60]!r}."
+        )
 
 
 def _check_quantity(value: Decimal, where: str) -> None:
     """Raise SapDataError when a quantity does not fit 15 digits with 3 decimals (INV-5)."""
-    exact = value == value.quantize(QUANTITY_STEP)
-    if not exact or abs(value) >= MAX_QUANTITY:
+    # The size is checked first: quantize() itself fails on values of about 10^25 and more.
+    fits = value.is_finite() and abs(value) < MAX_QUANTITY
+    if not fits or value != value.quantize(QUANTITY_STEP):
         raise SapDataError(f"SAP sent a quantity for {where} that does not fit: {value}.")
 
 

@@ -413,9 +413,31 @@ def huge_quantity(rows: dict) -> None:
     rows[STOCK][0]["MatlWrhsStkQtyInMatlBaseUnit"] = "1000000000000"
 
 
+def enormous_quantity(rows: dict) -> None:
+    rows[STOCK][0]["MatlWrhsStkQtyInMatlBaseUnit"] = "1E+25"  # too big even to round
+
+
+def long_unit(rows: dict) -> None:
+    rows[ORDERS][0]["ProductionUnit"] = "PCSX"
+
+
+def long_order_number(rows: dict) -> None:
+    rows[ORDERS][1]["ManufacturingOrder"] = "1" * 13
+
+
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "spoil", [duplicate_order, duplicate_item, long_description, four_decimals, huge_quantity]
+    "spoil",
+    [
+        duplicate_order,
+        duplicate_item,
+        long_description,
+        long_unit,
+        long_order_number,
+        four_decimals,
+        huge_quantity,
+        enormous_quantity,
+    ],
 )
 def test_s8_data_the_snapshot_cannot_hold_fails_like_an_outage(sap, client, clock, spoil) -> None:
     sync_plant(PLANT, client)
