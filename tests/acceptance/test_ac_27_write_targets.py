@@ -22,7 +22,6 @@ from tests.acceptance.support import (
 WRITE_WORDS = ("post", "put", "patch", "delete", "merge", "create", "update", "write")
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #18")
 def test_ac_27_sap_read_client_has_no_write_method():
     from sap.client import ODataClient
 
