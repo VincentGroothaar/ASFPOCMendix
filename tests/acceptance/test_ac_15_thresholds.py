@@ -8,8 +8,6 @@ import pytest
 from tests.acceptance import builders
 from tests.acceptance.support import Stock, days, one_component_order
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #20")
-
 
 @pytest.mark.parametrize(
     ("available", "status", "shortage"),

@@ -9,8 +9,6 @@ import pytest
 from tests.acceptance import builders
 from tests.acceptance.support import Component, Order, Stock, days
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #20")
-
 
 def test_inv_5_results_are_decimal_and_exact():
     order = Order(
