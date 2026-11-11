@@ -1,0 +1,7 @@
+{% load ui %}<div class="kpi-tile{% if pressed %} is-pressed{% endif %}">
+  <button type="submit"{% if form_id %} form="{{ form_id }}"{% endif %} name="{{ name }}" value="{{ value }}" aria-pressed="{{ pressed|yesno:'true,false' }}" class="kpi-tile-button">
+    <span class="kpi-label">{{ label }}</span>
+    <span class="kpi-count{% if status %} kpi-{{ status }}{% endif %}">{{ count }}</span>
+  </button>
+  {% if tooltip %}<span class="kpi-info">{% info_tooltip label tooltip %}</span>{% endif %}
+</div>

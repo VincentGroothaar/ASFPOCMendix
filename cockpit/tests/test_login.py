@@ -13,7 +13,9 @@ def test_login_page_shows_the_form_and_note(db) -> None:
     assertContains(response, "Username")
     assertContains(response, "Password")
     assertContains(
-        response, '<button class="btn btn-primary" type="submit">Log in</button>', html=True
+        response,
+        '<button class="btn btn-primary btn-block" type="submit">Log in</button>',
+        html=True,
     )
     assertContains(response, "Accounts and roles: Admin in Django admin.")
 

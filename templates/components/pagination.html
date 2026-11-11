@@ -1,0 +1,7 @@
+<div class="pagination">
+  <span class="muted">Showing {{ shown }} of {{ total }} {{ noun }}</span>
+  <div class="pagination-links">
+    {% if previous_url %}<a class="btn btn-secondary" href="{{ previous_url }}">Previous</a>{% else %}<button type="button" class="btn btn-secondary" disabled>Previous</button>{% endif %}
+    {% if next_url %}<a class="btn btn-secondary" href="{{ next_url }}">Next</a>{% else %}<button type="button" class="btn btn-secondary" disabled>Next</button>{% endif %}
+  </div>
+</div>

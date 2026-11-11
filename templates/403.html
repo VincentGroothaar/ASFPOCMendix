@@ -1,7 +1,8 @@
-{% extends "base.html" %}
+{% extends "layouts/frame.html" %}
 {% comment %}
   E · Not allowed (ui-spec 4.7 E). Rendered by cockpit.views for every refused page or action,
-  for CSRF failures, and for HTMX requests (where it replaces the whole page).
+  for CSRF failures, and for HTMX requests (where it replaces the whole page). Shown inside
+  the frame; Admin, users without a role and logged-out users get a sidebar without items.
   Three cases: a user with a role, a logged-in user without a usable role, a logged-out user.
 {% endcomment %}
 

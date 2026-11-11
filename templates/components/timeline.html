@@ -1,0 +1,6 @@
+{% load ui %}<ol class="timeline">
+  {% for step in steps %}<li class="timeline-step step-{{ step.state }}">
+    <span class="timeline-circle">{% if step.icon %}{% icon step.icon 16 %}{% endif %}</span>
+    <span class="timeline-text"><b>{{ step.title }}</b>{% if step.sub %}<span class="muted">{{ step.sub }}</span>{% endif %}</span>
+  </li>{% endfor %}
+</ol>
