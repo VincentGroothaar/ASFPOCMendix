@@ -85,7 +85,7 @@ All quantities are `DecimalField` / `Decimal` (max 3 decimals for entered quanti
 
 - **Auth:** Django's built-in authentication. One group per role (Viewer, Planner, Manager, Admin); each user is in exactly one group. Permissions are explicit per group, not inherited. Admin uses the built-in Django admin for users and groups only; business models are not registered in it.
 - **Secrets:** environment variables locally (`.env`, git-ignored), GitHub Actions secrets in CI, Render environment variables when hosted.
-- **Hosting:** Render free tier. One web service for the app (built on day 2), one for the mock, and one free Postgres shared by both in separate schemas. Free services sleep after 15 minutes idle and take about a minute to wake; the free database expires 30 days after creation and has no backups.
+- **Hosting:** Render free tier. One web service for the app (built on day 2), one for the mock, and one free Postgres shared by both in separate schemas. The app runs under gunicorn, WhiteNoise serves its static files, and `DJANGO_HTTPS=true` makes it trust Render's HTTPS proxy; the steps are in the README ("Deploy on Render"). Free services sleep after 15 minutes idle and take about a minute to wake; the free database expires 30 days after creation and has no backups.
 - **CI:** GitHub Actions on every PR: ruff, Django checks, migrations check, pytest against a Postgres service, the mock's tests, and Playwright for a few browser flows. Branch protection requires CI to pass before merging.
 - **Monitoring and recovery:** none beyond Render's logs. All SAP data can be rebuilt by a sync; requisitions are lost only if the free database expires.
 

@@ -19,12 +19,45 @@ load_env_file(BASE_DIR / ".env")
 
 # --- Security ---------------------------------------------------------------
 
-# The fallback key is only for local development and tests. Set a real
-# DJANGO_SECRET_KEY in any shared or deployed environment.
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or "dev-only-insecure-key"
+# DJANGO_HTTPS=true means the app is hosted behind an HTTPS proxy, as on Render.
+# It is off locally and in CI, where the app runs over plain HTTP.
+HOSTED_BEHIND_HTTPS = env_bool("DJANGO_HTTPS", default=False)
+
+# The fallback key is only for local development and tests. A hosted app refuses
+# to start without a real DJANGO_SECRET_KEY.
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if HOSTED_BEHIND_HTTPS:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY is not set. A hosted app (DJANGO_HTTPS=true) needs a long "
+            'random key, e.g. from `python -c "import secrets; print(secrets.token_urlsafe(50))"`.'
+        )
+    SECRET_KEY = "dev-only-insecure-key"
 # DEBUG is off unless DJANGO_DEBUG says otherwise; .env.example turns it on locally.
 DEBUG = env_bool("DJANGO_DEBUG", default=False)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1")
+
+if HOSTED_BEHIND_HTTPS:
+    # Render sets RENDER_EXTERNAL_HOSTNAME to the service's public host name itself,
+    # so the app accepts its own URL even when DJANGO_ALLOWED_HOSTS is not filled in.
+    render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    if render_host:
+        ALLOWED_HOSTS.append(render_host)
+    if any("/" in host for host in ALLOWED_HOSTS):
+        raise ImproperlyConfigured(
+            "DJANGO_ALLOWED_HOSTS must list host names only, e.g. cockpit.onrender.com "
+            "without https:// or a path."
+        )
+    # Render's proxy handles HTTPS and tells the app so in the X-Forwarded-Proto header.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Send plain-HTTP visitors to HTTPS, and send cookies over HTTPS only. HSTS (telling
+    # browsers to remember HTTPS) is left off: the redirect is enough for a demo app on a
+    # shared onrender.com domain, and a wrong HSTS value is hard to undo in browsers.
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # No CSRF_TRUSTED_ORIGINS needed: with the proxy header above, Django already accepts
+    # forms posted from the app's own https://<host>.
 
 # --- SAP (consumed OData service) -------------------------------------------
 
@@ -45,6 +78,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves the static files (CSS, admin styles) when hosted; must come right after security.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -107,5 +142,23 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# `manage.py collectstatic` copies every static file here; WhiteNoise serves them from here.
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    # Also stores a compressed copy of each file, so pages load faster.
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# --- Logging ----------------------------------------------------------------
+
+# Django only prints errors to the console when DEBUG is on. With this, errors and warnings
+# (a crash, a refused host name) also show up in the console when hosted: Render's logs.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {"django": {"handlers": ["console"], "level": "INFO"}},
+}
