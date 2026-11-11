@@ -1,0 +1,321 @@
+"""Load a plant's data from SAP into the snapshot tables (REQ-1, spec in issue #24).
+
+In Mendix terms this is the microflow that calls the consumed OData service and commits the
+result. It is the only code that writes PlantSnapshot, ProductionOrder, Component and Stock.
+
+Three functions for the views:
+- `ensure_fresh(plant)`: on a page load. Syncs only when the plant was never synced or the
+  snapshot is older than 5 minutes.
+- `sync_plant(plant)`: on Refresh, Try again, and after a successful requisition. Always syncs.
+- `sync_state(plant)`: only reads what is stored, never calls SAP.
+
+All three return a SyncState and never raise for SAP problems, so a view only has to look at
+`synced_at` and `failed` to choose between the page, the warning banner and the error page.
+
+How a sync works (ARCHITECTURE.md, "Sync"):
+1. One durable transaction locks the plant's PlantSnapshot row before SAP is called, so the
+   same plant is never synced twice at once. Other plants are not blocked.
+2. Read orders with components, stock and descriptions from SAP.
+3. Write the snapshot inside a savepoint. If SAP fails, nothing of the snapshot changes; only
+   the error and its time are stored.
+"""
+
+import logging
+import time
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+from django.db import transaction
+from django.utils import timezone
+
+from cockpit.models import Component, PlantSnapshot, ProductionOrder, Stock
+from sap import production_orders, products, stock
+from sap.client import ODataClient, SapUnavailable
+
+logger = logging.getLogger("cockpit.sync")
+
+# A snapshot older than this is loaded again on the next page view (D-17).
+STALE_AFTER = timedelta(minutes=5)
+
+# Rows per INSERT or UPDATE statement when writing the snapshot in bulk.
+BATCH_SIZE = 500
+# The order fields a sync overwrites on an order that is already stored.
+ORDER_FIELDS = [
+    "plant",
+    "material",
+    "description",
+    "quantity",
+    "unit",
+    "start_date",
+    "is_active",
+    "synced_at",
+]
+
+
+@dataclass(frozen=True)
+class SyncState:
+    """What a page needs to know about a plant's snapshot.
+
+    - synced_at set, failed False: show the data with "Data as of <synced_at>".
+    - synced_at set, failed True: show the data with the "SAP could not be reached" banner.
+    - synced_at None, failed True: show the "No data for plant yet" error page.
+    """
+
+    plant: str
+    synced_at: datetime | None  # last successful sync; None = never
+    failed: bool  # True when the latest attempt failed
+    error: str  # message of the latest failure, "" when not failed
+
+
+@dataclass(frozen=True)
+class SapData:
+    """Everything one sync reads from SAP for a plant."""
+
+    orders: list[production_orders.ProductionOrder]
+    stock: dict[str, stock.MaterialStock]
+    descriptions: dict[str, str]
+
+
+@dataclass(frozen=True)
+class WriteCounts:
+    """How much a sync wrote, for the log line."""
+
+    orders: int
+    materials: int
+
+
+class CountingClient:
+    """Wraps the SAP client and counts read calls (`get_all`), for the log line.
+
+    One `get_all` call can read more than one page from SAP; it still counts as one call.
+    """
+
+    def __init__(self, client: ODataClient) -> None:
+        self._client = client
+        self.calls = 0
+
+    def get_all(self, *args, **kwargs) -> list[dict]:
+        self.calls += 1
+        return self._client.get_all(*args, **kwargs)
+
+
+# --- Public functions --------------------------------------------------------------------------
+
+
+def sync_state(plant: str) -> SyncState:
+    """Return the stored sync state of a plant without calling SAP."""
+    return _state(plant, PlantSnapshot.objects.filter(plant=plant).first())
+
+
+def sync_plant(plant: str, client: ODataClient | None = None) -> SyncState:
+    """Load the plant from SAP now, whatever the age of the snapshot (Refresh, Try again).
+
+    Waits when another sync of the same plant is running. Must not be called inside another
+    database transaction: the durable block raises RuntimeError, so a requisition re-syncs
+    only after its own transaction has committed (review I-1 on #24).
+    """
+    with transaction.atomic(durable=True):
+        snapshot = _lock(plant)
+        return _sync_locked(snapshot, client)
+
+
+def ensure_fresh(plant: str, client: ODataClient | None = None) -> SyncState:
+    """Load the plant from SAP if it was never synced or the snapshot is over 5 minutes old.
+
+    When another request syncs the same plant while this one waits for the lock, this one uses
+    that result instead of calling SAP again, also when that attempt failed (review I-2, I-4).
+    """
+    seen_before_lock = _attempt_marks(PlantSnapshot.objects.filter(plant=plant).first())
+    with transaction.atomic(durable=True):
+        snapshot = _lock(plant)
+        another_attempt_finished = _attempt_marks(snapshot) != seen_before_lock
+        if another_attempt_finished or not _is_stale(snapshot):
+            return _state(plant, snapshot)
+        return _sync_locked(snapshot, client)
+
+
+# --- Steps of a sync ---------------------------------------------------------------------------
+
+
+def _lock(plant: str) -> PlantSnapshot:
+    """Create the plant's PlantSnapshot row if needed, then lock it until the transaction ends.
+
+    get_or_create handles two first syncs at once: the second insert waits for the first and
+    then reads its row. The locked read always returns the latest committed values.
+    """
+    PlantSnapshot.objects.get_or_create(plant=plant)
+    return PlantSnapshot.objects.select_for_update().get(plant=plant)
+
+
+def _sync_locked(snapshot: PlantSnapshot, client: ODataClient | None) -> SyncState:
+    """Read SAP and write the snapshot. The caller holds the lock on `snapshot`."""
+    started = time.monotonic()
+    sap = CountingClient(client or ODataClient.from_settings())
+    synced_at = timezone.now()
+    try:
+        data = _read_from_sap(sap, snapshot.plant)
+        with transaction.atomic():  # savepoint: on any error none of these writes stay
+            counts = _write_snapshot(snapshot.plant, data, synced_at)
+    except SapUnavailable as error:  # includes SapDataError (decision 2 on #24)
+        _store_failure(snapshot, str(error))
+        _log(snapshot.plant, "failed", None, sap.calls, started, error=str(error))
+        return _state(snapshot.plant, snapshot)
+
+    snapshot.synced_at = synced_at
+    snapshot.last_sync_error = ""
+    snapshot.last_sync_error_at = None
+    snapshot.save(update_fields=["synced_at", "last_sync_error", "last_sync_error_at"])
+    _log(snapshot.plant, "ok", counts, sap.calls, started)
+    return _state(snapshot.plant, snapshot)
+
+
+def _read_from_sap(client: CountingClient, plant: str) -> SapData:
+    """Read the plant's released orders, the stock of their components and all descriptions."""
+    orders = production_orders.read_released_orders(client, plant)
+    component_materials = sorted({line.material for order in orders for line in order.components})
+    all_materials = sorted(set(component_materials) | {order.material for order in orders})
+    return SapData(
+        orders=orders,
+        stock=stock.read_unrestricted_stock(client, plant, component_materials),
+        descriptions=products.read_descriptions(client, all_materials),
+    )
+
+
+def _write_snapshot(plant: str, data: SapData, synced_at: datetime) -> WriteCounts:
+    """Replace the plant's snapshot with what SAP returned (decision 3 on #24).
+
+    - Orders SAP returned are updated or added, and active (again). Their lines are rebuilt.
+    - Active orders SAP no longer returns become inactive. Their rows and requisitions stay.
+    - All stock rows of the plant are replaced. A material without stock in SAP gets no row.
+
+    Everything is written in bulk (a handful of queries, not a few per order), because a
+    plant like AUC1 has over 700 orders and the cold load must stay within 5 s (REQ-1).
+    """
+    orders = _write_orders(plant, data, synced_at)
+
+    Component.objects.filter(order__in=orders.values()).delete()
+    Component.objects.bulk_create(
+        (
+            Component(
+                order=orders[sap_order.number],
+                item=line.item,
+                material=line.material,
+                description=data.descriptions.get(line.material, ""),
+                required_quantity=line.required_quantity,
+                withdrawn_quantity=line.withdrawn_quantity,
+                unit=line.unit,
+            )
+            for sap_order in data.orders
+            for line in sap_order.components
+        ),
+        batch_size=BATCH_SIZE,
+    )
+
+    ProductionOrder.objects.filter(plant=plant, is_active=True).exclude(
+        number__in=list(orders)
+    ).update(is_active=False)
+
+    Stock.objects.filter(plant=plant).delete()
+    Stock.objects.bulk_create(
+        Stock(
+            plant=plant,
+            material=material_stock.material,
+            quantity=material_stock.quantity,
+            unit=material_stock.unit,
+            synced_at=synced_at,
+        )
+        for material_stock in data.stock.values()
+    )
+    materials = {line.material for order in data.orders for line in order.components}
+    return WriteCounts(orders=len(data.orders), materials=len(materials))
+
+
+def _write_orders(plant: str, data: SapData, synced_at: datetime) -> dict[str, ProductionOrder]:
+    """Update the orders SAP returned that are already stored and add the new ones.
+
+    Returns every returned order by number. Each one is active again, even if it was inactive.
+    """
+    numbers = [sap_order.number for sap_order in data.orders]
+    stored = ProductionOrder.objects.in_bulk(numbers, field_name="number")
+    to_add: list[ProductionOrder] = []
+    for sap_order in data.orders:
+        order = stored.get(sap_order.number) or ProductionOrder(number=sap_order.number)
+        order.plant = plant
+        order.material = sap_order.material
+        order.description = data.descriptions.get(sap_order.material, "")
+        order.quantity = sap_order.quantity
+        order.unit = sap_order.unit
+        order.start_date = sap_order.start_date
+        order.is_active = True
+        order.synced_at = synced_at
+        if order.pk is None:
+            to_add.append(order)
+    ProductionOrder.objects.bulk_update(list(stored.values()), ORDER_FIELDS, batch_size=BATCH_SIZE)
+    ProductionOrder.objects.bulk_create(to_add, batch_size=BATCH_SIZE)
+    return {order.number: order for order in [*stored.values(), *to_add]}
+
+
+def _store_failure(snapshot: PlantSnapshot, message: str) -> None:
+    """Store the error of a failed sync. Only the error fields are saved, nothing else."""
+    snapshot.last_sync_error = message
+    snapshot.last_sync_error_at = timezone.now()
+    snapshot.save(update_fields=["last_sync_error", "last_sync_error_at"])
+
+
+# --- Small helpers -----------------------------------------------------------------------------
+
+
+def _is_stale(snapshot: PlantSnapshot) -> bool:
+    """True when the plant was never synced or the last successful sync is over 5 minutes old."""
+    return snapshot.synced_at is None or timezone.now() - snapshot.synced_at > STALE_AFTER
+
+
+def _attempt_marks(snapshot: PlantSnapshot | None) -> tuple[datetime | None, datetime | None]:
+    """The values every finished attempt changes: last success time and last failure time."""
+    if snapshot is None:
+        return (None, None)
+    return (snapshot.synced_at, snapshot.last_sync_error_at)
+
+
+def _state(plant: str, snapshot: PlantSnapshot | None) -> SyncState:
+    """Turn the stored PlantSnapshot row (or no row) into a SyncState."""
+    if snapshot is None:
+        return SyncState(plant=plant, synced_at=None, failed=False, error="")
+    failed = snapshot.last_sync_error_at is not None
+    return SyncState(
+        plant=plant,
+        synced_at=snapshot.synced_at,
+        failed=failed,
+        error=snapshot.last_sync_error if failed else "",
+    )
+
+
+def _log(
+    plant: str,
+    result: str,
+    counts: WriteCounts | None,
+    sap_calls: int,
+    started: float,
+    error: str = "",
+) -> None:
+    """Write the one log line per sync that the 5 s target is measured from (REQ-1, AC-5)."""
+    seconds = time.monotonic() - started
+    if counts is None:
+        logger.info(
+            "sync plant=%s result=%s sap_calls=%d seconds=%.2f error=%s",
+            plant,
+            result,
+            sap_calls,
+            seconds,
+            error,
+        )
+    else:
+        logger.info(
+            "sync plant=%s result=%s orders=%d materials=%d sap_calls=%d seconds=%.2f",
+            plant,
+            result,
+            counts.orders,
+            counts.materials,
+            sap_calls,
+            seconds,
+        )
