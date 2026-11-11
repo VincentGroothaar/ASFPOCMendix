@@ -10,7 +10,7 @@ file's docstring repeats the criterion it proves. Decisions behind this layout: 
 The tests were written before the app (D-24). Each one is marked
 
 ```python
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #20")
+pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 ```
 
 naming the issue that should make it pass. CI stays green while a test fails as expected.

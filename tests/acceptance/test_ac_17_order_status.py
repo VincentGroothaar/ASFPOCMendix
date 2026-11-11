@@ -8,8 +8,6 @@ import pytest
 from tests.acceptance import builders
 from tests.acceptance.support import Component, Order, Stock, days
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #20")
-
 STOCK = [
     Stock("RM-SHORT", Decimal("50")),
     Stock("RM-LOW", Decimal("105")),

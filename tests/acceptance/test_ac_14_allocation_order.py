@@ -5,12 +5,8 @@ B available 40, red, shortage 20. Equal start dates are ordered by order number.
 from datetime import date
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import Stock, one_component_order
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #20")
 
 
 def test_ac_14_earlier_start_date_takes_stock_first():
