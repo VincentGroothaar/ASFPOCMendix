@@ -12,7 +12,6 @@ from tests.acceptance import builders
 from tests.acceptance.support import MIXED_ORDER, MOCK_URL, SAP_URL, load_mixed_order
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #18")
 def test_inv_4_sap_read_client_exposes_only_reads():
     from sap.client import ODataClient
 

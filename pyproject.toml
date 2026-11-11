@@ -30,7 +30,7 @@ package = false
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
-testpaths = ["cockpit/tests", "config/tests", "mock_pr/tests", "tests"]
+testpaths = ["cockpit/tests", "config/tests", "mock_pr/tests", "sap/tests", "tests"]
 
 [tool.ruff]
 line-length = 100

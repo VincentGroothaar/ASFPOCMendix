@@ -40,7 +40,9 @@ def test_inv_3_app_uses_the_configured_urls_and_keys(fakes, clock, client_as):
         assert request.headers.get("APIKey") == hosts[request.host], request.url
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #18")
+@pytest.mark.xfail(
+    strict=True, reason="config/settings.py mentions onrender.com in a message and a comment (#17)"
+)
 def test_inv_3_no_hosts_hard_coded_in_app_code():
     found = []
     for folder in APP_CODE:
