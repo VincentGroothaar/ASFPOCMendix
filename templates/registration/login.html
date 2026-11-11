@@ -11,17 +11,17 @@
       {% for message in messages %}
         <p class="form-message" role="status">{{ message }}</p>
       {% endfor %}
-      {% if form.errors %}
-        <p class="form-error" role="alert">
-          {% if form.non_field_errors %}{{ form.non_field_errors|join:" " }}{% else %}Enter your username and password.{% endif %}
-        </p>
+      {% if form.non_field_errors %}
+        <p class="form-error" role="alert">{{ form.non_field_errors|join:" " }}</p>
       {% endif %}
       <label class="field">Username
         <input type="text" name="username" autocomplete="username" required autofocus
                value="{{ form.username.value|default:'' }}">
+        {% for error in form.username.errors %}<span class="form-field-error">{{ error }}</span>{% endfor %}
       </label>
       <label class="field">Password
         <input type="password" name="password" autocomplete="current-password" required>
+        {% for error in form.password.errors %}<span class="form-field-error">{{ error }}</span>{% endfor %}
       </label>
       <input type="hidden" name="next" value="{{ next }}">
       <button class="btn btn-primary" type="submit">Log in</button>

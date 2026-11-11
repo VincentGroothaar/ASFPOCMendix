@@ -96,6 +96,11 @@ body {
   color: var(--color-short);
 }
 
+.form-field-error {
+  color: var(--color-short);
+  font-weight: var(--font-weight-regular);
+}
+
 .form-message {
   margin: 0;
   padding: var(--space-2) var(--space-3);
