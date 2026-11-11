@@ -231,7 +231,7 @@ Three cards:
 | B · Sync running | On Refresh, first open of a plant, after a PR, snapshot > 5 min (D-17). Spinner + `Loading orders from SAP for [plant]…`, placeholder rows; Refresh disabled. |
 | C · Sync failed, snapshot exists | Amber banner `SAP could not be reached. Showing data as of [time].` + **Try again**. Page stays usable; requisitions can still be created (D-19). |
 | D · First sync failed | Full message `No data for plant [plant] yet` + explanation + error and time + **Try again** / **Choose another plant**. |
-| E · Not allowed (403) | `403`, `You don't have permission for this`, explanation naming the role, **Back to orders**. Also returned for direct requests (INV-1). |
+| E · Not allowed (403) | `403`, `You don't have permission for this`, then one of: (role) `You are logged in as [role]. This role cannot open this page or do this action.` with **Back to orders**, or **Go to user administration** (to `/admin/`) for Admin; (no role or several) `Your account has no role. Ask an Admin to assign one.` with **Log out**; (logged out, e.g. a stale form) `Your session has expired or the form was out of date. Log in again.` with **Log in**. Also returned for direct requests (INV-1), CSRF failures, and HTMX requests, where it replaces the whole page (#22). |
 | F · Sidebar per role | See 2.2. |
 
 ## 5. Copy
