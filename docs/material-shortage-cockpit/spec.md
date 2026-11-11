@@ -50,7 +50,7 @@ The flow and the system boundaries follow [ARCHITECTURE.md](../../ARCHITECTURE.m
 | `cockpit/services/sync.py` | `sync_plant(plant)`: calls `sap/`, writes the snapshot in one transaction (ARCHITECTURE.md, Sync flow); `ensure_fresh(plant)` syncs when missing or older than 5 minutes. |
 | `cockpit/services/requisitions.py` | `prepare(order, material)` (prefill), `create(user, order, material, quantity, unit)`, and for the change request `needs_approval(quantity, price) -> bool`, `approve(user, requisition)` and `reject(user, requisition, reason="")` (the reason is optional). `APPROVAL_LIMIT = Decimal("10000")` is a module constant. All rules live here; views only call them. |
 | `cockpit/models.py` | Models from ARCHITECTURE.md, Data model. Constraint for INV-7 as a conditional unique constraint. |
-| `cockpit/views.py`, `cockpit/urls.py`, `templates/cockpit/` | Thin views. Login is required for every view by middleware (closed by default, #22); each view declares its role check with `requires(action)` from `cockpit/access.py`, using the role table in `cockpit/services/roles.py`. HTMX for Refresh, the confirm step and tooltips. |
+| `cockpit/views.py`, `cockpit/urls.py`, `templates/cockpit/` | Thin views. Login is required for every view by middleware (closed by default, #22); each view declares its role check with `requires(action)` from `cockpit/access.py`, using the role table in `cockpit/services/roles.py`. HTMX for Refresh and the confirm step. Status tooltips are rendered inline and shown by CSS on hover and focus, no request (#23). |
 | `cockpit/management/commands/create_test_users.py` | Creates or fully resets the five PoC accounts (viewer, planner, manager_a, manager_b, admin) with exactly one role each and passwords from `TEST_PASSWORD_*`, for local use, CI and the jury. The role groups come from a data migration. Runs in the Render start command, so changes to these accounts revert on every restart (#22). |
 
 ### Pages and URLs
@@ -158,6 +158,17 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-42 | REQ-7: login page per ui-spec 4.7 A; after login Admin lands on `/admin/` and business roles on `/`; Admin can also log in at `/admin/login/`; logout is POST only and returns to login with `You are logged out.` | Test (#22) |
 | AC-43 | `create_test_users` creates the five PoC accounts with their roles and passwords from `TEST_PASSWORD_*`; a re-run resets password, role, active, staff and superuser without duplicates and leaves other users untouched; a missing or weak password names the variable and changes nothing | Test (#22) |
 | AC-44 | REQ-7 / INV-9: every cockpit URL is protected by `requires`; an anonymous HTMX request gets `HX-Redirect` to login with `next` = the page the user was on (own host only) | URL walker test + browser test (#22) |
+| AC-45 | REQ-7: the frame shows the sidebar per role (ui-spec 2.2): Viewer and Planner see Orders, Dashboard, Requisitions; Manager also Thresholds; the active item is marked; user name, role and a Log out button at the bottom; Admin, no role and logged-out users get no items | Test per role + screenshots (#23) |
+| AC-46 | The Manager's Requisitions item shows the count badge when the count is above 0 and hides it at 0; Viewer and Planner never show it | Test (#23; real count #32) |
+| AC-47 | The page header shows the H1, with an optional status pill and sub-line, header actions on the right, and on data screens `Data as of` and a Refresh button that is disabled while it runs; the breadcrumb links every part but the last | Test (#23) |
+| AC-48 | Status pills, requisition labels, KPI tile, summary strip, pagination, banner, error note and timeline follow ui-spec 3 and use the 5.1 copy word for word; an unknown status is refused | Test + gallery screenshot (#23) |
+| AC-49 | REQ-4: an ⓘ button named `What does [subject] mean?` shows its tooltip on hover and on keyboard focus and hides it on leave and blur, without a request | Browser test (#23) |
+| AC-50 | Every colour and size in the app's CSS comes from `tokens.css` (exact list of allowed literals in #23); the Inter font is served by the app, never from Google | Test (#23) |
+| AC-51 | Formats follow ui-spec 6: `03 Nov 2026`, `04 Nov`, `02 Nov 10:11`, `1,500 G`, `20 PC` (from a stored `20.000`), `1.235 KG` (from `1.234567`), `8.000 KG` as sent to SAP, `1,250.00 EUR`; a float quantity is refused | Unit test (#23) |
+| AC-52 | Below 900px the sidebar is above the content, card rows stack, wide tables scroll inside their card, and the page has no horizontal scroll | Browser test (#23) |
+| AC-53 | The login page matches ui-spec 4.7 A, with a wrong password shown in an error note; the 403 page shows inside the frame for business roles | Test + screenshots (#23) |
+| AC-54 | ui-spec 8: visible focus outline in `--color-primary`; nav items and buttons at least `--touch-target` high, except compact row buttons and the ⓘ; icon-only buttons have an accessible name | Browser test (#23) |
+| AC-55 | HTMX POSTs carry the CSRF token, also after a 403 page has replaced the page | Browser test (#23) |
 
 ### Proven by unit tests only
 
