@@ -211,17 +211,15 @@ def breadcrumb(items: list) -> dict:
 
 
 @register.inclusion_tag("components/pagination.html")
-def pagination(page_obj, noun: str, query: QueryDict | dict | None = None) -> dict:
+def pagination(page_obj, noun: str, query: QueryDict | None = None) -> dict:
     """`Showing [n] of [total] [noun]` with Previous / Next (ui-spec 3.7).
 
     `query` is the current GET parameters (e.g. `request.GET`), so the links keep the filters.
     """
-    params = QueryDict(mutable=True)
-    if query:
-        for key in query:
-            if key != "page":
-                values = query.getlist(key) if hasattr(query, "getlist") else [query[key]]
-                params.setlist(key, values)
+    if query is not None and not isinstance(query, QueryDict):
+        raise TypeError("Pass the request's GET parameters (a QueryDict), e.g. request.GET")
+    params = query.copy() if query is not None else QueryDict(mutable=True)
+    params.pop("page", None)
 
     def link(number: int) -> str:
         page_params = params.copy()

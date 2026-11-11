@@ -114,15 +114,24 @@ def test_tooltip_opens_on_keyboard_focus_and_hover(
     page.mouse.move(0, 0)
     expect(tip).to_be_hidden()
 
+    # A mouse click focuses the button without :focus-visible; the tooltip must stay open
+    # after the mouse leaves, because the rule is :focus (decision I-6).
+    icon.click()
+    page.mouse.move(0, 0)
+    expect(tip).to_be_visible()
+
     assert requests == []  # the tooltip needs no request (AC-49)
 
 
 def test_last_row_tooltip_is_not_clipped(
     gallery_urls, transactional_db, live_server: LiveServer, page: Page
 ) -> None:
-    make_user("vera", "Viewer")
+    make_user("mara", "Manager")
     page.set_viewport_size(DESKTOP)
-    log_in(page, live_server, "vera", "/test/ui/")
+    # A Manager with 3 requisitions awaiting approval, so the gallery shows the badge (AC-46).
+    with mock.patch.object(navigation, "pending_approval_count", return_value=3):
+        log_in(page, live_server, "mara", "/test/ui/")
+    expect(page.get_by_role("navigation", name="Main").get_by_text("3", exact=True)).to_be_visible()
 
     page.get_by_role("button", name="What does Covered mean?").last.focus()
     tip = page.get_by_role("tooltip").filter(has_text="Covered: at least 10% to spare.").last
@@ -136,6 +145,42 @@ def test_last_row_tooltip_is_not_clipped(
     )
     assert hit
     screenshot(page, "gallery")
+
+
+def focus_colour(page: Page, locator, token: str) -> tuple[str, str]:
+    """The outline colour of an element focused by keyboard, and the colour of a token."""
+    locator.focus()
+    page.keyboard.press("Shift+Tab")
+    page.keyboard.press("Tab")  # keyboard focus, so :focus-visible applies
+    outline = locator.evaluate("el => getComputedStyle(el).outlineColor")
+    expected = page.evaluate(
+        """token => {
+            const probe = document.createElement('span');
+            probe.style.color = `var(${token})`;
+            document.body.append(probe);
+            const colour = getComputedStyle(probe).color;
+            probe.remove();
+            return colour;
+        }""",
+        token,
+    )
+    return outline, expected
+
+
+def test_focus_outline_colours(
+    gallery_urls, transactional_db, live_server: LiveServer, page: Page
+) -> None:
+    make_user("vera", "Viewer")
+    page.set_viewport_size(DESKTOP)
+    log_in(page, live_server, "vera", "/test/ui/")
+
+    content_link = page.get_by_role("navigation", name="Breadcrumb").get_by_role("link")
+    outline, primary = focus_colour(page, content_link, "--color-primary")
+    assert outline == primary
+
+    sidebar_link = page.get_by_role("navigation", name="Main").get_by_role("link", name="Orders")
+    outline, accent = focus_colour(page, sidebar_link, "--color-sidebar-accent")
+    assert outline == accent  # inside the sidebar (AC-54, review decision)
 
 
 def test_sizes_and_names(

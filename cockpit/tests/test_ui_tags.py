@@ -223,3 +223,11 @@ def test_format_filters() -> None:
     )
 
     assert html == "20 PC | 8.000 KG | 1,250.00 EUR"
+
+
+def test_pagination_only_takes_the_request_query() -> None:
+    page = Paginator(list(range(10)), 5).page(1)
+
+    with pytest.raises(TypeError):
+        render('{% pagination page "orders" query %}', page=page, query={"plant": ["AUC1"]})
+    assert "page=2" in render('{% pagination page "orders" %}', page=page)

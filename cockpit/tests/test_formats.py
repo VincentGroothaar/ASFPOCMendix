@@ -57,3 +57,31 @@ def test_money_has_2_decimals_rounded_half_up() -> None:
     assert format_money(Decimal("12400.005"), "USD") == "12,400.01 USD"
     with pytest.raises(TypeError):
         format_money(1250.0, "EUR")
+
+
+@pytest.mark.parametrize("value", [Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")])
+def test_a_quantity_that_is_not_a_finite_number_is_refused(value) -> None:
+    with pytest.raises(ValueError):
+        format_quantity(value, "PC")
+
+
+def test_a_tiny_negative_shows_as_zero_not_minus_zero() -> None:
+    assert format_quantity(Decimal("-0.0004"), "PC") == "0 PC"
+    assert format_quantity(Decimal("-0.0004"), "PC", as_sent=True) == "0.000 PC"
+    assert format_money(Decimal("-0.001"), "EUR") == "0.00 EUR"
+
+
+@pytest.mark.parametrize("unit", [None, "", "  "])
+def test_a_missing_unit_or_currency_is_refused(unit) -> None:
+    with pytest.raises(ValueError):
+        format_quantity(Decimal("1"), unit)
+    with pytest.raises(ValueError):
+        format_money(Decimal("1"), unit)
+
+
+def test_a_date_and_time_is_shown_as_its_date_in_the_app_time_zone() -> None:
+    # 23:30 UTC on 2 Nov is already 3 Nov in Europe/Amsterdam.
+    late = datetime(2026, 11, 2, 23, 30, tzinfo=UTC)
+
+    assert format_date(late) == "03 Nov 2026"
+    assert format_short_date(late) == "03 Nov"

@@ -1,6 +1,7 @@
 """The page frame per role, the login page and the 403 page in the frame (AC-45, AC-53, S-3)."""
 
 import pytest
+from django.template import RequestContext, Template
 from django.test import Client, RequestFactory
 from pytest_django.asserts import assertContains, assertInHTML, assertNotContains
 
@@ -82,3 +83,27 @@ def test_login_still_works(make_user) -> None:
     response = Client().post("/accounts/login/", {"username": "pia", "password": PASSWORD})
 
     assert response.status_code == 302
+
+
+def test_the_active_sidebar_item_has_aria_current(make_user) -> None:
+    request = RequestFactory().get("/orders/1000123/")
+    request.user = make_user("Manager")
+    page = Template('{% extends "layouts/frame.html" %}').render(RequestContext(request))
+
+    assert page.count('aria-current="page"') == 1
+    assert 'href="/orders/" class="sidebar-link is-active" aria-current="page"' in page
+
+
+def test_header_actions_render_in_the_page_header(make_user) -> None:
+    request = RequestFactory().get("/")
+    request.user = make_user("Manager")
+    page = Template(
+        '{% extends "layouts/frame.html" %}{% load ui %}'
+        '{% block page_title %}{% page_header "REQ-16" "awaiting_approval" %}{% endblock %}'
+        '{% block header_actions %}<button class="btn">Approve and send</button>{% endblock %}'
+    ).render(RequestContext(request))
+
+    header = page[page.index('<header class="page-header">') : page.index("</header>")]
+    assert "<h1>REQ-16</h1>" in header
+    actions = header[header.index('<div class="header-actions">') :]
+    assert '<button class="btn">Approve and send</button>' in actions

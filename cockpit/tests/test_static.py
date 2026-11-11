@@ -18,13 +18,28 @@ APP_CSS = STATIC / "app.css"
 # 6px pill dot, 28px timeline circle), the 899px breakpoint, full viewport height, and the H1
 # letter-spacing from tokens.css.
 ALLOWED_LENGTHS = frozenset({"1px", "2px", "3px", "6px", "28px", "899px", "100vh", "-0.01em"})
-ALLOWED_COLOUR_WORDS = frozenset({"transparent", "currentcolor"})
+# Every CSS named colour. Only `transparent` and `currentColor` are allowed in app.css.
 CSS_COLOUR_WORDS = frozenset(
-    {
-        "black", "white", "red", "green", "blue", "yellow", "orange", "purple", "gray", "grey",
-        "silver", "maroon", "navy", "teal", "olive", "lime", "aqua", "fuchsia", "pink", "brown",
-    }
-)  # fmt: skip
+    """
+aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue
+blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk
+crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki
+darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen
+darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue
+dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite
+gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki
+lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan
+lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen
+lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen
+magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen
+mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream
+mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid
+palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
+powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown
+seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen
+steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen
+""".split()
+)
 
 
 def _css_without_comments(path: Path) -> str:
