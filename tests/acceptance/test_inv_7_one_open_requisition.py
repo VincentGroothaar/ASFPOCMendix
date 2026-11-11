@@ -8,8 +8,6 @@ from django.db import IntegrityError, transaction
 from tests.acceptance import builders
 from tests.acceptance.support import MIXED_ORDER, load_mixed_order, sync
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #24 (sync); the model is #21")
-
 OPEN = [builders.AWAITING_APPROVAL, builders.SENT]
 
 
