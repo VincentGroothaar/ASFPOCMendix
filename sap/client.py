@@ -22,6 +22,9 @@ PAGE_SIZE = 1000
 # A safety limit: no read in the cockpit comes near this. Reaching it means SAP is not paging
 # the way we expect, and reading on would never end.
 MAX_ROWS = 100_000
+# The largest power of ten (either way) a number from SAP may have. Real quantities stay far
+# below; Decimal arithmetic on much larger exponents can raise decimal.Overflow.
+MAX_DECIMAL_POWER = 100
 # Materials per call when filtering by material (spec.md: batches of 40).
 MATERIAL_BATCH_SIZE = 40
 
@@ -195,4 +198,9 @@ def parse_decimal(value: object, field: str) -> Decimal:
         number = None
     if number is None or not number.is_finite():
         raise SapDataError(f"SAP sent a value for {field} that is not a number.")
+    # adjusted() is the power of ten of the first digit; reading it needs no arithmetic. A value
+    # far outside any real quantity (e.g. 1E+1000000) would make adding or comparing it raise
+    # decimal.Overflow, so it is refused here, where every SAP number enters the app.
+    if abs(number.adjusted()) > MAX_DECIMAL_POWER:
+        raise SapDataError(f"SAP sent a value for {field} that is out of range.")
     return number
