@@ -50,14 +50,14 @@ The flow and the system boundaries follow [ARCHITECTURE.md](../../ARCHITECTURE.m
 | `cockpit/services/sync.py` | `sync_plant(plant)`: calls `sap/`, writes the snapshot in one transaction (ARCHITECTURE.md, Sync flow); `ensure_fresh(plant)` syncs when missing or older than 5 minutes. |
 | `cockpit/services/requisitions.py` | `prepare(order, material)` (prefill), `create(user, order, material, quantity, unit)`, and for the change request `needs_approval(quantity, price) -> bool`, `approve(user, requisition)` and `reject(user, requisition, reason="")` (the reason is optional). `APPROVAL_LIMIT = Decimal("10000")` is a module constant. All rules live here; views only call them. |
 | `cockpit/models.py` | Models from ARCHITECTURE.md, Data model. Constraint for INV-7 as a conditional unique constraint. |
-| `cockpit/views.py`, `cockpit/urls.py`, `templates/cockpit/` | Thin views with `login_required` and a role check per view. HTMX for Refresh, the confirm step and tooltips. |
-| `cockpit/management/commands/create_test_users.py` | Creates the groups and one user per role plus a second Manager, with passwords from environment variables, for local use, CI and the jury. |
+| `cockpit/views.py`, `cockpit/urls.py`, `templates/cockpit/` | Thin views. Login is required for every view by middleware (closed by default, #22); each view declares its role check with `requires(action)` from `cockpit/access.py`, using the role table in `cockpit/services/roles.py`. HTMX for Refresh, the confirm step and tooltips. |
+| `cockpit/management/commands/create_test_users.py` | Creates or fully resets the five PoC accounts (viewer, planner, manager_a, manager_b, admin) with exactly one role each and passwords from `TEST_PASSWORD_*`, for local use, CI and the jury. The role groups come from a data migration. Runs in the Render start command, so changes to these accounts revert on every restart (#22). |
 
 ### Pages and URLs
 
 | URL | Who | What |
 |---|---|---|
-| `/` | business roles | Redirects to `/orders/` |
+| `/` | everyone logged in | Business roles: redirects to `/orders/` (a placeholder start page until #25). Admin: redirects to `/admin/` |
 | `/orders/?plant=&from=&to=&page=` | Viewer, Planner, Manager | Order list (REQ-1). Plant selector from `COCKPIT_PLANTS`; defaults today → +14 days; 50 per page; overdue orders listed first with a badge |
 | `POST /plants/<plant>/refresh/` | Viewer, Planner, Manager | Full sync, then reloads the list (HTMX) |
 | `/orders/<number>/` | Viewer, Planner, Manager | Components, stock and statuses (REQ-2 to REQ-4); Request button or requisition label (PR sent, Awaiting approval, PR failed, Rejected) per material |
@@ -142,7 +142,7 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-26 | REQ-5: the requisition list shows number, order, material, quantity, unit, delivery date, user, time and outcome for every attempt | Test |
 | AC-27 | REQ-5 / INV-3 / INV-4: requisitions are sent only to `MOCK_PR_BASE_URL` with a CSRF token and the `APIKey` header; no request ever writes to `SAP_BASE_URL` | Acceptance test against the local mock; test that the SAP client has no write method |
 | AC-28 | REQ-6: the dashboard shows the red order count, shortage per material with affected orders, shortage per order, and unit mismatches separately, matching the order list | Test with a constructed snapshot |
-| AC-29 | REQ-7 / INV-9: every URL redirects an anonymous user to login | Test over all URL names |
+| AC-29 | REQ-7 / INV-9: every URL redirects an anonymous user to login (GET, and POST with a valid CSRF token) | Test over all URL names |
 | AC-30 | REQ-7: Admin can manage users and groups in `/admin/` and gets 403 on business pages; business roles are sent to the admin login on `/admin/` (Django's default redirect, not 403) and cannot open user management | Test per role |
 | AC-31 | REQ-7 / INV-1: a direct POST to create a requisition as Viewer or Admin returns 403 and stores nothing | Test |
 | AC-32 | REQ-8 (change request): safety stock is read from SAP during sync and reserved before allocation. Stock 100, safety stock 30, order A needs 60, order B needs 20 → A available 70, green; B available 10, red, shortage 10. Safety stock above stock → available 0. The tooltip mentions it, with the amount, when it is above 0; `/settings/` shows it read only | Unit tests (safety stock above, equal to and below stock) + test that sync stores it |
@@ -152,6 +152,12 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-36 | REQ-10: rejecting takes an optional reason, shows it to the planner when given, and allows a new request for that order + material | Test |
 | AC-37 | REQ-10 / INV-8: Manager A cannot approve their own requisition (403); Manager B can | Test |
 | AC-38 | REQ-10 / INV-7: while a request awaits approval, no second request for the same order + material can be created | Test |
+| AC-39 | REQ-7: a user has a role only when active and in exactly one role group; with zero, several or only unknown groups, every business URL returns 403 and `/admin/` is refused | Unit + test per case (#22) |
+| AC-40 | REQ-7: in admin, saving a user (add or change form) with zero or two roles fails with `Choose exactly one role.`; role groups can be viewed but not added, changed or deleted; staff, superuser and user permissions are not shown | Test (#22) |
+| AC-41 | REQ-7 / INV-9: the 403 page (also for HTMX, where it replaces the whole page, and for a CSRF failure) shows the copy in ui-spec 4.7 E for a role, for no role, and for a logged-out user | Test per case + browser test (#22) |
+| AC-42 | REQ-7: login page per ui-spec 4.7 A; after login Admin lands on `/admin/` and business roles on `/`; Admin can also log in at `/admin/login/`; logout is POST only and returns to login with `You are logged out.` | Test (#22) |
+| AC-43 | `create_test_users` creates the five PoC accounts with their roles and passwords from `TEST_PASSWORD_*`; a re-run resets password, role, active, staff and superuser without duplicates and leaves other users untouched; a missing or weak password names the variable and changes nothing | Test (#22) |
+| AC-44 | REQ-7 / INV-9: every cockpit URL is protected by `requires`; an anonymous HTMX request gets `HX-Redirect` to login with `next` = the page the user was on (own host only) | URL walker test + browser test (#22) |
 
 ### Proven by unit tests only
 
