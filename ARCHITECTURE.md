@@ -36,20 +36,20 @@ Dependencies point inward: views → services → `sap/` and models. Services ta
 Snapshot (owned by SAP, refreshed by sync, never edited in the app):
 
 - **PlantSnapshot**: plant, synced_at, last_sync_error, last_sync_error_at.
-- **ProductionOrder**: plant, order number (unique), material, quantity, unit, start date, is_active (false when no longer released in SAP), synced_at.
+- **ProductionOrder**: plant, order number (unique), material, material description, quantity, unit, start date, is_active (false when no longer released in SAP), synced_at.
 - **Component**: order (FK), item number, material, description, required quantity, withdrawn quantity, unit.
 - **Stock**: plant, material, unrestricted quantity (summed over storage locations), stock unit, safety stock (change request), standard price per stock unit and currency (change request, empty when SAP has no price), synced_at. Unique on plant + material.
 
 Owned by the app:
 
-- **Requisition**: order (FK), material, quantity entered + unit entered, quantity sent + stock unit, delivery date, status (`awaiting_approval`, `sent`, `failed`, `rejected`), PR number, payload sent (JSON), response or error (JSON/text), created_by, created_at, decided_by, decided_at, reject_reason. Database constraint: at most one requisition per order + material with status `awaiting_approval` or `sent`.
-- **CockpitSettings** (change request): one row with the cover buffer percentage (default 10), who changed it last and when.
+- **Requisition**: order (FK, protected: an order with requisitions is never deleted), material, item numbers of the order's lines for that material (at request time), quantity entered + unit entered, quantity sent + stock unit, shortage at request time (order unit), delivery date, status (`awaiting_approval`, `sent`, `failed`, `rejected`), PR number, payload sent (JSON), response (JSON), error message (text), created_by, created_at, decided_by, decided_at, reject_reason, sent_at. The app reference `REQ-n` is not stored: it is `REQ-` + the id, unpadded (`REQ-16`). Database constraint: at most one requisition per order + material with status `awaiting_approval` or `sent`; failed and rejected rows never block, and a retry is a new row. Sending and approving follow the Create requisition and Approve or reject flows below.
+- **BufferChange**: a log with one row per change of the cover buffer: value (0–100, 2 decimals), changed_by, changed_at. The current buffer is the newest row, or 10 when there is none. Changing it from the screen is the change request (REQ-9).
 
 Safety stock and prices come from SAP and live in the snapshot; the approval limit is a constant in code (`APPROVAL_LIMIT`). None of them is edited in the app.
 
 Not stored: statuses, available stock and shortages. They are calculated from the snapshot and settings on every view, so they can never go stale relative to the data shown.
 
-All quantities are `DecimalField` / `Decimal` (max 3 decimals for entered quantities). Units are SAP unit codes as returned by the sandbox; the codes are confirmed by the sandbox data check (#7).
+All quantities are `DecimalField(max_digits=15, decimal_places=3)` / `Decimal`, matching the 3 decimals of SAP's requisition quantity; a quantity converted to the stock unit is rounded up to 3 decimals before it is sent and stored. Units are SAP unit codes as returned by the sandbox; the codes are confirmed by the sandbox data check (#7).
 
 ## Critical flows
 
@@ -65,7 +65,10 @@ All quantities are `DecimalField` / `Decimal` (max 3 decimals for entered quanti
 1. Planner clicks Request; the confirm form shows the prefilled shortage in the order's unit and the converted stock-unit quantity.
 2. On submit the server re-checks the role, the quantity rules and the one-per-order-and-material constraint.
 3. (Change request) If the value (quantity in stock unit × price per stock unit) is above `APPROVAL_LIMIT` (10,000 in the plant's currency), or the material has no price: store as `awaiting_approval` and stop.
-4. Otherwise the `sap/` requisition client fetches a CSRF token, POSTs the payload (fixed header constants from #8) and stores the outcome as `sent` with the PR number or `failed` with the error. Then the plant is re-synced.
+4. Otherwise, in one transaction: insert the row as `sent` with no PR number (a parallel second request now waits on it and then fails the constraint), let the `sap/` requisition client fetch a CSRF token and POST the payload (fixed header constants from #8), then store the PR number and `sent_at`, or switch the row to `failed` with the error. Every outcome without a PR number (OData error, network error, timeout, a 2xx without a number) is stored as `failed`; nothing re-raises, so every attempt is kept. Commit.
+5. After the commit, the plant is re-synced.
+
+**Approve or reject (change request).** In one transaction, lock the requisition (`select_for_update()`) and continue only if it is still `awaiting_approval`; otherwise refuse with a message. Reject stores the decision and reason. Approve stores the decision and then sends as in step 4 on the same row; the re-sync follows the commit.
 
 **Invariants every feature must follow**
 
@@ -99,6 +102,9 @@ All quantities are `DecimalField` / `Decimal` (max 3 decimals for entered quanti
 | SAP data | Per-plant snapshot with full sync | Live SAP calls per page; fetching only new orders | Fast pages; statuses never stale silently | 5 s budget applies to a full sync |
 | Sync execution | Synchronous, in the request | Background worker (Celery/Redis) | No extra moving parts to host or explain | A slow SAP response blocks that request |
 | Statuses | Calculated on read | Stored | Always consistent with the data shown | Recalculated on every view (cheap at this size) |
+| Cover buffer | Log table, current value = newest row (Accepted, #21) | One settings row with the last change | Keeps every change with who and when; no singleton row to seed | One query per read |
+| Requisition reference | `REQ-n` derived from the id, unpadded (Accepted, #21) | A stored sequence number | Unique and ordered with no locking code | Numbers can have gaps |
+| Duplicate PR guard | Insert as `sent`, then POST, in one transaction (Accepted, #21) | A `sending` status; insert after the POST | The database constraint blocks a double submit before the mock is called; approve and reject lock the row, so a race cannot send twice | Transaction open during the HTTP call (max 10 s) |
 | Requisition target | Separate mock service with SAP-identical paths | Mock inside the Django app | Shared by both tracks; switching to real S/4 is a URL change | One more service to deploy |
 | Login enforcement | `LoginRequiredMiddleware`, closed by default (Accepted, #22) | `@login_required` on each view | A forgotten decorator can't leave a page open | Public views must be marked explicitly |
 | Role permissions | Fixed role → action table in code (Accepted, #22) | Django permissions stored on groups | Reviewable, testable without a database, can't drift from REQUIREMENTS.md | Group permission fields in admin are hidden and unused |
