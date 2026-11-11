@@ -3,12 +3,8 @@
 
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import Stock, days, one_component_order
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #20")
 
 
 def test_ac_16_only_the_requirement_is_subtracted_not_the_buffer():

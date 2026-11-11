@@ -3,12 +3,8 @@ stock in KG → unit mismatch. Unit test: component and stock units always match
 
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import Stock, days, one_component_order
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #20")
 
 
 def test_ac_19_converted_stock_gives_red_with_shortage_in_the_order_unit():
