@@ -16,26 +16,31 @@ How a sync works (ARCHITECTURE.md, "Sync"):
 1. One durable transaction locks the plant's PlantSnapshot row before SAP is called, so the
    same plant is never synced twice at once. Other plants are not blocked.
 2. Read orders with components, stock and descriptions from SAP.
-3. Write the snapshot inside a savepoint. If SAP fails, nothing of the snapshot changes; only
-   the error and its time are stored.
+3. Check that the data fits the snapshot tables, then write it. If SAP fails or sends unusable
+   data, nothing of the snapshot changes; only the error and its time are stored.
 """
 
 import logging
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from cockpit.models import Component, PlantSnapshot, ProductionOrder, Stock
 from sap import production_orders, products, stock
-from sap.client import ODataClient, SapUnavailable
+from sap.client import ODataClient, SapDataError, SapUnavailable
 
 logger = logging.getLogger("cockpit.sync")
 
 # A snapshot older than this is loaded again on the next page view (D-17).
 STALE_AFTER = timedelta(minutes=5)
+
+# Quantity columns hold 15 digits, 3 of them decimals (cockpit.models.quantity_field).
+QUANTITY_STEP = Decimal("0.001")
+MAX_QUANTITY = Decimal(10) ** 12
 
 # Rows per INSERT or UPDATE statement when writing the snapshot in bulk.
 BATCH_SIZE = 500
@@ -154,7 +159,9 @@ def _sync_locked(snapshot: PlantSnapshot, client: ODataClient | None) -> SyncSta
     synced_at = timezone.now()
     try:
         data = _read_from_sap(sap, snapshot.plant)
-        with transaction.atomic():  # savepoint: on any error none of these writes stay
+        # A savepoint, as the spec asks. All SAP reads and checks happen before it, so today it
+        # only matters if a later change makes a SAP call or check while writing.
+        with transaction.atomic():
             counts = _write_snapshot(snapshot.plant, data, synced_at)
     except SapUnavailable as error:  # includes SapDataError (decision 2 on #24)
         _store_failure(snapshot, str(error))
@@ -174,11 +181,60 @@ def _read_from_sap(client: CountingClient, plant: str) -> SapData:
     orders = production_orders.read_released_orders(client, plant)
     component_materials = sorted({line.material for order in orders for line in order.components})
     all_materials = sorted(set(component_materials) | {order.material for order in orders})
-    return SapData(
+    data = SapData(
         orders=orders,
         stock=stock.read_unrestricted_stock(client, plant, component_materials),
         descriptions=products.read_descriptions(client, all_materials),
     )
+    _check_fits_snapshot(data)
+    return data
+
+
+def _check_fits_snapshot(data: SapData) -> None:
+    """Raise SapDataError when SAP sent data the snapshot tables cannot hold (review on #60).
+
+    Without this check such data would crash the sync with a database error (a 500 page, no
+    stored error) instead of failing like an outage, as decision 2 on #24 asks. Examples: the
+    same order twice (paging over a list that changed between pages), the same item twice in
+    one order, a text longer than its column, or a quantity with more than 3 decimals.
+    """
+    numbers = [order.number for order in data.orders]
+    duplicates = sorted({number for number in numbers if numbers.count(number) > 1})
+    if duplicates:
+        raise SapDataError(f"SAP sent production order {duplicates[0]} more than once.")
+    for order in data.orders:
+        _check_text(ProductionOrder, "number", order.number)
+        _check_text(ProductionOrder, "material", order.material)
+        _check_text(ProductionOrder, "unit", order.unit)
+        _check_quantity(order.quantity, f"order {order.number}")
+        items = [line.item for line in order.components]
+        if len(set(items)) != len(items):
+            raise SapDataError(f"SAP sent an item twice in production order {order.number}.")
+        for line in order.components:
+            _check_text(Component, "item", line.item)
+            _check_text(Component, "material", line.material)
+            _check_text(Component, "unit", line.unit)
+            _check_quantity(line.required_quantity, f"order {order.number} item {line.item}")
+            _check_quantity(line.withdrawn_quantity, f"order {order.number} item {line.item}")
+    for material_stock in data.stock.values():
+        _check_text(Stock, "unit", material_stock.unit)
+        _check_quantity(material_stock.quantity, f"stock of {material_stock.material}")
+    for description in data.descriptions.values():
+        _check_text(Component, "description", description)
+
+
+def _check_text(model: type[models.Model], field: str, value: str) -> None:
+    """Raise SapDataError when `value` is longer than the model's column for `field`."""
+    max_length = model._meta.get_field(field).max_length
+    if len(value) > max_length:
+        raise SapDataError(f"SAP sent a {field} longer than {max_length} characters: {value!r}.")
+
+
+def _check_quantity(value: Decimal, where: str) -> None:
+    """Raise SapDataError when a quantity does not fit 15 digits with 3 decimals (INV-5)."""
+    exact = value == value.quantize(QUANTITY_STEP)
+    if not exact or abs(value) >= MAX_QUANTITY:
+        raise SapDataError(f"SAP sent a quantity for {where} that does not fit: {value}.")
 
 
 def _write_snapshot(plant: str, data: SapData, synced_at: datetime) -> WriteCounts:

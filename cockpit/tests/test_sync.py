@@ -392,6 +392,44 @@ def test_s8_unusable_sap_data_fails_the_sync_like_an_outage(sap, client, clock) 
     assert {**after, "error": "", "error_at": None} == before
 
 
+def duplicate_order(rows: dict) -> None:
+    rows[ORDERS].append(dict(rows[ORDERS][0]))  # e.g. paging over a list that changed
+
+
+def duplicate_item(rows: dict) -> None:
+    lines = rows[ORDERS][0]["to_ProductionOrderComponent"]["results"]
+    lines.append(dict(lines[0]))
+
+
+def long_description(rows: dict) -> None:
+    rows[DESCRIPTIONS][1]["ProductDescription"] = "x" * 41
+
+
+def four_decimals(rows: dict) -> None:
+    rows[ORDERS][0]["to_ProductionOrderComponent"]["results"][0]["RequiredQuantity"] = "1.0005"
+
+
+def huge_quantity(rows: dict) -> None:
+    rows[STOCK][0]["MatlWrhsStkQtyInMatlBaseUnit"] = "1000000000000"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "spoil", [duplicate_order, duplicate_item, long_description, four_decimals, huge_quantity]
+)
+def test_s8_data_the_snapshot_cannot_hold_fails_like_an_outage(sap, client, clock, spoil) -> None:
+    sync_plant(PLANT, client)
+    before = stored_snapshot()
+    spoil(sap.rows)
+    clock.move_to(NOW + timedelta(minutes=1))
+
+    state = sync_plant(PLANT, client)
+
+    assert state.failed and state.synced_at == NOW, "no database error, a failed sync instead"
+    assert state.error.startswith("SAP sent")
+    assert {**stored_snapshot(), "error": "", "error_at": None} == before
+
+
 @pytest.mark.django_db
 def test_s8_first_sync_with_unusable_data_has_no_snapshot(sap, client, clock) -> None:
     sap.rows[ORDERS][0]["MfgOrderScheduledStartDate"] = "not a date"
@@ -434,13 +472,20 @@ def test_s10_success_after_a_failure_clears_the_error(sap, client, clock) -> Non
 
 
 def wait_until_a_query_waits_for_a_lock() -> None:
-    """Wait until another connection is blocked on a row lock (the plant's PlantSnapshot)."""
+    """Wait until another connection of this test waits for the PlantSnapshot row lock.
+
+    Only a session of this test database that is blocked by another session's lock and runs a
+    SELECT ... FOR UPDATE on the snapshot table counts, so other sessions cannot match.
+    """
     deadline = time.monotonic() + 10
     with connection.cursor() as cursor:
         while time.monotonic() < deadline:
             cursor.execute(
                 "select count(*) from pg_stat_activity "
-                "where datname = current_database() and wait_event_type = 'Lock'"
+                "where datname = current_database() and pid <> pg_backend_pid() "
+                "and cardinality(pg_blocking_pids(pid)) > 0 "
+                "and query ilike %s and query ilike %s",
+                ["%cockpit_plantsnapshot%", "%for update%"],
             )
             if cursor.fetchone()[0]:
                 return
@@ -466,14 +511,19 @@ def test_s11_a_load_waiting_behind_a_sync_uses_its_result(sap, clock, first_atte
             connection.close()
 
     first = threading.Thread(target=load, args=("first",))
-    first.start()
-    assert sap.entered.wait(10), "the first load never called SAP"
     second = threading.Thread(target=load, args=("second",))
-    second.start()
-    wait_until_a_query_waits_for_a_lock()
-    sap.release.set()
-    first.join(10)
-    second.join(10)
+    try:
+        first.start()
+        assert sap.entered.wait(10), "the first load never called SAP"
+        second.start()
+        wait_until_a_query_waits_for_a_lock()
+    finally:
+        # Always let both threads finish, also when an assertion above failed.
+        sap.release.set()
+        for thread in (first, second):
+            if thread.ident is not None:  # started
+                thread.join(10)
+    assert not first.is_alive() and not second.is_alive(), "a load never finished"
 
     assert sap.order_calls() == calls_before + 1, "only the first load called SAP"
     assert results["second"] == results["first"]
@@ -514,8 +564,12 @@ def test_s14_quantities_are_stored_as_exact_decimals(sap, client, clock) -> None
     assert isinstance(line.required_quantity, Decimal)
 
 
-def test_s14_the_sync_uses_only_the_read_functions() -> None:
-    # The service reaches SAP only through sap/ read functions; the client has no write method.
+@pytest.mark.django_db
+def test_s14_the_sync_only_reads_from_sap(sap, client, clock) -> None:
+    sync_plant(PLANT, client)
+
+    # Every request a full sync sends is a GET (INV-4), and the client has no write method.
+    assert sap.calls and {call.method for call in sap.calls} == {"GET"}
     assert not any(hasattr(sync.ODataClient, name) for name in ("post", "put", "patch", "delete"))
 
 
