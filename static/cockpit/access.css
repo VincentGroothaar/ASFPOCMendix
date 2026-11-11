@@ -54,7 +54,7 @@ body {
 
 .login-card {
   width: 100%;
-  max-width: 320px;
+  max-width: var(--login-card-width);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -127,6 +127,7 @@ body {
   margin: 0;
 }
 
+/* ui-spec 2.1: below 900px wide. CSS variables cannot be used in media queries. */
 @media (max-width: 900px) {
   .denied {
     padding: var(--space-4);

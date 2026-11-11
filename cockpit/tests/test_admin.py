@@ -119,6 +119,45 @@ def test_change_user_without_exactly_one_role_is_refused(make_user, roles) -> No
     assert form.errors["groups"] == [EXACTLY_ONE_ROLE]
 
 
+def change_user_form(user: User, roles: list[str]) -> dict:
+    """POST data for the admin's Change user page, as the browser sends it."""
+    return {
+        "username": user.username,
+        "first_name": "",
+        "last_name": "",
+        "email": "",
+        "is_active": "on",
+        "groups": [role_group(name).pk for name in roles],
+        "last_login_0": "",
+        "last_login_1": "",
+        "date_joined_0": "2026-11-11",
+        "date_joined_1": "10:00:00",
+    }
+
+
+@pytest.mark.parametrize("roles", [[], ["Viewer", "Manager"]], ids=["no role", "two roles"])
+def test_change_user_page_refuses_zero_or_two_roles(client_as, make_user, roles) -> None:
+    user = make_user("Viewer")
+
+    response = client_as("Admin").post(
+        f"/admin/auth/user/{user.pk}/change/", change_user_form(user, roles)
+    )
+
+    assertContains(response, EXACTLY_ONE_ROLE)
+    assert list(user.groups.values_list("name", flat=True)) == ["Viewer"]
+
+
+def test_change_user_page_moves_a_user_to_another_role(client_as, make_user) -> None:
+    user = make_user("Viewer", "Coffee club")
+
+    response = client_as("Admin").post(
+        f"/admin/auth/user/{user.pk}/change/", change_user_form(user, ["Manager"])
+    )
+
+    assert response.status_code == 302
+    assert list(user.groups.values_list("name", flat=True)) == ["Manager"]
+
+
 def test_only_role_groups_can_be_chosen(make_user) -> None:
     Group.objects.create(name="Coffee club")
 
