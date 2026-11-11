@@ -35,9 +35,10 @@ Say what the user sees on success, denial, invalid input, and failure.>
 
 ## Technical design
 
-<A Mermaid diagram of the main flow: the parts this change touches, what moves
-between them, and the order. It is for the human reviewer, so keep it to one
-screen and label every arrow.>
+<A Mermaid diagram of the main flow, only if this change adds or changes a
+boundary, a data flow, or a sequence between parts: the parts it touches, what
+moves between them, and the order. It is for the human reviewer, so keep it to
+one screen and label every arrow. Otherwise write "No flow change." and skip it.>
 
 <What the agent needs to build it: the modules and interfaces it changes, data
 and schema changes, API contracts, migrations, and where the tests go.
@@ -63,7 +64,7 @@ the cost. Name any change to ARCHITECTURE.md.>
 
 - Keep existing `AC-n`, `REQ-n`, and `INV-n` IDs. Never reuse or renumber them.
 - Link to requirements and architecture instead of copying them.
-- Every spec has a diagram. Check that it agrees with the text.
+- A spec has a diagram only when the flow changes (see the template). Check that a diagram agrees with the text. Never render it; the Mermaid text is enough.
 - For code that does not exist yet, describe the check as a scenario and expected result.
 - After delivery, set the status to Delivered and link the PR.
 

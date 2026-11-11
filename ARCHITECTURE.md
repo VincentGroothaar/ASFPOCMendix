@@ -1,5 +1,7 @@
 # Material Shortage Cockpit architecture
 
+Sections: Intended system, Responsibilities, Data model, Critical flows, Security and operations, Decisions, Configuration, Open decisions. Read only the sections your task touches; for example, a UI change rarely needs Data model.
+
 Status: Proposed. Built today: an empty Django project with CI on Postgres (#4, #9), the requisition mock (#8) and the SAP read client with its read functions (`sap/`, #18), and roles, login, access control and user administration (#22). Not built yet: everything in this document beyond that.
 
 ## Intended system

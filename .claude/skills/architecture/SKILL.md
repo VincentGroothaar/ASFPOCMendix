@@ -14,7 +14,7 @@ Fill in this template in root `ARCHITECTURE.md`. It describes the system you int
 1. Read `REQUIREMENTS.md`, the repository instructions, and any existing code, schemas, and infrastructure. Check every claim about the current system against them.
 2. Ask the user about each decision that shapes the system: boundaries, who owns which data, dependencies, and hard limits. Give your recommended answer with each question.
 3. Choose the simplest design that meets the requirements. For each big decision, name the strongest alternative and why you did not pick it.
-4. Fill in the template. Render the diagram and check that it matches the text.
+4. Fill in the template. Check that the Mermaid text of the diagram matches the prose. Do not render it. Change the diagram only when a boundary or flow changes.
 5. Stop when the document is ready for review. Do not plan tasks or write code.
 
 ## Template
