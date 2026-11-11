@@ -101,9 +101,9 @@ All quantities are `DecimalField(max_digits=15, decimal_places=3)` / `Decimal`, 
 | SAP data | Per-plant snapshot with full sync | Live SAP calls per page; fetching only new orders | Fast pages; statuses never stale silently | 5 s budget applies to a full sync |
 | Sync execution | Synchronous, in the request | Background worker (Celery/Redis) | No extra moving parts to host or explain | A slow SAP response blocks that request |
 | Statuses | Calculated on read | Stored | Always consistent with the data shown | Recalculated on every view (cheap at this size) |
-| Cover buffer | Log table, current value = newest row (Proposed, #21) | One settings row with the last change | Keeps every change with who and when; no singleton row to seed | One query per read |
-| Requisition reference | `REQ-n` derived from the id, unpadded (Proposed, #21) | A stored sequence number | Unique and ordered with no locking code | Numbers can have gaps |
-| Duplicate PR guard | Insert as `sent`, then POST, in one transaction (Proposed, #21) | A `sending` status; insert after the POST | The database constraint blocks a double submit before the mock is called; approve and reject lock the row, so a race cannot send twice | Transaction open during the HTTP call (max 10 s) |
+| Cover buffer | Log table, current value = newest row (Accepted, #21) | One settings row with the last change | Keeps every change with who and when; no singleton row to seed | One query per read |
+| Requisition reference | `REQ-n` derived from the id, unpadded (Accepted, #21) | A stored sequence number | Unique and ordered with no locking code | Numbers can have gaps |
+| Duplicate PR guard | Insert as `sent`, then POST, in one transaction (Accepted, #21) | A `sending` status; insert after the POST | The database constraint blocks a double submit before the mock is called; approve and reject lock the row, so a race cannot send twice | Transaction open during the HTTP call (max 10 s) |
 | Requisition target | Separate mock service with SAP-identical paths | Mock inside the Django app | Shared by both tracks; switching to real S/4 is a URL change | One more service to deploy |
 | Hosting | Render free tier | Azure; paid plans | Simple, free, enough for demo and jury | Sleep and wake-up delay; database expires after 30 days |
 
