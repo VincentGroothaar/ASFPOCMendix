@@ -27,6 +27,7 @@ from cockpit.services.units import UnitMismatch, convert
 ZERO = Decimal("0")
 HUNDRED = Decimal("100")
 # With these traps a result that is not exact raises instead of being rounded (INV-5).
+_PRECISION = 28
 _EXACT_TRAPS = [InvalidOperation, DivisionByZero, Overflow, Inexact, Rounded]
 
 # --- Inputs -------------------------------------------------------------------------------------
@@ -177,7 +178,7 @@ def calculate(
         balances={line.material: _Balance(line.unit, line.quantity) for line in stock},
     )
     results: dict[str, OrderResult] = {}
-    with localcontext(traps=_EXACT_TRAPS):
+    with localcontext(prec=_PRECISION, traps=_EXACT_TRAPS):
         for order in sorted(orders, key=lambda order: (order.start_date, order.number)):
             lines = sorted(order.components, key=_item_number)
             components = tuple(_allocate_line(line, allocation) for line in lines)
@@ -203,7 +204,7 @@ def _item_number(line: ComponentLine) -> int:
 
 def _allocate_line(line: ComponentLine, allocation: _Allocation) -> ComponentResult:
     """Give one line its status and take its requirement from the material's balance."""
-    open_requirement = max(line.required - line.withdrawn, ZERO)
+    open_requirement = _open_requirement(line)
     balance = allocation.balances.get(line.material)
 
     if open_requirement == ZERO:
@@ -240,6 +241,12 @@ def _allocate_line(line: ComponentLine, allocation: _Allocation) -> ComponentRes
     )
 
 
+def _open_requirement(line: ComponentLine) -> Decimal:
+    """Required minus withdrawn, or exactly 0 when nothing is left (never negative, never -0)."""
+    remaining = line.required - line.withdrawn
+    return remaining if remaining > ZERO else ZERO
+
+
 def _line_status(requirement: Decimal, available: Decimal, buffer_percent: Decimal) -> Status:
     """Short, Low cover or Covered, compared in the stock unit without any division."""
     if available < requirement:
@@ -257,7 +264,7 @@ def _result_without_allocation(
         item=line.item,
         material=line.material,
         status=status,
-        open_requirement=max(line.required - line.withdrawn, ZERO),
+        open_requirement=_open_requirement(line),
         unit=line.unit,
         available=None,
         shortage=None,

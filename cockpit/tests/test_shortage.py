@@ -270,3 +270,21 @@ def test_unknown_item_raises_key_error():
 
     with pytest.raises(KeyError):
         result.component("1", "2")
+
+
+# --- INV-5: exact arithmetic -------------------------------------------------------------------
+
+
+def test_a_result_that_needs_rounding_raises_instead():
+    # 31 significant digits do not fit in 28: rounding would silently change the result.
+    huge = "1234567890123456789012345678.9"
+    orders = [order("1", TODAY, line("RM", huge))]
+
+    with pytest.raises(ArithmeticError):
+        calculate(orders, [stock("RM", "1")], DEFAULT, TODAY)
+
+
+def test_negative_zero_open_requirement_is_reported_as_zero():
+    result = calculate([order("1", TODAY, line("RM", "-0"))], [], DEFAULT, TODAY)
+
+    assert str(result.component("1", "1").open_requirement) == "0"
