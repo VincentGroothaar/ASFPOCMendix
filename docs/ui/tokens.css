@@ -24,6 +24,7 @@
   --color-border: #e2e0da;            /* cards, table header line */
   --color-border-subtle: #ecebe6;     /* row dividers, tile dividers */
   --color-border-control: #c9c6bd;    /* inputs, secondary buttons */
+  /* Borders are 1px hairlines everywhere; 1px is the one raw size allowed, so it has no token. */
   --color-row-selected: #eef5f5;      /* selected row, plus 3px inset left bar in --color-primary */
 
   /* Text */
@@ -85,6 +86,7 @@
   --control-compact: 36px;     /* small buttons inside table rows */
   --sidebar-min-width: 200px;
   --drawer-width: 420px;       /* approval slide-in */
+  --login-card-width: 300px;   /* login card (ui-spec 4.7 A, wireframe width) */
   --content-max-width: 1200px;
 
   /* Elevation */
