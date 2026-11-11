@@ -24,7 +24,7 @@ Trust boundary: SAP and the mock are external systems reached over HTTPS with an
 | Part | Owns | Must not |
 |---|---|---|
 | `cockpit/` (Django app) | Models, views, templates, URLs, role checks | Put business logic in views or templates |
-| `cockpit/services/` | Plain, tested functions: allocation and status (`shortage.py`), unit conversion (`units.py`), sync (`sync.py`), requisitions (`requisitions.py`) | Import Django views or HTTP request objects |
+| `cockpit/services/` | Plain, tested functions: allocation and status (`shortage.py`), unit conversion (`units.py`), sync (`sync.py`), requisitions (`requisitions.py`), and the plant's statuses from the snapshot (`plant_status.py`: maps snapshot rows into `shortage.calculate` with the current buffer; shared by the order list, order detail, requisitions and dashboard, #27) | Import Django views or HTTP request objects |
 | `sap/` | OData V2 client: build URLs from `SAP_BASE_URL`, send the `APIKey` header, `$filter`/`$expand`/paging, map errors; requisition client for the mock (CSRF fetch + POST) | Write to the SAP sandbox; know about Django models |
 | `mock_pr/` | Standalone FastAPI mock of `API_PURCHASEREQ_PROCESS_SRV` (#8), used by both PoC tracks | Import the Django app, or be imported by it |
 | Postgres | App data in the default schema; mock data in schema `mock_pr` | |
@@ -106,7 +106,7 @@ All quantities are `DecimalField(max_digits=15, decimal_places=3)` / `Decimal`, 
 | Statuses | Calculated on read | Stored | Always consistent with the data shown | Recalculated on every view (cheap at this size) |
 | Cover buffer | Log table, current value = newest row (Accepted, #21) | One settings row with the last change | Keeps every change with who and when; no singleton row to seed | One query per read |
 | Requisition reference | `REQ-n` derived from the id, unpadded (Accepted, #21) | A stored sequence number | Unique and ordered with no locking code | Numbers can have gaps |
-| Duplicate PR guard | Insert as `sent`, then POST, in one transaction (Accepted, #21) | A `sending` status; insert after the POST | The database constraint blocks a double submit before the mock is called; approve and reject lock the row, so a race cannot send twice | Transaction open during the HTTP call (max 10 s) |
+| Duplicate PR guard | Insert as `sent`, then POST, in one transaction (Accepted, #21) | A `sending` status; insert after the POST | The database constraint blocks a double submit before the mock is called; approve and reject lock the row, so a race cannot send twice | Transaction open during the two HTTP calls, CSRF fetch and POST (max 20 s, 10 s each; #27) |
 | Concurrent syncs | Lock the plant's PlantSnapshot row before reading SAP (Accepted, #24) | No lock, last writer wins | SAP is not called twice for the same plant, and an older read can never overwrite a newer one | Transaction open during the SAP reads (2–4 s for AUC1) |
 | Requisition target | Separate mock service with SAP-identical paths | Mock inside the Django app | Shared by both tracks; switching to real S/4 is a URL change | One more service to deploy |
 | Login enforcement | `LoginRequiredMiddleware`, closed by default (Accepted, #22) | `@login_required` on each view | A forgotten decorator can't leave a page open | Public views must be marked explicitly |
