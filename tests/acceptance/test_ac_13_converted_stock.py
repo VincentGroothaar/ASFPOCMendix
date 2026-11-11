@@ -8,8 +8,6 @@ import pytest
 
 from tests.acceptance.support import Stock, days, one_component_order, sync
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #19")
-
 
 @pytest.mark.parametrize(
     ("quantity", "from_unit", "to_unit", "expected"),
