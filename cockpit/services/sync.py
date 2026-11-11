@@ -39,12 +39,12 @@ logger = logging.getLogger("cockpit.sync")
 STALE_AFTER = timedelta(minutes=5)
 
 # Quantity columns hold 15 digits, 3 of them decimals (cockpit.models.quantity_field).
-QUANTITY_STEP = Decimal("0.001")
-MAX_QUANTITY = Decimal(10) ** 12
+QUANTITY_DECIMALS = 3
+QUANTITY_INTEGER_DIGITS = 12
 
 # Rows per INSERT or UPDATE statement when writing the snapshot in bulk.
 BATCH_SIZE = 500
-# The order fields a sync overwrites on an order that is already stored.
+# The order fields a sync overwrites on an order that is already stored (all but number).
 ORDER_FIELDS = [
     "plant",
     "material",
@@ -235,10 +235,29 @@ def _check_text(model: type[models.Model], field: str, value: str) -> None:
 
 def _check_quantity(value: Decimal, where: str) -> None:
     """Raise SapDataError when a quantity does not fit 15 digits with 3 decimals (INV-5)."""
-    # The size is checked first: quantize() itself fails on values of about 10^25 and more.
-    fits = value.is_finite() and abs(value) < MAX_QUANTITY
-    if not fits or value != value.quantize(QUANTITY_STEP):
-        raise SapDataError(f"SAP sent a quantity for {where} that does not fit: {value}.")
+    if not _fits_quantity_column(value):
+        raise SapDataError(f"SAP sent a quantity for {where} that does not fit: {str(value)[:60]}.")
+
+
+def _fits_quantity_column(value: Decimal) -> bool:
+    """True when `value` fits a quantity column: at most 12 digits before the point, 3 after.
+
+    Decided by counting the number's digits and its exponent (Decimal.as_tuple), with no
+    Decimal arithmetic at all: arithmetic can itself fail on absurd values such as 1E+1000000,
+    and every failure here must be a SapDataError (review round 3 on #60).
+    Examples: 1.0000 and 999999999999.999 fit; 1.0005 and 1000000000000 do not.
+    """
+    if not value.is_finite():
+        return False
+    _sign, digits, exponent = value.as_tuple()
+    # Trailing zeros after the point do not count: 1.0000 is 1.
+    while len(digits) > 1 and digits[-1] == 0 and exponent < 0:
+        digits = digits[:-1]
+        exponent += 1
+    if not any(digits):
+        return True  # zero, also written as 0E+20 or -0.000000
+    integer_digits = len(digits) + exponent
+    return exponent >= -QUANTITY_DECIMALS and integer_digits <= QUANTITY_INTEGER_DIGITS
 
 
 def _write_snapshot(plant: str, data: SapData, synced_at: datetime) -> WriteCounts:
@@ -291,28 +310,35 @@ def _write_snapshot(plant: str, data: SapData, synced_at: datetime) -> WriteCoun
 
 
 def _write_orders(plant: str, data: SapData, synced_at: datetime) -> dict[str, ProductionOrder]:
-    """Update the orders SAP returned that are already stored and add the new ones.
+    """Add the orders SAP returned, or update them when they are already stored.
 
-    Returns every returned order by number. Each one is active again, even if it was inactive.
+    One "insert, or update on a duplicate number" statement per batch (Postgres
+    INSERT ... ON CONFLICT), so new and stored orders take the same, fastest path. Each order
+    is active again, even if it was inactive. Returns every returned order by number, with its
+    database id filled in.
     """
-    numbers = [sap_order.number for sap_order in data.orders]
-    stored = ProductionOrder.objects.in_bulk(numbers, field_name="number")
-    to_add: list[ProductionOrder] = []
-    for sap_order in data.orders:
-        order = stored.get(sap_order.number) or ProductionOrder(number=sap_order.number)
-        order.plant = plant
-        order.material = sap_order.material
-        order.description = data.descriptions.get(sap_order.material, "")
-        order.quantity = sap_order.quantity
-        order.unit = sap_order.unit
-        order.start_date = sap_order.start_date
-        order.is_active = True
-        order.synced_at = synced_at
-        if order.pk is None:
-            to_add.append(order)
-    ProductionOrder.objects.bulk_update(list(stored.values()), ORDER_FIELDS, batch_size=BATCH_SIZE)
-    ProductionOrder.objects.bulk_create(to_add, batch_size=BATCH_SIZE)
-    return {order.number: order for order in [*stored.values(), *to_add]}
+    orders = [
+        ProductionOrder(
+            number=sap_order.number,
+            plant=plant,
+            material=sap_order.material,
+            description=data.descriptions.get(sap_order.material, ""),
+            quantity=sap_order.quantity,
+            unit=sap_order.unit,
+            start_date=sap_order.start_date,
+            is_active=True,
+            synced_at=synced_at,
+        )
+        for sap_order in data.orders
+    ]
+    ProductionOrder.objects.bulk_create(
+        orders,
+        batch_size=BATCH_SIZE,
+        update_conflicts=True,
+        unique_fields=["number"],
+        update_fields=ORDER_FIELDS,
+    )
+    return {order.number: order for order in orders}
 
 
 def _store_failure(snapshot: PlantSnapshot, message: str) -> None:

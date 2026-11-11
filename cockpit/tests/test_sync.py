@@ -402,7 +402,7 @@ def duplicate_item(rows: dict) -> None:
 
 
 def long_description(rows: dict) -> None:
-    rows[DESCRIPTIONS][1]["ProductDescription"] = "x" * 41
+    rows[DESCRIPTIONS][1]["ProductDescription"] = "x" * 500
 
 
 def four_decimals(rows: dict) -> None:
@@ -415,6 +415,10 @@ def huge_quantity(rows: dict) -> None:
 
 def enormous_quantity(rows: dict) -> None:
     rows[STOCK][0]["MatlWrhsStkQtyInMatlBaseUnit"] = "1E+25"  # too big even to round
+
+
+def absurd_exponent(rows: dict) -> None:
+    rows[STOCK][0]["MatlWrhsStkQtyInMatlBaseUnit"] = "1E+1000000"  # breaks Decimal arithmetic
 
 
 def long_unit(rows: dict) -> None:
@@ -437,6 +441,7 @@ def long_order_number(rows: dict) -> None:
         four_decimals,
         huge_quantity,
         enormous_quantity,
+        absurd_exponent,
     ],
 )
 def test_s8_data_the_snapshot_cannot_hold_fails_like_an_outage(sap, client, clock, spoil) -> None:
@@ -449,7 +454,32 @@ def test_s8_data_the_snapshot_cannot_hold_fails_like_an_outage(sap, client, cloc
 
     assert state.failed and state.synced_at == NOW, "no database error, a failed sync instead"
     assert state.error.startswith("SAP sent")
+    assert len(state.error) < 150, "the SAP text in the message is cut short"
     assert {**stored_snapshot(), "error": "", "error_at": None} == before
+
+
+@pytest.mark.parametrize(
+    ("quantity", "fits"),
+    [
+        ("0", True),
+        ("-0", True),
+        ("0E+20", True),
+        ("1.0000", True),
+        ("999999999999.999", True),
+        ("-999999999999.999", True),
+        ("1E+3", True),
+        ("1.0005", False),
+        ("1E-30", False),
+        ("1000000000000", False),
+        ("1E+25", False),
+        ("1E+1000000", False),
+        ("1E-1000000", False),
+        ("NaN", False),
+        ("Infinity", False),
+    ],
+)
+def test_s8_quantity_column_check_never_needs_decimal_arithmetic(quantity, fits) -> None:
+    assert sync._fits_quantity_column(Decimal(quantity)) is fits
 
 
 @pytest.mark.django_db
