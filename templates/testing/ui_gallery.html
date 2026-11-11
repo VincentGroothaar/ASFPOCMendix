@@ -1,0 +1,93 @@
+{% extends "layouts/frame.html" %}
+{% load ui %}
+{% comment %}
+  Test-only gallery of every shared component (#23). Served only by tests/ui_urls.py.
+{% endcomment %}
+
+{% block title %}UI gallery · Material Shortage Cockpit{% endblock %}
+
+{% block breadcrumb %}{% breadcrumb crumbs %}{% endblock %}
+{% block page_title %}{% page_header "Order 1000123" "short" "FG-210 · Pump assembly · Plant AUC1 · Start 03 Nov 2026 · 20 PC · Released" synced_at "/test/ui/ok/" %}{% endblock %}
+{% block header_actions %}
+  <button type="button" class="btn btn-secondary">Reject</button>
+  <button type="button" class="btn btn-primary">Approve and send</button>
+{% endblock %}
+
+{% block content %}
+  {% banner "SAP could not be reached. Showing data as of 02 Nov 09:51." "Try again" "/test/ui/ok/" "post" %}
+
+  <form id="filters" method="get" action="">
+    <div class="kpi-tiles">
+      {% kpi_tile "All orders" 8 None False "status" "" "filters" %}
+      {% kpi_tile "Short" 4 "short" True "status" "" "filters" short_tip %}
+      {% kpi_tile "Low cover" 2 "low" False "status" "low" "filters" low_tip %}
+      {% kpi_tile "Covered" 2 "covered" False "status" "covered" "filters" covered_tip %}
+    </div>
+  </form>
+
+  <section class="card card-body" aria-label="Status pills">
+    <h2>Status pills and labels</h2>
+    <p>
+      {% status_pill "short" %} {% status_pill "low" %} {% status_pill "covered" %}
+      {% status_pill "mismatch" %} {% status_pill "issued" %} {% status_pill "overdue" %}
+    </p>
+    <p>
+      {% status_pill "sent" %} {% status_pill "awaiting_approval" %}
+      {% status_pill "failed" %} {% status_pill "rejected" %}
+    </p>
+    <p>
+      {% requisition_label "sent" %} {% requisition_label "awaiting_approval" %}
+      {% requisition_label "failed" "/test/ui/ok/" %} {% requisition_label "rejected" %}
+      {% requisition_label "none" %}
+    </p>
+    <div id="side-panel" class="muted">Side panel</div>
+  </section>
+
+  <div class="card-row">
+    <section class="card card-body" aria-label="Summary">
+      <h2>Summary strip</h2>
+      {% summary_strip summary %}
+    </section>
+    <section class="card card-body" aria-label="Progress">
+      <h2>Progress</h2>
+      {% timeline steps %}
+    </section>
+  </div>
+
+  <section class="card table-card" aria-label="Components">
+    <div class="table-toolbar"><h2>Components</h2><a class="btn btn-ghost" href="?">Clear</a></div>
+    <div class="table-scroll">
+      <table class="data">
+        <thead><tr><th>Component</th><th class="num">Required</th><th>Status</th><th>Requisition</th></tr></thead>
+        <tbody>
+          {% for material, description, status, label, tip in rows %}
+            <tr{% if forloop.first %} class="is-selected"{% endif %}>
+              <td><span class="cell-main">{{ material }}</span><span class="cell-sub">{{ description }}</span></td>
+              <td class="num">20 PC</td>
+              <td><span class="cell-inline">{% status_pill status %}{% info_tooltip label tip %}</span></td>
+              <td>{% if forloop.first %}<button type="button" class="btn btn-primary btn-compact">Request</button>{% else %}{% requisition_label "none" %}{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% pagination page_obj "orders" request.GET %}
+
+  <section class="card card-body" aria-label="Buttons">
+    <h2>Buttons and notes</h2>
+    <p>
+      <button type="button" class="btn btn-primary">Send requisition</button>
+      <button type="button" class="btn btn-secondary">Cancel</button>
+      <button type="button" class="btn btn-ghost">Edit filters</button>
+      <button type="button" class="btn btn-primary btn-compact">Review</button>
+      <button type="button" class="btn btn-primary" disabled>Disabled</button>
+    </p>
+    {% error_note "SAP returned an error: the material is blocked for purchasing." %}
+    <p>
+      <button type="button" id="post-ok" class="btn btn-secondary" hx-post="/test/ui/ok/" hx-target="#post-result" hx-swap="outerHTML">Post to the server</button>
+      <button type="button" id="post-forbidden" class="btn btn-secondary" hx-post="/test/ui/forbidden/">Post a forbidden action</button>
+    </p>
+    <p id="post-result" class="muted">Nothing posted yet</p>
+  </section>
+{% endblock %}

@@ -12,14 +12,15 @@
     {% endcomment %}
     <meta name="htmx-config" content='{"responseHandling": [{"code": "403", "swap": true, "target": "body", "swapOverride": "innerHTML", "select": "#page"}, {"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": false, "error": true}]}'>
     <link rel="stylesheet" href="{% static 'cockpit/tokens.css' %}">
-    <link rel="stylesheet" href="{% static 'cockpit/access.css' %}">
+    <link rel="stylesheet" href="{% static 'cockpit/app.css' %}">
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
   </head>
-  <body>
-    <div id="page">
-      <main>
-        {% block content %}{% endblock %}
-      </main>
-    </div>
+  {% comment %}
+    hx-headers: every HTMX request sends the CSRF token, so HTMX POSTs (Refresh, Try again,
+    Send requisition) pass Django's CSRF check (#23). It sits on <body>, outside #page, so it
+    survives the 403 swap above. Pages fill the body block; most extend layouts/frame.html.
+  {% endcomment %}
+  <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div id="page">{% block body %}{% endblock %}</div>
   </body>
 </html>

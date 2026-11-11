@@ -104,6 +104,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "cockpit.context_processors.sidebar",
             ],
         },
     },
@@ -173,5 +174,9 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "loggers": {"django": {"handlers": ["console"], "level": "INFO"}},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO"},
+        # The cockpit's own lines, e.g. one per plant sync with its duration (#24).
+        "cockpit": {"handlers": ["console"], "level": "INFO"},
+    },
 }
