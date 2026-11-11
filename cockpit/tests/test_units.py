@@ -84,9 +84,10 @@ def test_other_unit_differences_are_a_mismatch(from_unit, to_unit):
 
 
 @pytest.mark.parametrize("quantity", [1.5, 2, "2", True])
-def test_a_quantity_that_is_not_a_decimal_is_refused(quantity):
+@pytest.mark.parametrize(("from_unit", "to_unit"), [("KG", "G"), ("PC", "PC")])
+def test_a_quantity_that_is_not_a_decimal_is_refused(quantity, from_unit, to_unit):
     with pytest.raises(TypeError):
-        convert(quantity, "KG", "G")
+        convert(quantity, from_unit, to_unit)
 
 
 @pytest.mark.parametrize("quantity", ["NaN", "Infinity", "-Infinity"])
@@ -140,6 +141,18 @@ def test_a_result_that_cannot_be_exact_raises(digits, from_unit, to_unit):
     assert not isinstance(error.value, UnitMismatch)
 
 
+# 29 significant digits, most of them after the decimal point. The exact result would need
+# more than 28 digits and has no positive exponent, so only the Inexact and Rounded traps
+# stop it from being rounded silently.
+LONG_FRACTION = "1.1234567890123456789012345678"
+
+
+@pytest.mark.parametrize(("from_unit", "to_unit"), [("KG", "G"), ("TO", "KG"), ("M", "MM")])
+def test_a_long_fraction_is_not_rounded_silently(from_unit, to_unit):
+    with pytest.raises(ArithmeticError):
+        convert(Decimal(LONG_FRACTION), from_unit, to_unit)
+
+
 def test_a_long_quantity_to_a_larger_unit_stays_exact():
     assert convert(Decimal("1" * 28), "G", "TO") == Decimal("1111111111111111111111.111111")
 
@@ -153,3 +166,5 @@ def test_the_global_decimal_context_does_not_change_the_result():
         assert convert(Decimal("123456789012.345"), "KG", "G") == Decimal("123456789012345")
         with pytest.raises(ArithmeticError):
             convert(Decimal("1" * 23), "TO", "G")
+        with pytest.raises(ArithmeticError):
+            convert(Decimal(LONG_FRACTION), "KG", "G")
