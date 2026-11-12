@@ -151,3 +151,15 @@ def test_screenshots_for_the_pr(order_page, live_server: LiveServer, page: Page)
     width = page.evaluate("() => document.documentElement.scrollWidth")
     assert width <= NARROW["width"]
     screenshot(page, "order-detail-narrow")
+
+
+def test_404_screenshot_for_the_pr(order_page, live_server: LiveServer, page: Page) -> None:
+    """The 404 page in the frame for an unknown order (#26 decision 2, I-1, N-2)."""
+    page.set_viewport_size(DESKTOP)
+    log_in(page, live_server, "viewer.a", order_page)
+
+    page.goto(live_server.url + "/orders/999/")
+
+    expect(page.get_by_role("heading", name="Order 999 not found")).to_be_visible()
+    expect(page.get_by_role("link", name="Back to orders")).to_be_visible()
+    screenshot(page, "not-found")

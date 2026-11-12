@@ -21,7 +21,7 @@ from django.utils.cache import patch_vary_headers
 from django.views.decorators.http import require_http_methods, require_POST
 
 from cockpit.access import HtmxLoginRequiredMiddleware, requires
-from cockpit.models import ProductionOrder, Requisition
+from cockpit.models import ORDER_NUMBER_LENGTH, ProductionOrder, Requisition
 from cockpit.services import (
     formats,
     order_panel,
@@ -135,6 +135,12 @@ REFUSAL_STATUS = {"unknown": 404, "not_requestable": 400, "invalid_quantity": 20
 PANEL_DIR = "cockpit/orders/panel"
 
 
+def _check_order_number(number: str) -> None:
+    """404 for an order number the database cannot hold, before any query (see #77 review)."""
+    if not _storable_order_number(number):
+        raise NotFound(f"Order {number} not found")
+
+
 def _is_htmx(request: HttpRequest) -> bool:
     """True for an HTMX request that wants a fragment (not htmx's history restore)."""
     return request.headers.get("HX-Request") == "true" and not request.headers.get(
@@ -224,6 +230,7 @@ def requisition_create(request: HttpRequest, number: str) -> HttpResponse:
     All rules are in `services/requisitions.py`; this view maps what it returns to a panel
     state. Status codes: 200, 400 (not requestable), 404, 409 (already open).
     """
+    _check_order_number(number)
     material = request.GET.get("material", "")
     if request.method == "GET":
         return _review_panel(request, number, material)
@@ -245,6 +252,7 @@ def requisition_create(request: HttpRequest, number: str) -> HttpResponse:
 @requires(Action.VIEW_BUSINESS)
 def requisition_panel(request: HttpRequest, number: str, pk: int) -> HttpResponse:
     """The outcome of one requisition of this order in the panel (every business role)."""
+    _check_order_number(number)
     requisition = get_object_or_404(
         Requisition.objects.select_related("order", "created_by"), pk=pk, order__number=number
     )
@@ -254,6 +262,7 @@ def requisition_panel(request: HttpRequest, number: str, pk: int) -> HttpRespons
 @requires(Action.VIEW_BUSINESS)
 def requisition_panel_empty(request: HttpRequest, number: str) -> HttpResponse:
     """The Empty state: Cancel and Close return here, with no row selected."""
+    _check_order_number(number)
     return _render_panel(request, number, "empty")
 
 
@@ -263,6 +272,7 @@ def requisition_preview(request: HttpRequest, number: str) -> HttpResponse:
 
     Only for HTMX. A plain GET shows the Review state instead.
     """
+    _check_order_number(number)
     material = request.GET.get("material", "")
     if not _is_htmx(request):
         return _review_panel(request, number, material)
@@ -564,7 +574,9 @@ def _order_page_context(request: HttpRequest, number: str, selected_material: st
     The order is looked up before the sync, because the plant to sync comes from the order; an
     unknown number never calls SAP. Orders are never deleted, so it still exists after the sync.
     """
-    order = ProductionOrder.objects.filter(number=number).only("plant").first()
+    order = None
+    if _storable_order_number(number):
+        order = ProductionOrder.objects.filter(number=number).only("plant").first()
     if order is None:
         raise NotFound(f"Order {number} not found")
     sync = ensure_fresh(order.plant)
@@ -585,6 +597,12 @@ def _order_page_context(request: HttpRequest, number: str, selected_material: st
             f"SAP could not be reached. Showing data as of {format_datetime(sync.synced_at)}."
         )
     return context
+
+
+def _storable_order_number(number: str) -> bool:
+    """False for a number the database cannot hold (too long, or a NUL byte), which would
+    otherwise raise a database error (a 500) instead of a 404 (#77 review)."""
+    return "\x00" not in number and len(number) <= ORDER_NUMBER_LENGTH
 
 
 def _order_subline(detail: plant_status.OrderDetail) -> str:

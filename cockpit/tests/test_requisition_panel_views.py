@@ -326,3 +326,23 @@ def test_a_direct_post_as_viewer_is_refused_and_a_post_needs_csrf(sent_to):
 
     assert client.post(f"{CREATE}?material=RM-SHORT", {"quantity": "30"}).status_code in (302, 403)
     assert sent_to.payloads == []
+
+
+@pytest.mark.parametrize("number", ["1000001%00", "9" * 41])
+@pytest.mark.parametrize("path", ["", "preview/", "panel/empty/", "1/"])
+def test_an_order_number_the_database_cannot_hold_is_a_404(client_as, number, path):
+    """Like the order page (#77 review): a NUL byte or a too long number is a 404, not a 500."""
+    mixed_order()
+    planner = client_as("Planner")
+
+    for headers in ({}, HTMX):
+        response = planner.get(
+            f"/orders/{number}/requisitions/{path}", {"material": "RM-SHORT"}, **headers
+        )
+        assert response.status_code == 404
+    assert (
+        planner.post(
+            f"/orders/{number}/requisitions/?material=RM-SHORT", {"quantity": "5"}
+        ).status_code
+        == 404
+    )

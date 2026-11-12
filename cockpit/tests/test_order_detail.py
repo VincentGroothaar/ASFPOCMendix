@@ -424,6 +424,16 @@ def test_inactive_order_shows_the_note(client_as) -> None:
     assertContains(response, "6 PC")
     assertNotContains(response, "Released")
     assertNotContains(response, "What does")
+    html = response.content.decode()
+    title = html[
+        html.index('<div class="page-title-line">') : html.index(
+            "</div>", html.index('<div class="page-title-line">')
+        )
+    ]
+    assert "pill" not in title
+    cells = re.findall(r"<td[^>]*>(.*?)</td>", _row(html, "RM-1"), re.S)
+    shown = [re.sub(r"<[^>]+>", "", cell).strip() for cell in cells]
+    assert shown[0:4] == ["6 PC", "–", "–", "–"]  # Required, Available, Shortage, Status
 
 
 def test_unknown_order_is_a_404_without_sap(client_as) -> None:
@@ -435,6 +445,31 @@ def test_unknown_order_is_a_404_without_sap(client_as) -> None:
     assert response.status_code == 404
     assertContains(response, "<h1>Order 999 not found</h1>", status_code=404, html=True)
     assertContains(response, "Back to orders", status_code=404)
+
+
+@pytest.mark.parametrize("number", ["%00", "1000%00123", "9" * 13])
+def test_numbers_the_database_cannot_hold_are_a_404(client_as, number) -> None:
+    """A NUL byte or a number over 12 characters never reaches the database (#77 review)."""
+    response = client_as("Viewer").get(f"/orders/{number}/")
+
+    assert response.status_code == 404
+
+
+def test_order_made_inactive_by_a_sync_between_the_reads(monkeypatch) -> None:
+    """A sync from another request between the two reads gives unchecked rows, not a 500."""
+    mixed_order()
+    real_plant_result = plant_status.plant_result
+
+    def sync_in_between(plant, today):
+        ProductionOrder.objects.filter(number="1000123").update(is_active=False)
+        return real_plant_result(plant, today)
+
+    monkeypatch.setattr(plant_status, "plant_result", sync_in_between)
+
+    detail = plant_status.order_detail("1000123", TODAY)
+
+    assert detail.status is None
+    assert all(row.status is None for row in detail.rows)
 
 
 def test_unknown_url_logged_in_shows_page_not_found(client_as) -> None:
