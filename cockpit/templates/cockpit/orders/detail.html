@@ -36,6 +36,18 @@
               <tr><th scope="col">Component</th><th scope="col" class="num">Required</th><th scope="col" class="num">Available</th><th scope="col" class="num">Shortage</th><th scope="col">Status</th><th scope="col">Requisition</th></tr>
             </thead>
             <tbody id="components-body">{% include "cockpit/orders/rows.html" %}</tbody>
+            <tbody>
+              {% for row in order.rows %}
+                <tr>
+                  <td><span class="cell-main">{{ row.material }}</span><span class="cell-sub">{% if row.description %}{{ row.description }} · {% endif %}{{ row.item }}</span></td>
+                  <td class="num">{{ row.open_requirement|quantity:row.unit }}</td>
+                  <td class="num">{% if row.available is None %}<span class="muted">–</span>{% elif row.converted %}{% with original=row.available_in_stock_unit|quantity:row.stock_unit shown=row.available|quantity:row.unit %}{% value_tip shown original|add:" (= "|add:shown|add:")" %}{% endwith %}{% else %}{{ row.available|quantity:row.unit }}{% endif %}</td>
+                  <td class="num">{% if row.shortage is None %}<span class="muted">–</span>{% else %}{{ row.shortage|quantity:row.unit }}{% endif %}</td>
+                  <td>{% if row.status %}<span class="cell-inline">{% status_pill row.status|component_pill %}{% component_status_tip row.status order.buffer_percent row.unit row.stock_unit as tip %}{% info_tooltip row.status|component_label tip %}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
+                  <td>{% requisition_label "none" %}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
           </table>
         </div>
         {% if not can_create %}<p class="muted table-note">You can view requisitions but not create them.</p>{% endif %}
