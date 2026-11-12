@@ -8,8 +8,6 @@ from django.urls.converters import IntConverter
 
 from tests.acceptance.support import is_login_redirect
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #34")
-
 SPEC_URLS = [
     "/",
     "/orders/",

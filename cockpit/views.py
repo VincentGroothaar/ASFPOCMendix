@@ -24,6 +24,9 @@ from cockpit.access import requires
 from cockpit.models import Requisition
 from cockpit.services import formats, requisition_views, requisitions
 from cockpit.services.dashboard import Dashboard, build_dashboard
+from cockpit.access import HtmxLoginRequiredMiddleware, requires
+from cockpit.models import ProductionOrder, Requisition
+from cockpit.services import formats, plant_status, requisition_views, requisitions
 from cockpit.services.formats import format_datetime
 from cockpit.services.order_list import (
     PILL_KEYS,
@@ -80,6 +83,36 @@ def permission_denied(request: HttpRequest, exception: Exception | None = None) 
 def csrf_failure(request: HttpRequest, reason: str = "") -> HttpResponse:
     """CSRF_FAILURE_VIEW: a form or direct POST without a valid token gets the same 403 page."""
     return _render_denied(request)
+
+
+class NotFound(Http404):
+    """A 404 with a title the user may see, e.g. `Order 1000123 not found` (#26, N-2).
+
+    Any other 404 (an unknown URL, `get_object_or_404`) shows `Page not found`, because its
+    message is technical (URL patterns, model names).
+    """
+
+    def __init__(self, title: str) -> None:
+        super().__init__(title)
+        self.title = title
+
+
+PAGE_NOT_FOUND = "Page not found"
+
+
+def page_not_found(request: HttpRequest, exception: Exception | None = None) -> HttpResponse:
+    """The 404 handler (`handler404`).
+
+    A logged-out user is sent to login first (N-1 on #26): the login middleware only runs for
+    URLs that match a view, so an unknown URL would otherwise answer 404 without a login. The
+    middleware's own method is reused, so an HTMX request gets `HX-Redirect` as everywhere else.
+    """
+    user = getattr(request, "user", None) or AnonymousUser()
+    if not user.is_authenticated:
+        middleware = HtmxLoginRequiredMiddleware(get_response=lambda request: HttpResponse())
+        return middleware.handle_no_permission(request, page_not_found)
+    title = exception.title if isinstance(exception, NotFound) else PAGE_NOT_FOUND
+    return render(request, "404.html", {"title": title}, status=404)
 
 
 class CockpitLogoutView(LogoutView):
@@ -426,6 +459,53 @@ def _safe_next(request: HttpRequest) -> str | None:
     if parsed.scheme or parsed.netloc or parsed.path not in REFRESH_RETURN_PATHS:
         return None
     return target
+
+
+@requires(Action.VIEW_BUSINESS)
+def order_detail(request: HttpRequest, number: str) -> HttpResponse:
+    """One order with its components, stock and statuses (ui-spec 4.2; issue #26).
+
+    The order is looked up before the sync, because the plant to sync comes from the order; an
+    unknown number never calls SAP. Orders are never deleted, so it still exists after the sync.
+    """
+    order = ProductionOrder.objects.filter(number=number).only("plant").first()
+    if order is None:
+        raise NotFound(f"Order {number} not found")
+    sync = ensure_fresh(order.plant)
+    detail = plant_status.order_detail(number, timezone.localdate())
+    context = {
+        "order": detail,
+        "sync": sync,
+        "refresh_url": reverse("cockpit:refresh_plant", args=[detail.plant]),
+        "breadcrumb_items": [
+            ("Orders", f"{reverse('cockpit:order_list')}?{urlencode({'plant': detail.plant})}"),
+            (detail.number, None),
+        ],
+        "subline": _order_subline(detail),
+        "pill_key": PILL_KEYS.get(detail.status) if detail.status else None,
+    }
+    if sync.failed and sync.synced_at is not None:
+        context["banner_text"] = (
+            f"SAP could not be reached. Showing data as of {format_datetime(sync.synced_at)}."
+        )
+    return render(request, "cockpit/orders/detail.html", context)
+
+
+def _order_subline(detail: plant_status.OrderDetail) -> str:
+    """`FG-210 · Pump assembly · Plant AUC1 · Start 03 Nov 2026 · 20 PC · Released` (ui-spec 4.2).
+
+    An inactive order drops `Released` (decision 7 on #26).
+    """
+    parts = [
+        detail.material,
+        detail.description,
+        f"Plant {detail.plant}",
+        f"Start {formats.format_date(detail.start_date)}",
+        formats.format_quantity(detail.quantity, detail.unit),
+    ]
+    if detail.is_active:
+        parts.append("Released")
+    return " · ".join(part for part in parts if part)
 
 
 @requires(Action.VIEW_BUSINESS)

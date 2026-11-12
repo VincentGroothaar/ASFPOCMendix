@@ -1230,4 +1230,45 @@ details pre {
 
 .dash-order-links {
   white-space: normal;
+/* --- 4.2 Order detail (issue #26) --- */
+.detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-section);
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.side-panel h2,
+.side-panel p {
+  margin: 0;
+}
+
+/* A value or icon with a tooltip on hover and keyboard focus (ui-spec 3.3). */
+.value-tip,
+.mismatch-tip {
+  cursor: help;
+}
+
+.value-tip {
+  text-decoration: underline dotted;
+  text-underline-offset: var(--space-1);
+}
+
+.value-tip:hover + .tooltip,
+.value-tip:focus + .tooltip,
+.mismatch-tip:hover + .tooltip,
+.mismatch-tip:focus + .tooltip {
+  display: block;
+}
+
+@media (max-width: 899px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
 }

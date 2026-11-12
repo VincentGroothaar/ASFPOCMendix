@@ -38,7 +38,6 @@ def test_ac_13_convert_across_dimensions_is_a_mismatch(from_unit, to_unit):
         convert(Decimal("1"), from_unit, to_unit)
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #26")
 def test_ac_13_browser_converted_stock_shows_the_original_on_hover(
     fakes, running_clock, browser_as
 ):

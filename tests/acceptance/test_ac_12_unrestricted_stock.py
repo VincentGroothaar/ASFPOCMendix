@@ -8,8 +8,6 @@ whole filtered SAP sum as available stock.
 
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance.support import (
     PLANT,
     Stock,
@@ -21,8 +19,6 @@ from tests.acceptance.support import (
     shows_quantity,
     sync,
 )
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #26")
 
 
 def test_ac_12_only_unrestricted_non_special_stock_counts(fakes, clock, client_as):

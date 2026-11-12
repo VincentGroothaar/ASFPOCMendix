@@ -1,0 +1,11 @@
+{% extends "layouts/frame.html" %}
+{% comment %}The 404 page inside the frame (#26). Logged-out users never see it: the handler sends them to login.{% endcomment %}
+
+{% block title %}{{ title }} · Material Shortage Cockpit{% endblock %}
+{% block page_title %}<div class="page-title"><h1>{{ title }}</h1></div>{% endblock %}
+
+{% block content %}
+  <section class="card card-body">
+    <a class="btn btn-secondary" href="{% url 'cockpit:order_list' %}">Back to orders</a>
+  </section>
+{% endblock %}
