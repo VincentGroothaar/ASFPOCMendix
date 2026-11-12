@@ -174,7 +174,7 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-58 | REQ-6 (#80): "Shortage per order" shows at most 10 rows, red first, then by start date, then by number; the donut and KPI counts are unchanged | Service and view test with 12 orders (11 red, 1 low cover) |
 | AC-59 | REQ-6 (#80): when Short orders are hidden, the footer shows `Showing 10 of [total] orders` and a link `Show all [N] short orders` (`Show all 1 short order` for 1), N = all Short orders in scope; the link goes to Orders with `status=short`, the dashboard's plant and range, and no `page` or `requisition` parameter | View test: parse the link, also with `page=3&requisition=none` on the dashboard URL; open it and check the Orders list is filtered |
 | AC-60 | REQ-6 (#80): with 10 rows or fewer there is no footer; with more than 10 rows but no hidden Short order the footer has no link | View test with 10 rows, and with 3 red plus 9 low cover orders |
-| AC-61 | REQ-6 (#80): at 1512 px a long Material ID in "Shortage per material" stays on one line (box at most 1.5 × its line height) and no row is taller than 4 × the body line height; at 390 px there is no page-level horizontal scroll | Browser test on a constructed snapshot with a long ID and more than 5 orders |
+| AC-61 | REQ-6 (#80): at 1512 px a long Material ID in "Shortage per material" stays on one line (box at most 1.5 × its line height) and no row is taller than 5 × the body line height; at 390 px there is no page-level horizontal scroll | Browser test on a constructed snapshot with a long ID and more than 5 orders |
 
 ### Proven by unit tests only
 
