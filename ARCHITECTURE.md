@@ -105,8 +105,8 @@ All quantities are `DecimalField(max_digits=15, decimal_places=3)` / `Decimal`, 
 | UI | Server-rendered Django templates + HTMX | React SPA | One language and one codebase a Mendix developer can review | Less rich client-side interaction |
 | Database | Postgres everywhere | SQLite locally | Exact `Decimal` behaviour must match between tests and hosting | Docker needed locally |
 | SAP data | Per-plant snapshot with full sync | Live SAP calls per page; fetching only new orders | Fast pages; statuses never stale silently | 5 s budget applies to a full sync |
-| Missing SAP config | Treated as a failed sync in `services/sync.py` (Proposed, #25) | A configuration error (500) | Every page shows the same failure state; a local run without `.env` explains itself | A misconfigured deployment looks like an SAP outage until the message is read |
-| HTMX history | No htmx history cache; full page on history restore (Proposed, #25) | htmx's localStorage history cache | Back never shows a bare fragment; no order data left in the browser after logout | Back reloads the page from the server |
+| Missing SAP config | Treated as a failed sync in `services/sync.py` (Accepted, #25) | A configuration error (500) | Every page shows the same failure state; a local run without `.env` explains itself | A misconfigured deployment looks like an SAP outage until the message is read |
+| HTMX history | No htmx history cache; full page on history restore (Accepted, #25) | htmx's localStorage history cache | Back never shows a bare fragment; no order data left in the browser after logout | Back reloads the page from the server |
 | Sync execution | Synchronous, in the request | Background worker (Celery/Redis) | No extra moving parts to host or explain | A slow SAP response blocks that request |
 | Statuses | Calculated on read | Stored | Always consistent with the data shown | Recalculated on every view (cheap at this size) |
 | Cover buffer | Log table, current value = newest row (Accepted, #21) | One settings row with the last change | Keeps every change with who and when; no singleton row to seed | One query per read |

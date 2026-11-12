@@ -11,6 +11,8 @@ Three functions for the views:
 
 All three return a SyncState and never raise for SAP problems, so a view only has to look at
 `synced_at` and `failed` to choose between the page, the warning banner and the error page.
+A missing SAP configuration (SAP_BASE_URL or SAP_API_KEY empty) counts as an SAP problem too:
+the sync fails without storing anything (issue #69). Views never catch sync errors themselves.
 
 How a sync works (ARCHITECTURE.md, "Sync"):
 1. One durable transaction locks the plant's PlantSnapshot row before SAP is called, so the
@@ -26,6 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from django.core.exceptions import ImproperlyConfigured
 from django.db import models, transaction
 from django.utils import timezone
 
@@ -34,6 +37,9 @@ from sap import production_orders, products, stock
 from sap.client import ODataClient, SapDataError, SapUnavailable
 
 logger = logging.getLogger("cockpit.sync")
+
+# Shown when the SAP connection settings are missing (issue #69).
+NOT_CONFIGURED = "The SAP connection is not configured."
 
 # A snapshot older than this is loaded again on the next page view (D-17).
 STALE_AFTER = timedelta(minutes=5)
@@ -64,11 +70,14 @@ class SyncState:
     - synced_at set, failed False: show the data with "Data as of <synced_at>".
     - synced_at set, failed True: show the data with the "SAP could not be reached" banner.
     - synced_at None, failed True: show the "No data for plant yet" error page.
+
+    `failed_at` is when the latest attempt failed, shown next to the error (ui-spec 4.7 D).
     """
 
     plant: str
     synced_at: datetime | None  # last successful sync; None = never
     failed: bool  # True when the latest attempt failed
+    failed_at: datetime | None  # time of the latest failure; None when not failed (#69)
     error: str  # message of the latest failure, "" when not failed
 
 
@@ -155,7 +164,10 @@ def _lock(plant: str) -> PlantSnapshot:
 def _sync_locked(snapshot: PlantSnapshot, client: ODataClient | None) -> SyncState:
     """Read SAP and write the snapshot. The caller holds the lock on `snapshot`."""
     started = time.monotonic()
-    sap = CountingClient(client or ODataClient.from_settings())
+    try:
+        sap = CountingClient(client or ODataClient.from_settings())
+    except ImproperlyConfigured:
+        return _not_configured(snapshot, started)
     synced_at = timezone.now()
     try:
         data = _read_from_sap(sap, snapshot.plant)
@@ -341,6 +353,23 @@ def _write_orders(plant: str, data: SapData, synced_at: datetime) -> dict[str, P
     return {order.number: order for order in orders}
 
 
+def _not_configured(snapshot: PlantSnapshot, started: float) -> SyncState:
+    """Fail the sync because SAP_BASE_URL or SAP_API_KEY is missing, and store nothing (#69).
+
+    Leaving an atomic block normally would commit it, including a PlantSnapshot row that
+    `_lock` just created. set_rollback makes the surrounding transaction roll back instead.
+    """
+    transaction.set_rollback(True)
+    _log(snapshot.plant, "failed", None, 0, started, error=NOT_CONFIGURED)
+    return SyncState(
+        plant=snapshot.plant,
+        synced_at=snapshot.synced_at,
+        failed=True,
+        failed_at=timezone.now(),
+        error=NOT_CONFIGURED,
+    )
+
+
 def _store_failure(snapshot: PlantSnapshot, message: str) -> None:
     """Store the error of a failed sync. Only the error fields are saved, nothing else."""
     snapshot.last_sync_error = message
@@ -366,12 +395,13 @@ def _attempt_marks(snapshot: PlantSnapshot | None) -> tuple[datetime | None, dat
 def _state(plant: str, snapshot: PlantSnapshot | None) -> SyncState:
     """Turn the stored PlantSnapshot row (or no row) into a SyncState."""
     if snapshot is None:
-        return SyncState(plant=plant, synced_at=None, failed=False, error="")
+        return SyncState(plant=plant, synced_at=None, failed=False, failed_at=None, error="")
     failed = snapshot.last_sync_error_at is not None
     return SyncState(
         plant=plant,
         synced_at=snapshot.synced_at,
         failed=failed,
+        failed_at=snapshot.last_sync_error_at,
         error=snapshot.last_sync_error if failed else "",
     )
 
