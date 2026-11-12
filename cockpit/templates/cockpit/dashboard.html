@@ -1,0 +1,112 @@
+{% extends "layouts/frame.html" %}
+{% load ui %}
+{% comment %}
+  Shortage dashboard (ui-spec 4.3, 4.7 B-D; issue #30). Plant and range come from the URL and are
+  changed on the Orders page. The wrapper uses the orders-results classes so the loading
+  indicator (state B) works exactly as on Orders.
+{% endcomment %}
+
+{% block title %}Shortage dashboard · Material Shortage Cockpit{% endblock %}
+
+{% block page_title %}{% if sync.synced_at %}{% page_header "Shortage dashboard" subline=subline data_as_of=sync.synced_at refresh_url=refresh_url data_screen=True %}{% else %}{% page_header "Shortage dashboard" subline=subline data_screen=True %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="orders-results" id="dashboard-results">
+  <div class="sync-indicator" role="status">
+    <div class="sync-indicator-line"><span class="spinner" aria-hidden="true"></span><span>Loading orders from SAP for {{ filters.plant }}…</span></div>
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+
+  <div class="orders-body">
+  {% if not sync.synced_at %}
+    <section class="card card-body first-sync-failed">
+      <h2>No data for plant {{ filters.plant }} yet</h2>
+      <p>The first sync with SAP failed, so there is nothing to show. This is usually temporary.</p>
+      <p class="muted">{{ sync.error }}{% if sync.failed_at %} · {{ sync.failed_at|datetime_short }}{% endif %}</p>
+      <div class="button-row">
+        <button type="button" class="btn btn-primary" hx-post="{{ refresh_url }}" hx-swap="none" hx-disabled-elt="this" hx-indicator=".sync-indicator">Try again</button>
+        {% if plants|length > 1 %}<a class="btn btn-secondary" href="{{ choose_plant_url }}">Choose another plant</a>{% endif %}
+      </div>
+    </section>
+  {% else %}
+    {% if sync.failed %}{% banner banner_text "Try again" refresh_url "post" ".sync-indicator" %}{% endif %}
+
+    <div class="dash-top">
+      <section class="card card-body dash-donut-card" aria-labelledby="dash-status-title">
+        <h2 id="dash-status-title">Orders by status</h2>
+        <div class="dash-donut-row">
+          <div class="dash-donut" role="img" aria-label="{{ donut_label }}">
+            <svg viewBox="0 0 42 42" aria-hidden="true">
+              <circle class="dash-ring-empty" cx="21" cy="21" r="15.9155" fill="none" stroke-width="6"></circle>
+              {% for segment in segments %}
+                <circle cx="21" cy="21" r="15.9155" fill="none" stroke-width="6" stroke="{{ segment.colour }}" stroke-dasharray="{{ segment.length }} {{ segment.gap }}" stroke-dashoffset="{{ segment.offset }}" transform="rotate(-90 21 21)"></circle>
+              {% endfor %}
+            </svg>
+            <div class="dash-donut-total"><b>{{ dashboard.total }}</b><span class="muted">orders</span></div>
+          </div>
+          <ul class="dash-legend">
+            {% for slice in dashboard.slices %}
+              <li><i class="dash-swatch dash-swatch-{{ slice.key }}" aria-hidden="true"></i>{{ slice.label }}<b>{{ slice.count }}</b></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+
+      <div class="dash-kpis">
+        <div class="dash-kpi"><span class="dash-kpi-icon tone-short">{% icon "alert-triangle" %}</span><b>{{ dashboard.red_orders }}</b><span>Red orders</span></div>
+        <div class="dash-kpi"><span class="dash-kpi-icon tone-short">{% icon "cube" %}</span><b>{{ dashboard.short_components }}</b><span>Short components · {{ dashboard.short_materials }} material{{ dashboard.short_materials|pluralize }}</span></div>
+        <div class="dash-kpi"><span class="dash-kpi-icon tone-low">{% icon "list" %}</span><b>{{ dashboard.low_cover_components }}</b><span>Low cover components</span></div>
+        <div class="dash-kpi"><span class="dash-kpi-icon tone-primary">{% icon "file" %}</span><b>{{ dashboard.open_requisitions }}</b><span>Open requisitions · {{ dashboard.awaiting_approval }} awaiting approval</span></div>
+      </div>
+    </div>
+
+    <p class="muted dash-note">Unit mismatch lines are excluded from component counts.</p>
+
+    <div class="dash-tables">
+      <section class="card table-card" aria-labelledby="dash-materials-title">
+        <div class="table-toolbar"><h2 class="table-title" id="dash-materials-title">Shortage per material</h2></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th scope="col">Material</th><th scope="col" class="num">Shortage</th><th scope="col" class="num">Orders</th><th scope="col">First needed</th></tr></thead>
+            <tbody>
+              {% for row in dashboard.materials %}
+                <tr>
+                  <td><span class="cell-main">{{ row.material }}</span>{% if row.description %}<span class="cell-sub">{{ row.description }}</span>{% endif %}</td>
+                  <td class="num">{{ row.shortage|quantity:row.unit }}</td>
+                  <td class="num">{{ row.orders }}<span class="cell-sub dash-order-links">{% for number in row.order_numbers %}<a href="/orders/{{ number }}/">{{ number }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</span></td>
+                  <td><span class="cell-inline">{{ row.first_needed|date_short }}{% if row.overdue %}{% status_pill "overdue" %}{% endif %}</span></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="muted empty-row">No orders in this range.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card table-card" aria-labelledby="dash-orders-title">
+        <div class="table-toolbar"><h2 class="table-title" id="dash-orders-title">Shortage per order</h2></div>
+        <div class="table-scroll">
+          <table class="data">
+            <thead><tr><th scope="col">Order</th><th scope="col">Start</th><th scope="col" class="num">Short</th><th scope="col" class="num">Low</th><th scope="col">Status</th></tr></thead>
+            <tbody>
+              {% for row in dashboard.orders %}
+                <tr>
+                  <td><a class="cell-main" href="/orders/{{ row.number }}/">{{ row.number }}</a></td>
+                  <td><span class="cell-inline">{{ row.start_date|date_short }}{% if row.overdue %}{% status_pill "overdue" %}{% endif %}</span></td>
+                  <td class="num">{{ row.short_lines }}</td>
+                  <td class="num">{{ row.low_lines }}</td>
+                  <td>{% status_pill row.pill_key %}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5" class="muted empty-row">No orders in this range.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}

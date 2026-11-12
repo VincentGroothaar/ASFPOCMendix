@@ -18,6 +18,7 @@ from tests.acceptance.support import (
     [
         "/",  # built in #22
         "/orders/",  # built in #25
+        "/dashboard/",  # built in #30
         "/dashboard/",  # any unknown URL redirects anonymous users since #26
         "/requisitions/",
         "/settings/",
