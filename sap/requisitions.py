@@ -70,6 +70,19 @@ def odata_date(value: date) -> str:
     return f"/Date({int(moment.timestamp() * 1000)})/"
 
 
+def service_root(base_url: str) -> str:
+    """The service URL for a base URL given with or without the service path (#83).
+
+    `https://host` and `https://host/sap/opu/odata/sap/API_PURCHASEREQ_PROCESS_SRV` (with or
+    without a trailing "/") both give `https://host/sap/opu/odata/sap/API_PURCHASEREQ_PROCESS_SRV`.
+    Only an exact match on the service path is removed; any other path is kept as it is.
+    """
+    host = base_url.rstrip("/")
+    if host.endswith(SERVICE_PATH):
+        host = host.removesuffix(SERVICE_PATH).rstrip("/")
+    return f"{host}{SERVICE_PATH}"
+
+
 def create_requisition(
     payload: dict,
     *,
@@ -90,7 +103,7 @@ def create_requisition(
     session = session or requests.Session()
     # The key lives only in the session headers, so it never lands in `response` or a traceback.
     session.headers.update({"APIKey": api_key, "Accept": "application/json"})
-    service_url = f"{base_url}{SERVICE_PATH}"
+    service_url = service_root(base_url)
     try:
         token_response = session.get(
             f"{service_url}/", headers={"X-CSRF-Token": "Fetch"}, timeout=TIMEOUT_SECONDS

@@ -198,3 +198,47 @@ def test_the_api_key_is_never_in_the_stored_response():
         FakeSession(raise_on={"POST": requests.Timeout()}),
     ]:
         assert KEY not in repr(send(session).response)
+
+
+# --- Base URL with or without the service path (#83, AC-64) ------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("base_url", "expected_service"),
+    [
+        (BASE, SERVICE),
+        (BASE + "/", SERVICE),
+        (SERVICE, SERVICE),
+        (SERVICE + "/", SERVICE),
+        # Any other path is passed through unchanged: only an exact match is removed.
+        (f"{BASE}/other", f"{BASE}/other/sap/opu/odata/sap/API_PURCHASEREQ_PROCESS_SRV"),
+        (
+            f"{BASE}/sap/opu/odata/sap/api_purchasereq_process_srv",
+            f"{BASE}/sap/opu/odata/sap/api_purchasereq_process_srv"
+            "/sap/opu/odata/sap/API_PURCHASEREQ_PROCESS_SRV",
+        ),
+    ],
+)
+def test_ac_64_base_url_with_or_without_the_service_path(settings, base_url, expected_service):
+    settings.MOCK_PR_BASE_URL = base_url
+    settings.MOCK_API_KEY = KEY
+    session = FakeSession()
+
+    assert create_requisition(PAYLOAD, session=session).ok
+
+    assert [call[0:2] for call in session.calls] == [
+        ("GET", f"{expected_service}/"),
+        ("POST", f"{expected_service}/A_PurchaseRequisitionHeader"),
+    ]
+
+
+def test_ac_64_only_a_slash_still_counts_as_not_set(settings):
+    settings.MOCK_PR_BASE_URL = "/"
+    settings.MOCK_API_KEY = KEY
+    session = FakeSession()
+
+    result = create_requisition(PAYLOAD, session=session)
+
+    assert not result.ok and result.error_message == UNREACHABLE
+    assert result.response == {"error": "MOCK_PR_BASE_URL or key not set"}
+    assert session.calls == []

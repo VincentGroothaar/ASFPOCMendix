@@ -40,7 +40,7 @@ themselves, so they can be trusted while the acceptance tests are still red.
 | Tests | Need | Without it |
 |---|---|---|
 | AC-10, AC-12 (one test each) | `SAP_API_KEY` (live SAP sandbox; CI passes the Actions secret) | skipped |
-| AC-24, AC-35 (one test each) | `MOCK_PR_BASE_URL` and `MOCK_API_KEY` (the local mock; CI starts it) | skipped |
+| AC-24, AC-35, AC-65 (one test each) | `MOCK_PR_BASE_URL` and `MOCK_API_KEY` (the local mock; CI starts it) | skipped |
 | Browser tests (`test_ac_*_browser_*`, `test_ac_52_*`, `test_order_list_browser.py`) | Playwright's Chromium (`uv run playwright install chromium`) | error |
 
 All other tests use the fakes, so they run anywhere.

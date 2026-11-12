@@ -31,7 +31,8 @@ uv run --env-file .env uvicorn mock_pr.main:create_app_from_env --factory --port
 ```
 
 The service root is then `http://localhost:8001/sap/opu/odata/sap/API_PURCHASEREQ_PROCESS_SRV/`.
-For the Cockpit, set `MOCK_PR_BASE_URL=http://localhost:8001` in `.env`.
+For the Cockpit, set `MOCK_PR_BASE_URL=http://localhost:8001` in `.env`: the host only, without the
+service path. The Cockpit adds the path itself (a URL that already ends in it also works, #83).
 
 Tests: `uv run pytest mock_pr` (they need the same Postgres; they use a separate schema,
 `mock_pr_test`, and drop it afterwards).
