@@ -13,4 +13,6 @@ urlpatterns = [
         views.requisition_create,
         name="requisition_create",
     ),
+    path("requisitions/", views.requisition_list, name="requisition_list"),
+    path("requisitions/<int:pk>/", views.requisition_detail, name="requisition_detail"),
 ]

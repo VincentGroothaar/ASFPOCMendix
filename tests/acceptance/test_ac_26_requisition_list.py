@@ -3,8 +3,6 @@ date, user, time and outcome for every attempt."""
 
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import (
     MIXED_ORDER,
@@ -13,8 +11,6 @@ from tests.acceptance.support import (
     shows_quantity,
     sync,
 )
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #29")
 
 
 def test_ac_26_every_attempt_is_listed_with_its_details(fakes, clock, client_as):

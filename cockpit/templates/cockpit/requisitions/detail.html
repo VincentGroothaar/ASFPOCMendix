@@ -1,0 +1,42 @@
+{% extends "layouts/frame.html" %}
+{% load ui %}
+{% comment %}One requisition (REQ-5, ui-spec 4.5). Three summary tiles: Value / limit comes with the approval ticket.{% endcomment %}
+
+{% block title %}{{ requisition.reference }} · Material Shortage Cockpit{% endblock %}
+{% block breadcrumb %}{% breadcrumb breadcrumb_items %}{% endblock %}
+{% block page_title %}{% page_header requisition.reference pill_status=requisition.status subline=subline %}{% endblock %}
+{% block header_actions %}{% if retry_url %}<a class="btn btn-primary" href="{{ retry_url }}">Retry</a>{% endif %}{% endblock %}
+
+{% block content %}
+  {% summary_strip summary %}
+
+  <div class="card-row">
+    <section class="card card-body" aria-labelledby="progress-title">
+      <h2 id="progress-title">Progress</h2>
+      {% timeline steps %}
+      {% if requisition.status == "failed" and requisition.error_message %}{% error_note requisition.error_message %}{% endif %}
+      {% if requisition.status == "rejected" and requisition.reject_reason %}<p class="reason-note">Reason: {{ requisition.reject_reason }}</p>{% endif %}
+    </section>
+
+    <section class="card card-body" aria-labelledby="details-title">
+      <h2 id="details-title">Details</h2>
+      <dl class="kv">
+        <dt>For order</dt><dd><a href="/orders/{{ requisition.order.number }}/">{{ requisition.order.number }}</a>{% if requisition.items %} · item {{ requisition.items }}{% endif %}</dd>
+        <dt>Plant</dt><dd>{{ requisition.order.plant }}</dd>
+        <dt>Quantity sent to SAP</dt><dd>{{ requisition.quantity_sent|quantity_sent:requisition.unit_sent }}</dd>
+        <dt>Requested by</dt><dd>{{ requisition.created_by.get_username }}</dd>
+      </dl>
+    </section>
+  </div>
+
+  {% if show_technical %}
+    <section class="card card-body">
+      <details>
+        <summary>Technical details</summary>
+        <h3>Request and response</h3>
+        <pre>{{ request_text }}</pre>
+        <pre>{{ response_text }}</pre>
+      </details>
+    </section>
+  {% endif %}
+{% endblock %}

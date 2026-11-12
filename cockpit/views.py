@@ -12,11 +12,13 @@ from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.views import LogoutView
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from cockpit.access import requires
-from cockpit.services import requisitions
+from cockpit.models import Requisition
+from cockpit.services import formats, requisition_views, requisitions
 from cockpit.services.roles import Action, Role, can, role_of
 
 LOGGED_OUT_MESSAGE = "You are logged out."
@@ -149,3 +151,67 @@ def _plain(value: Decimal) -> str:
     """A number as a plain string without trailing zeros, for a form field: 30.000 → 30."""
     text = format(value, "f")
     return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+# --- Requisition list and detail (REQ-5, #29) -----------------------------------------------------
+
+
+@requires(Action.VIEW_BUSINESS)
+def requisition_list(request: HttpRequest) -> HttpResponse:
+    """All requisition attempts, newest first, with a Status filter and Only mine (ui-spec 4.4)."""
+    result = requisition_views.list_requisitions(
+        request.user,
+        status=request.GET.get("status", ""),
+        only_mine=request.GET.get("mine") == "1",
+        page_number=request.GET.get("page", ""),
+    )
+    context = {
+        "result": result,
+        "page_obj": result.page,
+        "status_filters": requisition_views.STATUS_FILTERS,
+        "pr_text": requisition_views.pr_text,
+    }
+    return render(request, "cockpit/requisitions/list.html", context)
+
+
+@requires(Action.VIEW_BUSINESS)
+def requisition_detail(request: HttpRequest, pk: int) -> HttpResponse:
+    """One requisition: status, progress, details and, when sent or failed, technical details."""
+    requisition = get_object_or_404(
+        Requisition.objects.select_related("order", "created_by"), pk=pk
+    )
+    requisition_views.describe(requisition)
+    summary = [
+        (
+            "Requested",
+            formats.format_quantity(requisition.quantity_entered, requisition.unit_entered),
+        ),
+        (
+            "Shortage when requested",
+            formats.format_quantity(requisition.shortage_at_request, requisition.unit_entered)
+            if requisition.shortage_at_request is not None
+            else "–",
+        ),
+        ("Needed by", formats.format_date(requisition.delivery_date)),
+    ]
+    sub_parts = [
+        requisition.material,
+        requisition.description,
+        requisition_views.pr_text(requisition),
+    ]
+    request_text, response_text = requisition_views.technical_details(requisition)
+    context = {
+        "requisition": requisition,
+        "subline": " · ".join(part for part in sub_parts if part),
+        "summary": summary,
+        "breadcrumb_items": [
+            ("Requisitions", reverse("cockpit:requisition_list")),
+            (requisition.reference, None),
+        ],
+        "steps": requisition_views.requisition_timeline(requisition),
+        "retry_url": requisition_views.retry_url(request.user, requisition),
+        "show_technical": requisition_views.shows_technical_details(requisition),
+        "request_text": request_text,
+        "response_text": response_text,
+    }
+    return render(request, "cockpit/requisitions/detail.html", context)
