@@ -142,3 +142,71 @@ def test_orders_page_script_opens_filters_and_updates_the_sidebar(
     link = page.get_by_role("link", name="Dashboard", exact=True)
     expect(link).to_have_attribute("href", re.compile(r"from=2026-01-01"))
     expect(link).to_have_attribute("href", re.compile(r"plant=AUC1"))
+
+
+def build_long_lists_snapshot() -> None:
+    """12 short orders on one material with a long ID: more than 5 orders, more than 10 rows."""
+    now = timezone.now()
+    today = timezone.localdate()
+    PlantSnapshot.objects.create(plant="AUC1", synced_at=now)
+    for index in range(12):
+        order = ProductionOrder.objects.create(
+            number=f"10001{index:02d}",
+            plant="AUC1",
+            material="FG-1",
+            description="Bike",
+            quantity=Decimal("1"),
+            unit="PC",
+            start_date=today + timedelta(days=1),
+            synced_at=now,
+        )
+        Component.objects.create(
+            order=order,
+            item="0001",
+            material="MZ-RM-C990-0001",
+            description="Hydraulic oil for the long list check",
+            required_quantity=Decimal("5"),
+            withdrawn_quantity=Decimal("0"),
+            unit="PC",
+        )
+
+
+def test_long_lists_stay_short_in_the_browser(
+    transactional_db, live_server: LiveServer, page: Page
+) -> None:
+    """AC-61 (#80): at 1512 px the material ID stays on one line and no row is taller than 5
+    body lines; at 390 px the page does not scroll sideways."""
+    build_long_lists_snapshot()
+    viewer = User.objects.create_user("viewer.a", password=PASSWORD)
+    viewer.groups.add(Group.objects.get_or_create(name="Viewer")[0])
+    page.set_default_timeout(5_000)
+    SCREENSHOTS.mkdir(parents=True, exist_ok=True)
+
+    page.set_viewport_size({"width": 1512, "height": 900})
+    page.goto(live_server.url + "/dashboard/")
+    page.get_by_label("Username").fill("viewer.a")
+    page.get_by_label("Password").fill(PASSWORD)
+    page.get_by_role("button", name="Log in").click()
+
+    expect(page.get_by_text("and 7 more")).to_be_visible()
+    expect(page.get_by_text("Showing 10 of 12 orders")).to_be_visible()
+    expect(page.get_by_role("link", name="Show all 12 short orders")).to_be_visible()
+
+    page.screenshot(path=str(SCREENSHOTS / "03-dashboard-long-lists-desktop.png"), full_page=True)
+
+    # The material ID is one line: its box is at most 1.5 times its line height.
+    material = page.locator(".dash-material").first
+    height, line_height = material.evaluate(
+        "el => [el.getBoundingClientRect().height, parseFloat(getComputedStyle(el).lineHeight)]"
+    )
+    assert height <= 1.5 * line_height
+    # No row of Shortage per material is taller than 5 times the body line height.
+    body_line_height = page.evaluate("parseFloat(getComputedStyle(document.body).lineHeight)")
+    row_height = page.locator("table.data").first.locator("tbody tr").first.bounding_box()["height"]
+    assert row_height <= 5 * body_line_height
+
+    page.set_viewport_size({"width": 390, "height": 900})
+    page.goto(live_server.url + "/dashboard/")
+    expect(page.get_by_role("heading", level=1)).to_have_text("Shortage dashboard")
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    page.screenshot(path=str(SCREENSHOTS / "03-dashboard-long-lists-mobile.png"), full_page=True)

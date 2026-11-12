@@ -71,9 +71,9 @@
             <tbody>
               {% for row in dashboard.materials %}
                 <tr>
-                  <td><span class="cell-main">{{ row.material }}</span>{% if row.description %}<span class="cell-sub">{{ row.description }}</span>{% endif %}</td>
+                  <td><span class="cell-main dash-material">{{ row.material }}</span>{% if row.description %}<span class="cell-sub">{{ row.description }}</span>{% endif %}</td>
                   <td class="num">{{ row.shortage|quantity:row.unit }}</td>
-                  <td class="num">{{ row.orders }}<span class="cell-sub dash-order-links">{% for number in row.order_numbers %}<a href="/orders/{{ number }}/">{{ number }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</span></td>
+                  <td class="num">{{ row.orders }}<span class="cell-sub dash-order-links">{% for number in row.shown_orders %}<a href="/orders/{{ number }}/">{{ number }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% if row.more_orders %} <span class="dash-more">and {{ row.more_orders }} more</span>{% endif %}</span></td>
                   <td><span class="cell-inline">{{ row.first_needed|date_short }}{% if row.overdue %}{% status_pill "overdue" %}{% endif %}</span></td>
                 </tr>
               {% empty %}
@@ -90,7 +90,7 @@
           <table class="data">
             <thead><tr><th scope="col">Order</th><th scope="col">Start</th><th scope="col" class="num">Short</th><th scope="col" class="num">Low</th><th scope="col">Status</th></tr></thead>
             <tbody>
-              {% for row in dashboard.orders %}
+              {% for row in dashboard.orders_shown %}
                 <tr>
                   <td><a class="cell-main" href="/orders/{{ row.number }}/">{{ row.number }}</a></td>
                   <td><span class="cell-inline">{{ row.start_date|date_short }}{% if row.overdue %}{% status_pill "overdue" %}{% endif %}</span></td>
@@ -104,6 +104,9 @@
             </tbody>
           </table>
         </div>
+        {% if dashboard.orders_hidden %}
+          <p class="muted dash-footer">Showing {{ dashboard.orders_shown|length }} of {{ dashboard.orders|length }} orders{% if dashboard.short_orders_hidden %} · <a href="{{ short_orders_url }}">Show all {{ dashboard.red_orders }} short order{{ dashboard.red_orders|pluralize }}</a>{% endif %}</p>
+        {% endif %}
       </section>
     </div>
   {% endif %}

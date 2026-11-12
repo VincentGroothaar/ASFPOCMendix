@@ -521,6 +521,12 @@ def dashboard(request: HttpRequest) -> HttpResponse:
         context["dashboard"] = data
         context["segments"] = _donut_segments(data)
         context["donut_label"] = _donut_label(data)
+        # The "Show all N short orders" link: same plant and range, no stale page or filter.
+        context["short_orders_url"] = (
+            reverse("cockpit:order_list")
+            + "?"
+            + urlencode(filters.query(status=Status.SHORT, requisition=None, page=1))
+        )
         context["banner_text"] = (
             f"SAP could not be reached. Showing data as of {format_datetime(sync.synced_at)}."
         )

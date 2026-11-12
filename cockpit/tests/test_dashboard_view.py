@@ -4,8 +4,10 @@ Like test_orders_view.py, the snapshot is written into the test database with a 
 `synced_at`, so `ensure_fresh` never calls SAP.
 """
 
+import html
+import re
 from datetime import timedelta
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote, urlsplit
 
 import pytest
 import time_machine
@@ -112,6 +114,92 @@ def test_the_range_comes_from_the_url(client_as) -> None:
     response = client_as("Viewer").get("/dashboard/?plant=USC1&from=2026-10-01&to=2026-10-31")
 
     assertContains(response, "Plant USC1 · start 01 Oct 2026 – 31 Oct 2026")
+
+
+# --- AC-56 to AC-60: how much of each table is listed (#80) -------------------------------------
+
+
+def make_red_orders(count: int) -> None:
+    """`count` Short orders for RM-1 (no stock), numbered 1000101, 1000102, ..."""
+    for index in range(1, count + 1):
+        make_order(f"{1000100 + index}", TODAY + timedelta(days=1), needs="5")
+
+
+def make_low_cover_orders(count: int) -> None:
+    for index in range(1, count + 1):
+        make_stock(f"LOW-{index}", "100")
+        make_order(
+            f"{2000100 + index}", TODAY + timedelta(days=2), needs="95", material=f"LOW-{index}"
+        )
+
+
+def test_a_material_lists_5_orders_then_and_n_more_as_plain_text(client_as) -> None:  # AC-56
+    synced()
+    make_red_orders(8)
+
+    response = client_as("Viewer").get("/dashboard/")
+
+    assertContains(response, 'class="dash-more">and 3 more</span>', count=1)
+    # Orders 1 to 5 are linked in both tables, orders 6 to 8 only in the order table.
+    assertContains(response, 'href="/orders/1000105/"', count=2)
+    assertContains(response, 'href="/orders/1000106/"', count=1)
+    assert 'href="/orders/?' not in response.content.decode().split("Shortage per order")[0]
+
+
+def test_a_material_with_5_orders_has_no_and_n_more(client_as) -> None:  # AC-57
+    synced()
+    make_red_orders(5)
+
+    response = client_as("Viewer").get("/dashboard/")
+
+    assertNotContains(response, "dash-more")
+    assertContains(response, 'href="/orders/1000105/"', count=2)
+
+
+def test_the_order_table_lists_10_rows_and_a_footer_with_a_link_to_short_orders(
+    client_as,
+) -> None:  # AC-58, AC-59
+    synced()
+    make_red_orders(11)
+    make_low_cover_orders(1)
+
+    # The dashboard URL carries a page and a requisition filter that the link must not copy.
+    response = client_as("Viewer").get("/dashboard/?plant=AUC1&page=3&requisition=none")
+
+    content = response.content.decode()
+    assertContains(response, "Showing 10 of 12 orders")
+    assert 'href="/orders/1000111/"' not in content.split("Shortage per order")[1]  # row 11 hidden
+    (href,) = re.findall(r'<a href="([^"]+)">Show all 11 short orders</a>', content)
+    link = urlsplit(html.unescape(href))
+    query = parse_qs(link.query)
+    assert link.path == "/orders/"
+    assert query["status"] == ["short"]
+    assert query["plant"] == ["AUC1"]
+    assert "from" in query and "to" in query
+    assert "page" not in query and "requisition" not in query
+    opened = client_as("Viewer").get(html.unescape(href))
+    assertContains(opened, "Short orders")
+
+
+def test_ten_rows_have_no_footer(client_as) -> None:  # AC-60
+    synced()
+    make_red_orders(10)
+
+    response = client_as("Viewer").get("/dashboard/")
+
+    assertNotContains(response, "Showing")
+    assertNotContains(response, "Show all")
+
+
+def test_hidden_low_cover_orders_get_a_footer_without_a_link(client_as) -> None:  # AC-60
+    synced()
+    make_red_orders(3)
+    make_low_cover_orders(9)
+
+    response = client_as("Viewer").get("/dashboard/")
+
+    assertContains(response, "Showing 10 of 12 orders")
+    assertNotContains(response, "Show all")
 
 
 # --- The donut ----------------------------------------------------------------------------------

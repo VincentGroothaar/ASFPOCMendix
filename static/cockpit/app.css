@@ -1232,6 +1232,20 @@ details pre {
   white-space: normal;
 }
 
+/* A material ID such as MZ-RM-C990-0001 stays on one line (#80); the description still wraps. */
+.dash-material {
+  white-space: nowrap;
+}
+
+.dash-more {
+  white-space: nowrap;
+}
+
+.dash-footer {
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
 /* --- 4.2 Order detail (issue #26) --- */
 .detail-layout {
   display: grid;

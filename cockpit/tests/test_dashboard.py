@@ -287,3 +287,73 @@ def test_narrowing_the_range_changes_the_counts_but_not_a_status() -> None:
 
 def test_the_default_range_is_today_to_two_weeks() -> None:
     assert default_filters(PLANTS, TODAY).start_to == date(2026, 11, 17)
+
+
+# --- AC-56 to AC-60: how much of each table is listed (#80) -------------------------------------
+
+
+def make_red_orders(count: int) -> None:
+    """`count` Short orders for RM-1 (no stock), numbered R01, R02, ... in the default range."""
+    for index in range(1, count + 1):
+        make_order(f"R{index:02d}", day(1), needs="5")
+
+
+def make_low_cover_orders(count: int) -> None:
+    """`count` Low cover orders, each on its own material with 100 in stock and 95 needed."""
+    for index in range(1, count + 1):
+        make_stock(f"LOW-{index}", "100")
+        make_order(f"L{index:02d}", day(2), needs="95", material=f"LOW-{index}")
+
+
+def test_a_material_lists_the_first_5_orders_and_counts_the_rest() -> None:  # AC-56
+    make_red_orders(8)
+
+    row = numbers_for().materials[0]
+
+    assert row.orders == 8
+    assert row.shown_orders == ("R01", "R02", "R03", "R04", "R05")
+    assert row.more_orders == 3
+
+
+@pytest.mark.parametrize("count", [1, 2, 5])
+def test_a_material_with_5_orders_or_fewer_lists_all_of_them(count: int) -> None:  # AC-57
+    make_red_orders(count)
+
+    row = numbers_for().materials[0]
+
+    assert len(row.shown_orders) == count
+    assert row.more_orders == 0
+
+
+def test_shortage_per_order_lists_10_rows_and_keeps_every_count() -> None:  # AC-58
+    make_red_orders(11)
+    make_low_cover_orders(1)
+
+    result = numbers_for()
+
+    assert len(result.orders) == 12
+    assert [row.number for row in result.orders_shown] == [f"R{i:02d}" for i in range(1, 11)]
+    assert (result.orders_hidden, result.short_orders_hidden) == (2, True)
+    assert (result.red_orders, result.low_cover_components, result.total) == (11, 1, 12)
+
+
+def test_ten_rows_leave_nothing_hidden() -> None:  # AC-60
+    make_red_orders(10)
+
+    result = numbers_for()
+
+    assert (len(result.orders_shown), result.orders_hidden, result.short_orders_hidden) == (
+        10,
+        0,
+        False,
+    )
+
+
+def test_hidden_low_cover_orders_do_not_count_as_hidden_short_orders() -> None:  # AC-60
+    make_red_orders(3)
+    make_low_cover_orders(9)
+
+    result = numbers_for()
+
+    assert [row.pill_key for row in result.orders_shown].count("short") == 3
+    assert (result.orders_hidden, result.short_orders_hidden) == (2, False)
