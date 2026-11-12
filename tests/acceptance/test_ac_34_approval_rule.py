@@ -19,15 +19,19 @@ from tests.acceptance.support import (
     sync,
 )
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #32")
+# Marked per test, not for the module: the at-the-limit case is already sent before the change
+# request (#27 sends every requisition), so only the approval parts wait for #32.
+NOT_BUILT = pytest.mark.xfail(strict=True, reason="Not built yet: #32")
 
 
+@NOT_BUILT
 def test_ac_34_approval_limit_is_10000():
     from cockpit.services.requisitions import APPROVAL_LIMIT
 
     assert APPROVAL_LIMIT == Decimal("10000")
 
 
+@NOT_BUILT
 @pytest.mark.parametrize(
     ("quantity", "price", "needed"),
     [
@@ -45,7 +49,10 @@ def test_ac_34_needs_approval(quantity, price, needed):
     assert needs_approval(Decimal(quantity), price_value) is needed
 
 
-@pytest.mark.parametrize(("quantity", "status"), [("60", "awaiting"), ("50", "sent")])
+@pytest.mark.parametrize(
+    ("quantity", "status"),
+    [pytest.param("60", "awaiting", marks=NOT_BUILT), ("50", "sent")],
+)
 def test_ac_34_above_the_limit_waits_and_at_the_limit_is_sent(
     fakes, clock, client_as, quantity, status
 ):
@@ -63,6 +70,7 @@ def test_ac_34_above_the_limit_waits_and_at_the_limit_is_sent(
         assert len(fakes.mock.posts) == 1
 
 
+@NOT_BUILT
 def test_ac_34_price_per_price_unit_is_used(fakes, clock, client_as):
     """SAP gives 2,000 EUR per 10 PC: 200 per PC, so 60 PC = 12,000 needs approval."""
     fakes.sap.orders.append(one_component_order("1000101", days(1), "RM-1", "100"))
@@ -77,6 +85,7 @@ def test_ac_34_price_per_price_unit_is_used(fakes, clock, client_as):
     assert fakes.mock.posts == []
 
 
+@NOT_BUILT
 def test_ac_34_no_price_needs_approval(fakes, clock, client_as):
     fakes.sap.orders.append(one_component_order("1000101", days(1), "RM-1", "100"))
     fakes.sap.stock.append(Stock("RM-1", Decimal("0")))  # no valuation row in SAP
@@ -88,6 +97,7 @@ def test_ac_34_no_price_needs_approval(fakes, clock, client_as):
     assert fakes.mock.posts == []
 
 
+@NOT_BUILT
 def test_ac_34_browser_side_panel_shows_awaiting_approval(fakes, running_clock, browser_as):
     from playwright.sync_api import expect
 

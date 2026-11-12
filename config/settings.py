@@ -64,6 +64,11 @@ if HOSTED_BEHIND_HTTPS:
 SAP_BASE_URL = os.environ.get("SAP_BASE_URL", "")
 SAP_API_KEY = os.environ.get("SAP_API_KEY", "")
 
+# --- Purchase requisition mock (the only POST target, INV-3 and INV-4) -------
+
+MOCK_PR_BASE_URL = os.environ.get("MOCK_PR_BASE_URL", "")
+MOCK_API_KEY = os.environ.get("MOCK_API_KEY", "")
+
 # --- Apps -------------------------------------------------------------------
 
 INSTALLED_APPS = [

@@ -6,8 +6,6 @@ import pytest
 from tests.acceptance import builders
 from tests.acceptance.support import MIXED_ORDER, load_mixed_order, sync
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #27")
-
 
 @pytest.mark.parametrize("role", ["Viewer", "Admin"])
 @pytest.mark.parametrize("material", ["RM-SHORT", "RM-LOW", "RM-COVER"])
