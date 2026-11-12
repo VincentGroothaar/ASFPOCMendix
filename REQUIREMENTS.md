@@ -81,7 +81,7 @@ Done when:
 As a Manager, I want a dashboard of shortages, so that I can see where the plant is at risk at a glance.
 
 Done when:
-- The dashboard shows, for the selected plant and range: the number of red orders, shortages per material (total shortage and the orders affected) and shortages per order.
+- The dashboard shows, for the selected plant and range: the number of red orders, shortages per material (total shortage and the orders affected) and shortages per order. Long lists are shortened: each material shows its order count and at most 5 affected orders, and the order table shows at most 10 rows with a link to the full list on Orders (#80).
 - Unit mismatches are listed separately and not counted as red.
 - Viewers, Planners and Managers can open it.
 

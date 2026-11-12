@@ -141,7 +141,7 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-25 | REQ-5: on an endpoint error the error message is shown, the attempt is stored as failed, and Retry creates a new attempt | Test with the mock returning 400 |
 | AC-26 | REQ-5: the requisition list shows number, order, material, quantity, unit, delivery date, user, time and outcome for every attempt | Test |
 | AC-27 | REQ-5 / INV-3 / INV-4: requisitions are sent only to `MOCK_PR_BASE_URL` with a CSRF token and the `APIKey` header; no request ever writes to `SAP_BASE_URL` | Acceptance test against the local mock; test that the SAP client has no write method |
-| AC-28 | REQ-6: the dashboard shows the red order count, shortage per material with affected orders, shortage per order, and unit mismatches separately, matching the order list | Test with a constructed snapshot |
+| AC-28 | REQ-6: the dashboard shows the red order count, shortage per material with its order count and at most 5 affected orders, shortage per order (at most 10 rows), and unit mismatches separately, matching the order list (#80) | Test with a constructed snapshot |
 | AC-29 | REQ-7 / INV-9: every URL redirects an anonymous user to login (GET, and POST with a valid CSRF token) | Test over all URL names |
 | AC-30 | REQ-7: Admin can manage users and groups in `/admin/` and gets 403 on business pages; business roles are sent to the admin login on `/admin/` (Django's default redirect, not 403) and cannot open user management | Test per role |
 | AC-31 | REQ-7 / INV-1: a direct POST to create a requisition as Viewer or Admin returns 403 and stores nothing | Test |
@@ -169,6 +169,12 @@ The tooltip texts for statuses and requisition labels are in [docs/ui/ui-spec.md
 | AC-53 | The login page matches ui-spec 4.7 A, with a wrong password shown in an error note; the 403 page shows inside the frame for business roles | Test + screenshots (#23) |
 | AC-54 | ui-spec 8: visible focus outline in `--color-primary`, or `--color-sidebar-accent` inside the sidebar; nav items and buttons at least `--touch-target` high, except compact row buttons and the ⓘ; icon-only buttons have an accessible name | Browser test (#23) |
 | AC-55 | HTMX POSTs carry the CSRF token, also after a 403 page has replaced the page | Browser test (#23) |
+| AC-56 | REQ-6 (#80): a material with more than 5 affected orders shows its full order count, the first 5 orders (by start date, then number) as links, and `and N more` as muted text with no link; N = count − 5 | Service and view test with a constructed snapshot of 8 orders for one material |
+| AC-57 | REQ-6 (#80): a material with 5 orders or fewer shows all of them and no `and N more` | Same test, with a material of 5 orders and one of 2 |
+| AC-58 | REQ-6 (#80): "Shortage per order" shows at most 10 rows, red first, then by start date, then by number; the donut and KPI counts are unchanged | Service and view test with 12 orders (11 red, 1 low cover) |
+| AC-59 | REQ-6 (#80): when Short orders are hidden, the footer shows `Showing 10 of [total] orders` and a link `Show all [N] short orders` (`Show all 1 short order` for 1), N = all Short orders in scope; the link goes to Orders with `status=short`, the dashboard's plant and range, and no `page` or `requisition` parameter | View test: parse the link, also with `page=3&requisition=none` on the dashboard URL; open it and check the Orders list is filtered |
+| AC-60 | REQ-6 (#80): with 10 rows or fewer there is no footer; with more than 10 rows but no hidden Short order the footer has no link | View test with 10 rows, and with 3 red plus 9 low cover orders |
+| AC-61 | REQ-6 (#80): at 1512 px a long Material ID in "Shortage per material" stays on one line (box at most 1.5 × its line height) and no row is taller than 4 × the body line height; at 390 px there is no page-level horizontal scroll | Browser test on a constructed snapshot with a long ID and more than 5 orders |
 
 ### Proven by unit tests only
 
