@@ -28,6 +28,10 @@ OPEN_REQUISITION_STATUSES = (
     Requisition.Status.SENT,
 )
 
+# How much of each table the page lists (#80). The rest is counted, not listed.
+MATERIAL_ORDERS_SHOWN = 5  # orders per row of Shortage per material
+ORDER_ROWS_SHOWN = 10  # rows of Shortage per order
+
 # Donut slices, in legend order: (key, label). The key picks the chart colour token.
 SLICES = (
     ("short", "Short"),
@@ -59,6 +63,16 @@ class MaterialRow:
     first_needed: date
     overdue: bool
 
+    @property
+    def shown_orders(self) -> tuple[str, ...]:
+        """The first orders listed in the row (#80); the rest is counted in `more_orders`."""
+        return self.order_numbers[:MATERIAL_ORDERS_SHOWN]
+
+    @property
+    def more_orders(self) -> int:
+        """How many affected orders are not listed in the row."""
+        return max(0, self.orders - MATERIAL_ORDERS_SHOWN)
+
 
 @dataclass(frozen=True)
 class OrderShortageRow:
@@ -85,7 +99,22 @@ class Dashboard:
     open_requisitions: int
     awaiting_approval: int
     materials: tuple[MaterialRow, ...]
-    orders: tuple[OrderShortageRow, ...]
+    orders: tuple[OrderShortageRow, ...]  # all rows, red first; the page shows `orders_shown`
+
+    @property
+    def orders_shown(self) -> tuple[OrderShortageRow, ...]:
+        """The first rows of Shortage per order that the page lists (#80)."""
+        return self.orders[:ORDER_ROWS_SHOWN]
+
+    @property
+    def orders_hidden(self) -> int:
+        """How many rows of Shortage per order are not listed."""
+        return len(self.orders) - len(self.orders_shown)
+
+    @property
+    def short_orders_hidden(self) -> bool:
+        """True when at least one hidden row is a Short order (the link to Orders then shows)."""
+        return any(row.pill_key == "short" for row in self.orders[ORDER_ROWS_SHOWN:])
 
 
 def build_dashboard(

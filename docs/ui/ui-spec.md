@@ -181,8 +181,8 @@ Vertical list of steps. Each step: 28px circle + bold title + muted sub-line (wh
 - **Orders by status:** donut (chart tokens) with the total in the middle and a legend with counts: Short, Low cover, Covered, Unit mismatch.
 - Four KPI cards with icon: **Red orders**, **Short components · [n] materials**, **Low cover components**, **Open requisitions · [n] awaiting approval**.
 - Note: `Unit mismatch lines are excluded from component counts.`
-- **Shortage per material:** Material, Shortage (stock unit), Orders, First needed (+ Overdue). Sorted by first needed. No totals across materials (mixed units).
-- **Shortage per order:** Order (link), Start, Short, Low, Status.
+- **Shortage per material:** Material, Shortage (stock unit), Orders, First needed (+ Overdue). Sorted by first needed. No totals across materials (mixed units). The Orders cell shows the order count, then at most 5 affected orders as links (by start date), then `and [n] more` as muted text without a link when there are more (#80). The Material ID stays on one line.
+- **Shortage per order:** Order (link), Start, Short, Low, Status. At most 10 rows, red first (#80). When rows are left out, a footer under the table reads `Showing [shown] of [total] orders`. When Short orders are left out, it adds ` · Show all [n] short orders` (`Show all 1 short order`), a link to Orders with the Short filter, the same plant and range; [n] counts all Short orders.
 
 ### 4.4 Requisitions (PDF page 4, all roles; Review only for Manager)
 - Header: "Requisitions".
@@ -237,7 +237,7 @@ Three cards:
 ## 5. Copy
 
 ### 5.1 Labels (word for word)
-Production orders · Shortage dashboard · Requisitions · Thresholds · Data as of · Refresh · Edit filters · Hide filters · Reset to default · [n] filters active: · All orders · Short · Low cover · Covered · Unit mismatch · Issued · Overdue · PR sent · Awaiting approval · PR failed · Rejected · Request · Review · Review requisition · Send requisition · Cancel · Close · Retry · Approve and send · Reject · Confirm reject · Request again · Back · Reason (optional) · Open full details · Technical details · Request and response · Only mine · Clear · Show · Progress · Details · Cover buffer · Approval limit · Safety stock · Fixed for the PoC · From SAP · Log out · No orders match these filters. (empty order list, #25)
+Production orders · Shortage dashboard · Requisitions · Thresholds · Data as of · Refresh · Edit filters · Hide filters · Reset to default · [n] filters active: · All orders · Short · Low cover · Covered · Unit mismatch · Issued · Overdue · PR sent · Awaiting approval · PR failed · Rejected · Request · Review · Review requisition · Send requisition · Cancel · Close · Retry · Approve and send · Reject · Confirm reject · Request again · Back · Reason (optional) · Open full details · Technical details · Request and response · Only mine · Clear · Show · Progress · Details · Cover buffer · Approval limit · Safety stock · Fixed for the PoC · From SAP · Log out · No orders match these filters. (empty order list, #25) · and [n] more · Showing [n] of [n] orders · Show all [n] short orders (dashboard, #80)
 
 ### 5.2 Tooltip texts
 | Where | Text |
