@@ -1,0 +1,8 @@
+{% load ui %}{% comment %}PR sent (ui-spec 4.2).{% endcomment %}
+<div class="panel-heading"><span class="panel-icon panel-icon-ok">{% icon "check" %}</span><div><h2>PR sent</h2><p class="muted">{{ requisition.reference }} · {{ requisition.material }}</p></div></div>
+<dl class="kv">
+  <dt>PR number</dt><dd>{{ requisition.pr_number }}</dd>
+  <dt>Quantity</dt><dd>{{ requisition.quantity_entered|quantity:requisition.unit_entered }}</dd>
+  <dt>Requested by</dt><dd>{{ requisition.created_by.get_username }} · {{ requisition.created_at|datetime_short }}</dd>
+</dl>
+<div class="panel-actions">{% include "cockpit/orders/panel/close.html" %}</div>

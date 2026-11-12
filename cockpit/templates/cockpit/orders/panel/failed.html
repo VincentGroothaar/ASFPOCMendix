@@ -1,0 +1,12 @@
+{% load ui %}{% comment %}PR failed (ui-spec 4.2): the error in plain words, the request and response, Close and Retry.{% endcomment %}
+<div class="panel-heading"><span class="panel-icon panel-icon-bad">{% icon "alert-triangle" %}</span><div><h2>PR failed</h2><p class="muted">{{ requisition.reference }} · {{ requisition.material }}</p></div></div>
+{% error_note requisition.error_message|default:"The requisition could not be sent." %}
+<details class="panel-technical">
+  <summary>Request and response</summary>
+  <pre>{{ request_text }}</pre>
+  <pre>{{ response_text }}</pre>
+</details>
+<div class="panel-actions">
+  {% include "cockpit/orders/panel/close.html" %}
+  {% if retry_url %}{% url 'cockpit:requisition_create' order.number as create_url %}<form method="get" action="{{ create_url }}" class="inline-form"><input type="hidden" name="material" value="{{ requisition.material }}"><button type="submit" class="btn btn-primary" hx-get="{{ create_url }}?material={{ requisition.material|urlencode }}" hx-target="#side-panel">Retry</button></form>{% endif %}
+</div>

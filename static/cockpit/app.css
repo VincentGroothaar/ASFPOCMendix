@@ -1274,3 +1274,72 @@ details pre {
     grid-template-columns: 1fr;
   }
 }
+
+/* --- 4.2 Requisition side panel (issue #28) --- */
+tr.is-selected td {
+  background: var(--color-row-selected);
+}
+
+tr.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.inline-form {
+  display: inline;
+  margin: 0;
+}
+
+.table-note {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.panel-heading h2,
+.panel-heading p {
+  margin: 0;
+}
+
+.panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border-radius: var(--radius-control);
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.panel-icon-ok {
+  background: var(--color-covered-bg);
+  color: var(--color-covered);
+}
+
+.panel-icon-bad {
+  background: var(--color-short-bg);
+  color: var(--color-short);
+}
+
+.panel-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.panel-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.panel-technical pre {
+  overflow-x: auto;
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-caption);
+}

@@ -58,8 +58,9 @@ def test_requisition_label(status, label, tone) -> None:
     assertHTMLEqual(plain, f'<span class="req-label req-label-{tone}">{label}</span>')
     assertHTMLEqual(
         as_button,
-        f'<button type="button" class="req-label req-label-{tone}" hx-get="/panel/1/" '
-        f'hx-target="#side-panel">{label}</button>',
+        f'<form method="get" action="/panel/1/" class="inline-form">'
+        f'<button type="submit" class="req-label req-label-{tone}" hx-get="/panel/1/" '
+        f'hx-target="#side-panel">{label}</button></form>',
     )
 
 

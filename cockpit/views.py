@@ -22,7 +22,13 @@ from django.views.decorators.http import require_http_methods, require_POST
 
 from cockpit.access import HtmxLoginRequiredMiddleware, requires
 from cockpit.models import ORDER_NUMBER_LENGTH, ProductionOrder, Requisition
-from cockpit.services import formats, plant_status, requisition_views, requisitions
+from cockpit.services import (
+    formats,
+    order_panel,
+    plant_status,
+    requisition_views,
+    requisitions,
+)
 from cockpit.services.dashboard import Dashboard, build_dashboard
 from cockpit.services.formats import format_datetime
 from cockpit.services.order_list import (
@@ -122,77 +128,158 @@ class CockpitLogoutView(LogoutView):
         return response
 
 
-# --- Requisitions (REQ-5, #27) --------------------------------------------------------------------
+# --- Requisitions and the side panel (REQ-5, #27, #28) ----------------------------------------
 
 # How the view answers each refusal from the requisition service.
 REFUSAL_STATUS = {"unknown": 404, "not_requestable": 400, "invalid_quantity": 200, "duplicate": 409}
+PANEL_DIR = "cockpit/orders/panel"
+
+
+def _check_order_number(number: str) -> None:
+    """404 for an order number the database cannot hold, before any query (see #77 review)."""
+    if not _storable_order_number(number):
+        raise NotFound(f"Order {number} not found")
+
+
+def _is_htmx(request: HttpRequest) -> bool:
+    """True for an HTMX request that wants a fragment (not htmx's history restore)."""
+    return request.headers.get("HX-Request") == "true" and not request.headers.get(
+        "HX-History-Restore-Request"
+    )
+
+
+def _render_panel(
+    request: HttpRequest,
+    number: str,
+    state: str,
+    panel: dict[str, object] | None = None,
+    material: str = "",
+    status: int = 200,
+) -> HttpResponse:
+    """Show the side panel in `state` (a template in `panel/`), with `material`'s rows selected.
+
+    An HTMX request gets the panel plus the components rows (an out-of-band swap, so the
+    highlight and the labels follow). Any other request gets the whole order page with the
+    panel in the same state, so every panel URL also works without JavaScript (#28, I-2).
+    """
+    context = {"panel_template": f"{PANEL_DIR}/{state}.html", **(panel or {})}
+    if _is_htmx(request):
+        context.update(_rows_context(request, number, material))
+        response = render(request, "cockpit/orders/panel_fragment.html", context, status=status)
+    else:
+        context.update(_order_page_context(request, number, material))
+        response = render(request, "cockpit/orders/detail.html", context, status=status)
+    patch_vary_headers(response, ["HX-Request"])
+    return response
+
+
+def _review_panel(
+    request: HttpRequest,
+    number: str,
+    material: str,
+    quantity_value: str | None = None,
+    error: str = "",
+    refusal: str = "",
+    status: int = 200,
+) -> HttpResponse:
+    """The Review state: prefilled, or with the value the planner typed and its message."""
+    try:
+        prefill = requisitions.prepare(number, material)
+    except requisitions.RequisitionRefused as refused:
+        return _refusal_panel(request, number, material, refused)
+    panel = {
+        "prefill": prefill,
+        "quantity_value": _plain(prefill.quantity) if quantity_value is None else quantity_value,
+        "error": error,
+        "refusal": refusal,
+        "cover_percent": _plain(prefill.cover_percent),
+        "sent": (prefill.quantity_sent, prefill.stock_unit),
+    }
+    return _render_panel(request, number, "review", panel, material, status)
+
+
+def _refusal_panel(
+    request: HttpRequest, number: str, material: str, refused: requisitions.RequisitionRefused
+) -> HttpResponse:
+    """Why this order and material cannot be requested: an error note in the panel (400)."""
+    if refused.reason == "unknown":
+        raise Http404(refused.message)
+    panel = {"message": refused.message}
+    return _render_panel(request, number, "error", panel, material, REFUSAL_STATUS[refused.reason])
+
+
+def _outcome_panel(request: HttpRequest, requisition: Requisition) -> HttpResponse:
+    """The outcome of one requisition: PR sent, PR failed, or another status (#32, #33)."""
+    state = {"sent": "sent", "failed": "failed"}.get(requisition.status, "other")
+    requisition_views.describe(requisition)
+    request_text, response_text = requisition_views.technical_details(requisition)
+    panel = {
+        "requisition": requisition,
+        "retry_url": requisition_views.retry_url(request.user, requisition),
+        "request_text": request_text,
+        "response_text": response_text,
+    }
+    return _render_panel(request, requisition.order.number, state, panel, requisition.material)
 
 
 @require_http_methods(["GET", "POST"])
 @requires(Action.CREATE_REQUISITION)
 def requisition_create(request: HttpRequest, number: str) -> HttpResponse:
-    """Confirm step (GET) and create (POST) of a requisition for one order and material.
+    """Review (GET) and create (POST) a requisition for one order and material, in the panel.
 
-    A plain page for now; #28 shows the same view in the side panel. All rules are in
-    `services/requisitions.py`.
+    All rules are in `services/requisitions.py`; this view maps what it returns to a panel
+    state. Status codes: 200, 400 (not requestable), 404, 409 (already open).
     """
+    _check_order_number(number)
     material = request.GET.get("material", "")
     if request.method == "GET":
-        try:
-            prefill = requisitions.prepare(number, material)
-        except requisitions.RequisitionRefused as refused:
-            return _render_refusal(request, refused)
-        return _render_confirm(request, prefill, quantity_value=_plain(prefill.quantity))
+        return _review_panel(request, number, material)
 
     raw_quantity = request.POST.get("quantity", "")
     try:
         requisition = requisitions.create(request.user, number, material, raw_quantity)
     except requisitions.RequisitionRefused as refused:
-        if refused.reason not in ("invalid_quantity", "duplicate"):
-            return _render_refusal(request, refused)
-        try:
-            prefill = requisitions.prepare(number, material)
-        except requisitions.RequisitionRefused as refused_again:
-            return _render_refusal(request, refused_again)
-        status = REFUSAL_STATUS[refused.reason]
-        field_error = refused.message if refused.reason == "invalid_quantity" else ""
-        page_error = refused.message if refused.reason == "duplicate" else ""
-        return _render_confirm(
-            request, prefill, raw_quantity, field_error, page_error, status=status
-        )
-    retry_url = f"{request.path}?{urlencode({'material': material})}"
-    return render(
-        request,
-        "cockpit/requisitions/result.html",
-        {"requisition": requisition, "retry_url": retry_url},
+        if refused.reason == "invalid_quantity":
+            return _review_panel(request, number, material, raw_quantity, error=refused.message)
+        if refused.reason == "duplicate":
+            return _review_panel(
+                request, number, material, raw_quantity, refusal=refused.message, status=409
+            )
+        return _refusal_panel(request, number, material, refused)
+    return _outcome_panel(request, requisition)
+
+
+@requires(Action.VIEW_BUSINESS)
+def requisition_panel(request: HttpRequest, number: str, pk: int) -> HttpResponse:
+    """The outcome of one requisition of this order in the panel (every business role)."""
+    _check_order_number(number)
+    requisition = get_object_or_404(
+        Requisition.objects.select_related("order", "created_by"), pk=pk, order__number=number
     )
+    return _outcome_panel(request, requisition)
 
 
-def _render_confirm(
-    request: HttpRequest,
-    prefill: requisitions.Prefill,
-    quantity_value: str,
-    error: str = "",
-    refusal: str = "",
-    status: int = 200,
-) -> HttpResponse:
-    """The confirm form, prefilled or with the value the planner typed and its error."""
-    context = {
-        "prefill": prefill,
-        "quantity_value": quantity_value,
-        "error": error,
-        "refusal": refusal,
-        "cover_percent": _plain(prefill.cover_percent),
-    }
-    return render(request, "cockpit/requisitions/confirm.html", context, status=status)
+@requires(Action.VIEW_BUSINESS)
+def requisition_panel_empty(request: HttpRequest, number: str) -> HttpResponse:
+    """The Empty state: Cancel and Close return here, with no row selected."""
+    _check_order_number(number)
+    return _render_panel(request, number, "empty")
 
 
-def _render_refusal(request: HttpRequest, refused: requisitions.RequisitionRefused) -> HttpResponse:
-    """A page that says why this order and material cannot be requested."""
-    status = REFUSAL_STATUS[refused.reason]
-    return render(
-        request, "cockpit/requisitions/refused.html", {"message": refused.message}, status=status
-    )
+@requires(Action.CREATE_REQUISITION)
+def requisition_preview(request: HttpRequest, number: str) -> HttpResponse:
+    """The "Sent to SAP" value for the quantity being typed: always 200, a dash if not valid.
+
+    Only for HTMX. A plain GET shows the Review state instead.
+    """
+    _check_order_number(number)
+    material = request.GET.get("material", "")
+    if not _is_htmx(request):
+        return _review_panel(request, number, material)
+    sent = order_panel.preview_sent(number, material, request.GET.get("quantity", ""))
+    response = render(request, f"{PANEL_DIR}/sent_to_sap.html", {"sent": sent})
+    patch_vary_headers(response, ["HX-Request"])
+    return response
 
 
 def _plain(value: Decimal) -> str:
@@ -319,10 +406,7 @@ def order_list(request: HttpRequest) -> HttpResponse:
             f"SAP could not be reached. Showing data as of {format_datetime(sync.synced_at)}."
         )
 
-    is_fragment = request.headers.get("HX-Request") == "true" and not request.headers.get(
-        "HX-History-Restore-Request"
-    )
-    template = "cockpit/orders/results.html" if is_fragment else "cockpit/orders/page.html"
+    template = "cockpit/orders/results.html" if _is_htmx(request) else "cockpit/orders/page.html"
     response = render(request, template, context)
     patch_vary_headers(response, ["HX-Request"])
     return response
@@ -460,7 +544,32 @@ def _safe_next(request: HttpRequest) -> str | None:
 
 @requires(Action.VIEW_BUSINESS)
 def order_detail(request: HttpRequest, number: str) -> HttpResponse:
-    """One order with its components, stock and statuses (ui-spec 4.2; issue #26).
+    """One order with its components, stock and statuses (ui-spec 4.2; issues #26, #28).
+
+    The side panel starts Empty. The page context is shared with the panel views, which show
+    the same page for a request without HTMX (#28).
+    """
+    context = _order_page_context(request, number)
+    context["panel_template"] = f"{PANEL_DIR}/empty.html"
+    return render(request, "cockpit/orders/detail.html", context)
+
+
+def _rows_context(request: HttpRequest, number: str, selected_material: str = "") -> dict:
+    """The order and its component rows with their Requisition cells (`selected_material`'s
+    rows highlighted). Raises NotFound for an unknown order."""
+    detail = plant_status.order_detail(number, timezone.localdate())
+    if detail is None:
+        raise NotFound(f"Order {number} not found")
+    can_create = can(request.user, Action.CREATE_REQUISITION)
+    return {
+        "order": detail,
+        "can_create": can_create,
+        "table_rows": order_panel.table_rows(detail, can_create, selected_material),
+    }
+
+
+def _order_page_context(request: HttpRequest, number: str, selected_material: str = "") -> dict:
+    """Everything the order page needs: the header, the sync state and the component rows.
 
     The order is looked up before the sync, because the plant to sync comes from the order; an
     unknown number never calls SAP. Orders are never deleted, so it still exists after the sync.
@@ -471,23 +580,23 @@ def order_detail(request: HttpRequest, number: str) -> HttpResponse:
     if order is None:
         raise NotFound(f"Order {number} not found")
     sync = ensure_fresh(order.plant)
-    detail = plant_status.order_detail(number, timezone.localdate())
-    context = {
-        "order": detail,
-        "sync": sync,
-        "refresh_url": reverse("cockpit:refresh_plant", args=[detail.plant]),
-        "breadcrumb_items": [
+    context = _rows_context(request, number, selected_material)
+    detail = context["order"]
+    context.update(
+        sync=sync,
+        refresh_url=reverse("cockpit:refresh_plant", args=[detail.plant]),
+        breadcrumb_items=[
             ("Orders", f"{reverse('cockpit:order_list')}?{urlencode({'plant': detail.plant})}"),
             (detail.number, None),
         ],
-        "subline": _order_subline(detail),
-        "pill_key": PILL_KEYS.get(detail.status) if detail.status else None,
-    }
+        subline=_order_subline(detail),
+        pill_key=PILL_KEYS.get(detail.status) if detail.status else None,
+    )
     if sync.failed and sync.synced_at is not None:
         context["banner_text"] = (
             f"SAP could not be reached. Showing data as of {format_datetime(sync.synced_at)}."
         )
-    return render(request, "cockpit/orders/detail.html", context)
+    return context
 
 
 def _storable_order_number(number: str) -> bool:

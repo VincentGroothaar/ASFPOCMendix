@@ -1,0 +1,1 @@
+{% url 'cockpit:requisition_panel_empty' order.number as empty_url %}<form method="get" action="{{ empty_url }}" class="inline-form"><button type="submit" class="btn btn-secondary" hx-get="{{ empty_url }}" hx-target="#side-panel">Close</button></form>

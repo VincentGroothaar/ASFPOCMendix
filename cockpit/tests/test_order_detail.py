@@ -308,20 +308,29 @@ def test_anonymous_is_sent_to_login(client) -> None:
 
 @pytest.mark.parametrize("role", ["Viewer", "Planner", "Manager"])
 def test_business_roles_see_the_page(client_as, role) -> None:
-    """D-7: same page for every role; Requisition column `–`; empty side panel."""
+    """D-7 (as changed by #28, I-3): the same page for every role; the Requisition column has a
+    Request button on short and low cover lines for Planner and Manager, and a dash otherwise
+    (and for the Viewer, with a note); the side panel starts Empty."""
     synced()
     mixed_order()
 
     response = client_as(role).get("/orders/1000123/")
 
     assertContains(response, "<h1>Order 1000123</h1>", html=True)
-    assert all(_requisition_cell(row) == "–" for row in _rows(response.content.decode()))
+    cells = {
+        row.split('<span class="cell-main">')[1].split("</span>")[0]: _requisition_cell(row)
+        for row in _rows(response.content.decode())
+    }
+    requestable = {"RM-SHORT", "RM-LOW"} if role != "Viewer" else set()
+    assert {m for m, cell in cells.items() if cell == "Request"} == requestable
+    assert all(cell in ("Request", "–") for cell in cells.values())
+    note = "You can view requisitions but not create them."
+    (assertContains if role == "Viewer" else assertNotContains)(response, note)
     assertContains(response, "<h2>Requisition</h2>", html=True)
     assertContains(
         response,
         "Choose Request on a short or low-cover component, or open an existing requisition.",
     )
-    assertNotContains(response, ">Request<")
 
 
 def test_header_breadcrumb_subline_and_refresh(client_as) -> None:
@@ -377,8 +386,8 @@ def test_rows_show_quantities_tooltips_and_dashes(client_as) -> None:
 
 
 def _rows(html: str) -> list[str]:
-    body = html[html.index("<tbody>") : html.index("</tbody>")]
-    return body.split("<tr>")[1:]
+    body = html[html.index('<tbody id="components-body">') : html.index("</tbody>")]
+    return body.split("<tr ")[1:]
 
 
 def _requisition_cell(row: str) -> str:

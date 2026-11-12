@@ -1,4 +1,4 @@
-"""Tests for the requisition endpoint /orders/<n>/requisitions/?material= (#27, R-3, R-6)."""
+"""Tests for the requisition endpoint /orders/<n>/requisitions/?material= (#27, R-3; #28 panel)."""
 
 import pytest
 from pytest_django.asserts import assertContains, assertTemplateUsed
@@ -9,6 +9,12 @@ from cockpit.tests.test_requisitions import mixed_order, resyncs, sent_to  # noq
 URL = "/orders/1000001/requisitions/"
 
 
+@pytest.fixture(autouse=True)
+def no_sap(settings):
+    """No SAP connection, so the full page's sync never leaves the test (and stores nothing)."""
+    settings.SAP_BASE_URL = ""
+
+
 @pytest.mark.django_db
 def test_confirm_step_shows_the_prefilled_form(client_as):
     mixed_order()
@@ -16,7 +22,7 @@ def test_confirm_step_shows_the_prefilled_form(client_as):
     response = client_as("Planner").get(URL, {"material": "RM-SHORT"})
 
     assert response.status_code == 200
-    assertTemplateUsed(response, "cockpit/requisitions/confirm.html")
+    assertTemplateUsed(response, "cockpit/orders/panel/review.html")
     assertContains(response, 'name="quantity"')
     assertContains(response, 'value="30"')
     assertContains(response, "Quantity (order unit PC)")
@@ -52,7 +58,7 @@ def test_sent_requisition_shows_the_result(client_as, sent_to, resyncs):  # noqa
     response = client_as("Planner").post(f"{URL}?material=RM-SHORT", {"quantity": "30"})
 
     assert response.status_code == 200
-    assertTemplateUsed(response, "cockpit/requisitions/result.html")
+    assertTemplateUsed(response, "cockpit/orders/panel/sent.html")
     requisition = Requisition.objects.get()
     assertContains(response, requisition.reference)
     assertContains(response, "PR sent")
@@ -71,7 +77,8 @@ def test_failed_requisition_shows_the_error_and_retry(client_as, sent_to, resync
     assert response.status_code == 200
     assertContains(response, "PR failed")
     assertContains(response, "Material &lt;b&gt;blocked&lt;/b&gt;.")  # SAP text is escaped
-    assertContains(response, f'href="{URL}?material=RM-SHORT"')
+    assertContains(response, f'hx-get="{URL}?material=RM-SHORT"')
+    assertContains(response, '<input type="hidden" name="material" value="RM-SHORT">', html=True)
 
 
 @pytest.mark.django_db
