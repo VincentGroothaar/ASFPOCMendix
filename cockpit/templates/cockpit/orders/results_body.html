@@ -1,0 +1,75 @@
+{% load ui %}<div class="orders-results" id="orders-results">
+  {# The tile filter, re-rendered with every answer so it is never stale (R-B2). #}
+  <input type="hidden" name="status" form="order-filters" value="{{ filters.status|default:'' }}" autocomplete="off">
+
+  {# State B (ui-spec 4.7): shown by htmx while a filter change, Refresh or Try again runs. #}
+  <div class="sync-indicator" role="status">
+    <div class="sync-indicator-line"><span class="spinner" aria-hidden="true"></span><span>Loading orders from SAP for {{ filters.plant }}…</span></div>
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+
+  <div class="orders-body">
+  {% if not sync.synced_at %}
+    {# State D: the first sync of this plant failed (ui-spec 4.7 D, decision 7). #}
+    <section class="card card-body first-sync-failed">
+      <h2>No data for plant {{ filters.plant }} yet</h2>
+      <p>The first sync with SAP failed, so there is nothing to show. This is usually temporary.</p>
+      <p class="muted">{{ sync.error }}{% if sync.failed_at %} · {{ sync.failed_at|datetime_short }}{% endif %}</p>
+      <div class="button-row">
+        <button type="button" class="btn btn-primary" hx-post="{{ refresh_url }}" hx-swap="none" hx-disabled-elt="this" hx-indicator=".sync-indicator">Try again</button>
+        {% if plants|length > 1 %}<button type="button" class="btn btn-secondary" data-choose-plant>Choose another plant</button>{% endif %}
+      </div>
+    </section>
+  {% else %}
+    {% if sync.failed %}
+      {# State C: SAP failed, the older snapshot is shown (ui-spec 4.7 C, AC-7). #}
+      {% banner banner_text "Try again" refresh_url "post" ".sync-indicator" %}
+    {% endif %}
+
+    <div class="kpi-tiles">
+      {% for tile in tiles %}{% kpi_tile tile.label tile.count tile.pill_key tile.pressed "status" tile.value "order-filters" tile.tooltip %}{% endfor %}
+    </div>
+
+    <section class="card table-card" aria-labelledby="orders-title">
+      <div class="table-toolbar">
+        <h2 class="table-title" id="orders-title">{{ view_title }}{% if filters.requisition %} · requisition: {{ requisition_title }}{% endif %}</h2>
+        <div class="table-filters">
+          <label class="inline-field">Requisition
+            <select name="requisition" form="order-filters" autocomplete="off"
+                    hx-get="{% url 'cockpit:order_list' %}" hx-include="#order-filters" hx-target="#orders-results"
+                    hx-push-url="true" hx-trigger="change" hx-indicator=".sync-indicator" hx-sync="#order-filters:replace">
+              {% for value, label in requisition_options %}<option value="{{ value }}"{% if value == requisition_value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </label>
+          {% if filters.status or filters.requisition %}<a class="btn btn-ghost" href="{% url 'cockpit:order_list' %}?{{ clear_query }}"
+             hx-get="{% url 'cockpit:order_list' %}?{{ clear_query }}" hx-target="#orders-results" hx-push-url="true"
+             hx-indicator=".sync-indicator" hx-sync="#order-filters:replace">Clear</a>{% endif %}
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="data">
+          <thead>
+            <tr><th scope="col">Order</th><th scope="col">Start date</th><th scope="col" class="num">Quantity</th><th scope="col">Status</th><th scope="col">Requisition</th><th scope="col"><span class="visually-hidden">Open</span></th></tr>
+          </thead>
+          <tbody>
+            {% for row in orders.rows %}
+              <tr class="order-row" data-href="/orders/{{ row.number }}/">
+                <td><a class="cell-main" href="/orders/{{ row.number }}/">{{ row.number }}</a><span class="cell-sub">{{ row.material }}{% if row.description %} · {{ row.description }}{% endif %}</span></td>
+                <td><span class="cell-inline">{{ row.start_date|date_long }}{% if row.overdue %}{% status_pill "overdue" %}{% endif %}</span></td>
+                <td class="num">{{ row.quantity|quantity:row.unit }}</td>
+                <td><span class="cell-inline">{% if row.pill_key %}{% status_pill row.pill_key %}{% else %}<span class="muted">–</span>{% endif %}{% if row.unit_mismatch %}<span class="mismatch-icon" role="img" aria-label="Unit mismatch: a component isn't checked" title="Unit mismatch: a component isn't checked">{% icon "alert-triangle" %}</span>{% endif %}</span></td>
+                <td>{% if row.requisition %}{% requisition_label row.requisition %}{% else %}{% requisition_label "none" %}{% endif %}</td>
+                <td class="row-chevron"><a href="/orders/{{ row.number }}/" aria-label="Open order {{ row.number }}">{% icon "chevron-right" %}</a></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="6" class="muted empty-row">No orders match these filters.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    {% pagination orders.page "orders" request.GET %}
+  {% endif %}
+  </div>
+</div>
