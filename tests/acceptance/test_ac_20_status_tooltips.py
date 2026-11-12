@@ -33,7 +33,6 @@ def tooltip_shows(page, status: str, text: str, how: str) -> None:
     icon.blur()
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #26")
 @pytest.mark.parametrize("how", ["hover", "focus"])
 def test_ac_20_browser_each_status_has_its_rule_tooltip(fakes, running_clock, browser_as, how):
     load_mixed_order(fakes.sap)
