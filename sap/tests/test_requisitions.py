@@ -161,6 +161,9 @@ def test_network_error_or_timeout_is_unreachable(error, step):
     "post_answer",
     [
         answer(201, {"d": {}}),  # no number
+        answer(201, {"d": None}),  # review #68: `d` that is not an object
+        answer(201, {"d": "x"}),
+        answer(201, ["not", "an", "object"]),
         answer(201, {"d": {"PurchaseRequisition": ""}}),
         answer(201, {"d": {"PurchaseRequisition": "1" * 21}}),  # longer than we store
         answer(201, text="not json"),

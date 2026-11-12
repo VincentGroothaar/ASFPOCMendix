@@ -10,9 +10,10 @@ stores the outcome. After the commit, a successful send re-syncs the plant.
 """
 
 import logging
+import re
 from dataclasses import dataclass
 from datetime import date
-from decimal import ROUND_CEILING, Decimal, InvalidOperation
+from decimal import ROUND_CEILING, Decimal
 
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
@@ -29,14 +30,16 @@ logger = logging.getLogger(__name__)
 
 # Quantities are entered and sent with at most 3 decimals (REQ-5; SAP RequestedQuantity Scale 3).
 DECIMALS = Decimal("0.001")
-# The quantity column is DecimalField(15, 3): at most 12 digits before the decimal point.
-MAX_ENTERED = Decimal("999999999999.999")
+# A quantity as a planner types it: ASCII digits, optionally a point and more digits (#68).
+PLAIN_NUMBER = re.compile(r"[0-9]+(\.[0-9]+)?", re.ASCII)
 # SAP's RequestedQuantity is Precision 13, Scale 3: at most 10 digits before the point.
 MAX_SENT = Decimal("9999999999.999")
 # The database constraint that allows one open requisition per order and material (INV-7).
 OPEN_CONSTRAINT = "one_open_requisition_per_order_material"
 OPEN_STATUSES = [Requisition.Status.SENT, Requisition.Status.AWAITING_APPROVAL]
 REQUESTABLE = {Status.SHORT, Status.LOW_COVER}
+# Requisition.items is a CharField(200); a longer list is shortened (decision on #68).
+MAX_ITEMS_LENGTH = 200
 # Longest error text stored with an attempt; SAP's own messages are far shorter.
 MAX_ERROR_LENGTH = 2000
 
@@ -142,24 +145,25 @@ def prepare(order_number: str, material: str, today: date | None = None) -> Pref
 def validate_quantity(raw: str) -> Decimal:
     """Read the quantity a planner typed: greater than 0, at most 3 decimals (REQ-5).
 
-    Trailing zeros don't count as decimals ("1.2000" is 1.2). Raises RequisitionRefused
+    Only plain digits with an optional decimal point are accepted (12, 12.5, 0.001): no sign,
+    exponent, underscore, comma or other scripts. Decimals are counted on the text, so nothing
+    is rounded first; trailing zeros don't count ("1.2000" is 1.2). Raises RequisitionRefused
     ("invalid_quantity") with a message for the form.
     """
     text = (raw or "").strip()
     if not text:
         raise RequisitionRefused("invalid_quantity", "Enter a quantity.")
-    try:
-        quantity = Decimal(text)
-    except InvalidOperation:
-        raise RequisitionRefused("invalid_quantity", "Enter a number, for example 12.5.") from None
-    if not quantity.is_finite():
+    if not PLAIN_NUMBER.fullmatch(text):
         raise RequisitionRefused("invalid_quantity", "Enter a number, for example 12.5.")
+    whole, _, fraction = text.partition(".")
+    if len(fraction.rstrip("0")) > 3:
+        raise RequisitionRefused("invalid_quantity", "Use at most 3 decimals.")
+    if len(whole.lstrip("0")) > 12:
+        raise RequisitionRefused("invalid_quantity", "This quantity is too large.")
+    # Exact: at most 12 digits before and 3 after the point, so quantize never rounds.
+    quantity = Decimal(whole + "." + (fraction or "0")).quantize(DECIMALS)
     if quantity <= 0:
         raise RequisitionRefused("invalid_quantity", "Enter a quantity greater than 0.")
-    if quantity > MAX_ENTERED:
-        raise RequisitionRefused("invalid_quantity", "This quantity is too large.")
-    if quantity.normalize().as_tuple().exponent < -3:
-        raise RequisitionRefused("invalid_quantity", "Use at most 3 decimals.")
     return quantity
 
 
@@ -232,7 +236,7 @@ def _insert(
             return Requisition.objects.create(
                 order=order,
                 material=prefill.material,
-                items=", ".join(prefill.items),
+                items=_items_text(prefill.items),
                 quantity_entered=quantity,
                 unit_entered=prefill.unit,
                 quantity_sent=quantity_sent,
@@ -266,6 +270,18 @@ def _resync(plant: str, requisition: Requisition) -> None:
         # SAP problems already come back as a failed SyncState; this is a bug or a database
         # error. The PR is sent and stored, so the planner still sees "PR sent".
         logger.exception("Re-sync of plant %s after %s failed", plant, requisition.reference)
+
+
+def _items_text(items: tuple[str, ...]) -> str:
+    """The item numbers as stored: "0001, 0002", shortened with "… (+n more)" to fit 200."""
+    text = ", ".join(items)
+    if len(text) <= MAX_ITEMS_LENGTH:
+        return text
+    for count in range(len(items) - 1, 0, -1):
+        text = f"{', '.join(items[:count])} … (+{len(items) - count} more)"
+        if len(text) <= MAX_ITEMS_LENGTH:
+            return text
+    return f"… ({len(items)} items)"
 
 
 def _line_amount(line: ComponentResult, buffer_percent: Decimal) -> Decimal:

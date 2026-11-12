@@ -199,14 +199,48 @@ def test_a_unit_mismatch_cannot_be_requested():
 
 
 @pytest.mark.parametrize(
-    ("raw", "expected"), [("30", "30"), (" 12.5 ", "12.5"), ("0.001", "0.001"), ("1.2000", "1.2")]
+    ("raw", "expected"),
+    [
+        ("30", "30"),
+        (" 12.5 ", "12.5"),
+        ("0.001", "0.001"),
+        ("1.2000", "1.2"),
+        ("1." + "0" * 40, "1"),  # trailing zeros don't count, and nothing overflows
+        ("007", "7"),
+        ("999999999999.999", "999999999999.999"),
+    ],
 )
 def test_valid_quantities(raw, expected):
     assert validate_quantity(raw) == Decimal(expected)
 
 
 @pytest.mark.parametrize(
-    "raw", ["", "  ", "0", "-5", "abc", "1.2345", "0.0001", "NaN", "Infinity", "1" * 13]
+    "raw",
+    [
+        "",
+        "  ",
+        "0",
+        "0.000",
+        "-5",
+        "+5",
+        "abc",
+        "1.2345",
+        "0.0001",
+        "NaN",
+        "Infinity",
+        "1" * 13,
+        # Only plain digits (decision on #68): no exponent, underscore, comma or other script.
+        "1e3",
+        "1E-4",
+        "1_000",
+        "1,5",
+        "\u0661\u0662",  # Arabic-Indic 12
+        ".5",
+        "5.",
+        # Review #68: these passed when decimals were counted after rounding.
+        "1.0000000000000000000000000000001",
+        "1e-999999999",
+    ],
 )
 def test_invalid_quantities_are_refused(raw):
     with pytest.raises(RequisitionRefused) as refused:
@@ -250,8 +284,8 @@ def test_create_sends_stores_the_pr_and_resyncs_after_commit(planner, sent_to, r
     [item] = sent_to.payloads[0]["to_PurchaseReqnItem"]
     assert item["RequestedQuantity"] == "30.000"
     assert requisition.payload == sent_to.payloads[0]
-    # R-5: once, and not inside a transaction (the test's own outer block aside).
-    assert resyncs == [("AUC1", resyncs[0][1])]
+    # R-5: once. That it runs outside the transaction is checked in the next test.
+    assert [plant for plant, _ in resyncs] == ["AUC1"]
 
 
 @pytest.mark.django_db(transaction=True)
@@ -381,3 +415,30 @@ def test_refusals_store_and_send_nothing(planner, sent_to, material, quantity, r
     assert refused.value.reason == reason
     assert Requisition.objects.count() == 0
     assert sent_to.payloads == []
+
+
+@pytest.mark.django_db
+def test_combined_lines_store_every_item(planner, sent_to, resyncs):
+    """R-1: the stored requisition lists all lines of the material."""
+    add_order("1000001", START, [("0001", "RM-1", "50", "PC"), ("0002", "RM-1", "5", "PC")])
+    add_stock("RM-1", "40")
+
+    requisition = create(planner, "1000001", "RM-1", "15", TODAY)
+
+    requisition.refresh_from_db()
+    assert requisition.items == "0001, 0002"
+
+
+@pytest.mark.django_db
+def test_a_long_item_list_is_shortened_to_fit(planner, sent_to, resyncs):
+    """Decision on #68: 40 lines of one material still create a requisition."""
+    lines = [(f"{n:04d}", "RM-1", "1", "PC") for n in range(1, 41)]
+    add_order("1000001", START, lines)
+
+    requisition = create(planner, "1000001", "RM-1", "40", TODAY)
+
+    requisition.refresh_from_db()
+    assert len(requisition.items) <= 200
+    assert requisition.items.startswith("0001, 0002, ")
+    assert requisition.items.endswith(" more)")
+    assert requisition.status == Requisition.Status.SENT

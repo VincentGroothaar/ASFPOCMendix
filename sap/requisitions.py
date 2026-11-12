@@ -119,7 +119,8 @@ def _read_answer(response: requests.Response) -> RequisitionResult:
     if not response.ok:
         message = _odata_error_message(body)
         return RequisitionResult(None, message or NOT_ACCEPTED, record)
-    number = body.get("d", {}).get("PurchaseRequisition") if isinstance(body, dict) else None
+    data = body.get("d") if isinstance(body, dict) else None
+    number = data.get("PurchaseRequisition") if isinstance(data, dict) else None
     if not isinstance(number, str) or not number or len(number) > MAX_PR_NUMBER_LENGTH:
         return RequisitionResult(None, NOT_ACCEPTED, record)
     return RequisitionResult(number, "", record)
