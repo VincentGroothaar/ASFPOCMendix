@@ -260,6 +260,17 @@ def test_state_d_without_sap_config_is_a_page_not_an_error(client_as) -> None:
     assert not PlantSnapshot.objects.exists()
 
 
+def test_missing_sap_config_on_an_older_snapshot_shows_the_banner(client_as) -> None:
+    synced(at=NOW - timedelta(minutes=10))
+    make_order("1000101", NOW.date())
+
+    response = client_as("Viewer").get("/orders/")
+
+    assert response.status_code == 200
+    assertContains(response, "SAP could not be reached. Showing data as of 03 Nov 09:50.")
+    assertContains(response, "1000101")
+
+
 def test_state_d_offers_another_plant_only_when_there_is_one(client_as, settings) -> None:
     settings.COCKPIT_PLANTS = ["AUC1"]
 

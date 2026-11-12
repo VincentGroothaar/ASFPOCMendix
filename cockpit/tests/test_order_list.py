@@ -5,11 +5,13 @@ The snapshot rows are written straight into the test database; SAP is not involv
 
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from unittest import mock
 
 import pytest
 from django.contrib.auth.models import User
 
 from cockpit.models import Component, ProductionOrder, Requisition, Stock
+from cockpit.services import order_list
 from cockpit.services.order_list import (
     OrderFilters,
     RequisitionFilter,
@@ -143,16 +145,19 @@ def test_valid_values_are_read() -> None:
         ("page", "0"),
         ("page", "-1"),
         ("page", "two"),
+        ("page", "1.5"),
+        ("page", "²"),  # a digit to isdigit(), not to int() (review M-1 on #73)
+        ("page", "07"),
         ("page", "99999999999999999999999"),
+        ("page", "9" * 5000),  # longer than int() accepts
     ],
 )
 def test_a_bad_value_falls_back_to_its_default(name, value) -> None:
-    parsed = parse_filters({name: value}, PLANTS, TODAY)
+    assert parse_filters({name: value}, PLANTS, TODAY) == default_filters(PLANTS, TODAY)
 
-    if name == "page" and value.isdigit() and int(value) >= 1:
-        assert parsed.page == int(value)  # a huge page is valid; get_page shows the last page
-    else:
-        assert parsed == default_filters(PLANTS, TODAY)
+
+def test_a_large_page_number_is_kept_and_shows_the_last_page_later() -> None:
+    assert parse_filters({"page": "999999999"}, PLANTS, TODAY).page == 999999999
 
 
 def test_from_after_to_is_kept() -> None:
@@ -209,6 +214,22 @@ def test_sorted_by_start_date_then_number() -> None:
     make_order("1000102", day(1))
 
     assert numbers(build_order_list(filters(), TODAY)) == ["1000102", "1000103", "1000101"]
+
+
+@pytest.mark.django_db
+def test_an_order_added_by_a_sync_during_the_build_is_not_listed_half_done() -> None:
+    """Review S-1 on #73: the rows use the same orders as the statuses, read once."""
+    make_order("1000101", day(1))
+    real_calculate = order_list._calculate
+
+    def calculate_while_a_sync_commits(*args, **kwargs):
+        make_order("1000102", day(1))  # committed by another request in the meantime
+        return real_calculate(*args, **kwargs)
+
+    with mock.patch.object(order_list, "_calculate", calculate_while_a_sync_commits):
+        result = build_order_list(filters(), TODAY)
+
+    assert numbers(result) == ["1000101"]
 
 
 # --- Statuses come from the whole plant (INV-6) -------------------------------------------------

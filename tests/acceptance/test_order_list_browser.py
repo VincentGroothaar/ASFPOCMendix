@@ -1,6 +1,7 @@
-"""Browser checks for the order list filters (issue #25, local criteria AC-25-1, AC-25-7).
+"""Browser checks for the order list (issue #25, local criteria AC-25-1 and AC-25-7).
 
-These go beyond the spec.md ACs: they prove the HTMX wiring the design review asked for.
+Not a per-AC file: these go beyond the spec.md ACs and prove the HTMX wiring the design review
+asked for (the name avoids spec.md AC-25, which is "requisition failed").
 - R-B2 / R2-B1: the tile and Requisition filters survive each other and filter-bar changes.
 - R2-I1: Reset to default keeps the list filters.
 - R-B1 / R2-I2: after a plant change the header and Refresh belong to the new plant, also
@@ -67,7 +68,7 @@ def requisition_select(page):
     return page.locator('select[name="requisition"]')
 
 
-def test_ac_25_requisition_select_and_clear(fakes, running_clock, browser_as):
+def test_order_list_requisition_select_and_clear(fakes, running_clock, browser_as):
     orders_with_requisitions(fakes)
     page = browser_as("/orders/", role="Viewer")
 
@@ -84,7 +85,9 @@ def test_ac_25_requisition_select_and_clear(fakes, running_clock, browser_as):
     expect(page.get_by_role("link", name="Clear")).to_have_count(0)
 
 
-def test_ac_25_tile_and_requisition_filters_survive_each_other(fakes, running_clock, browser_as):
+def test_order_list_tile_and_requisition_filters_survive_each_other(
+    fakes, running_clock, browser_as
+):
     orders_with_requisitions(fakes)
     page = browser_as("/orders/", role="Viewer")
 
@@ -116,7 +119,7 @@ def test_ac_25_tile_and_requisition_filters_survive_each_other(fakes, running_cl
     expect(requisition_select(page)).to_have_value("none")
 
 
-def test_ac_25_reset_keeps_the_list_filters(fakes, running_clock, browser_as):
+def test_order_list_reset_keeps_the_list_filters(fakes, running_clock, browser_as):
     orders_with_requisitions(fakes)
     page = browser_as(f"/orders/?from={days(1).isoformat()}&to={days(2).isoformat()}", "Viewer")
 
@@ -131,7 +134,7 @@ def test_ac_25_reset_keeps_the_list_filters(fakes, running_clock, browser_as):
     expect(page.get_by_label("Start date from")).to_have_value(days(0).isoformat())
 
 
-def test_ac_25_open_filter_bar_stays_open_after_a_change(fakes, running_clock, browser_as):
+def test_order_list_open_filter_bar_stays_open_after_a_change(fakes, running_clock, browser_as):
     orders_with_requisitions(fakes)
     page = browser_as("/orders/", role="Viewer")
 
@@ -151,7 +154,7 @@ def two_plants():
         yield
 
 
-def test_ac_25_refresh_follows_a_plant_change(fakes, running_clock, browser_as, two_plants):
+def test_order_list_refresh_follows_a_plant_change(fakes, running_clock, browser_as, two_plants):
     fakes.sap.orders += [
         one_component_order("1000101", days(1), "RM-A", "10"),
         order_in("USC1", "2000101"),
@@ -171,7 +174,9 @@ def test_ac_25_refresh_follows_a_plant_change(fakes, running_clock, browser_as, 
     expect(page.get_by_label("Plant")).to_have_value("USC1")
 
 
-def test_ac_25_back_shows_controls_that_match_the_url(fakes, running_clock, browser_as, two_plants):
+def test_order_list_back_shows_controls_that_match_the_url(
+    fakes, running_clock, browser_as, two_plants
+):
     fakes.sap.orders += [
         one_component_order("1000101", days(1), "RM-A", "10"),
         order_in("USC1", "2000101"),
@@ -188,7 +193,7 @@ def test_ac_25_back_shows_controls_that_match_the_url(fakes, running_clock, brow
     expect(page.get_by_label("Plant")).to_have_value("AUC1")
 
 
-def test_ac_25_from_state_d_a_plant_change_restores_the_header(
+def test_order_list_from_state_d_a_plant_change_restores_the_header(
     fakes, running_clock, browser_as, two_plants
 ):
     fakes.sap.orders.append(order_in("USC1", "2000101"))
@@ -207,13 +212,19 @@ def test_ac_25_from_state_d_a_plant_change_restores_the_header(
     expect(page.get_by_role("button", name="Refresh")).to_be_visible()
 
 
-def test_ac_52_order_list_has_no_horizontal_page_scroll_on_a_phone(
+def test_order_list_tile_tooltips_show_on_hover_and_focus_with_the_buffer(
     fakes, running_clock, browser_as
 ):
+    """AC-20 (tiles) on the Orders page: the ⓘ shows the 5.2 text with the current buffer."""
     orders_with_requisitions(fakes)
     page = browser_as("/orders/", role="Viewer")
-    page.set_viewport_size({"width": 390, "height": 900})
-    page.reload()
+    info = page.get_by_role("button", name="What does Covered mean?")
+    tooltip = page.get_by_text("All components have at least 10% to spare.")  # default buffer
 
-    expect(page.get_by_text("1000101")).to_be_visible()
-    assert page.evaluate("document.documentElement.scrollWidth") <= 390
+    expect(tooltip).to_be_hidden()
+    info.hover()
+    expect(tooltip).to_be_visible()
+    page.mouse.move(0, 0)
+    expect(tooltip).to_be_hidden()
+    info.focus()
+    expect(tooltip).to_be_visible()

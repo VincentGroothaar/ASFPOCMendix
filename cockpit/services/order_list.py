@@ -12,6 +12,7 @@ The rules, in the order they are applied (spec in issue #25, "List rules"):
 6. Sort by start date, then order number, and show 50 per page.
 """
 
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
@@ -19,7 +20,6 @@ from decimal import Decimal
 from enum import StrEnum
 
 from django.core.paginator import Page, Paginator
-from django.db.models import Q
 
 from cockpit.models import ProductionOrder, Requisition, Stock
 from cockpit.services.buffer import current_buffer
@@ -182,7 +182,11 @@ def _parse_choice(value: str, choices: tuple) -> object | None:
 
 
 def _parse_page(value: str) -> int:
-    return int(value) if value.isdigit() and int(value) >= 1 else 1
+    # Only plain ASCII digits, at most 9 of them: `isdigit()` also accepts characters such as
+    # "²" that int() rejects, and int() refuses very long numbers (review M-1 on #73).
+    if re.fullmatch(r"[1-9][0-9]{0,8}", value):
+        return int(value)
+    return 1
 
 
 # --- Statuses and labels ------------------------------------------------------------------------
@@ -194,9 +198,18 @@ def plant_result(plant: str, today: date) -> PlantResult:
     Always over all active orders, whatever the screen shows (INV-6). Reused by the order
     detail (#26) and the dashboard (#30).
     """
-    orders = ProductionOrder.objects.filter(plant=plant, is_active=True).prefetch_related(
-        "components"
+    return _calculate(plant, _active_orders(plant), today)
+
+
+def _active_orders(plant: str) -> list[ProductionOrder]:
+    """All active orders of the plant with their components, read once."""
+    return list(
+        ProductionOrder.objects.filter(plant=plant, is_active=True).prefetch_related("components")
     )
+
+
+def _calculate(plant: str, orders: list[ProductionOrder], today: date) -> PlantResult:
+    """Run the status calculation over exactly these orders and the plant's stock."""
     order_lines = [
         OrderLine(
             number=order.number,
@@ -251,15 +264,16 @@ def order_requisition_labels(order_ids: Iterable[int]) -> dict[int, Requisition.
 
 def build_order_list(filters: OrderFilters, today: date) -> OrderList:
     """Build the tiles and the requested page of the order table for these filters."""
-    result = plant_result(filters.plant, today)
+    # The orders are read once and used for both the statuses and the rows, so a sync that
+    # commits in between can never add a row without a status (review S-1 on #73).
+    orders = _active_orders(filters.plant)
+    result = _calculate(filters.plant, orders, today)
     # Overdue orders are always listed, whatever the range (D-18).
-    overdue = Q(start_date__lt=today)
-    in_range = Q(start_date__gte=filters.start_from, start_date__lte=filters.start_to)
-    in_scope = list(
-        ProductionOrder.objects.filter(plant=filters.plant, is_active=True).filter(
-            overdue | in_range
-        )
-    )
+    in_scope = [
+        order
+        for order in orders
+        if order.start_date < today or filters.start_from <= order.start_date <= filters.start_to
+    ]
     labels = order_requisition_labels(order.id for order in in_scope)
     rows = [_row(order, result, labels.get(order.id), today) for order in in_scope]
 
