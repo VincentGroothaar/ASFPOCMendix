@@ -7,12 +7,8 @@ be made to send an invalid requisition on purpose.
 
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import MIXED_ORDER, load_mixed_order, read_page, sync
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #28")
 
 MESSAGE = "Property 'PurchasingGroup' is required (item 1)."
 

@@ -2,7 +2,8 @@
 {% load ui %}
 {% comment %}
   Order detail (ui-spec 4.2, 5.2; issue #26): components table and the side panel.
-  The Requisition column and the side panel's other states come with #28.
+  The Requisition column and the side panel states are #28: `panel_template` is the state shown (Empty on a
+  plain visit); the panel views render this same page for a request without HTMX.
   Refresh and Try again post to #25's refresh view, which answers `HX-Refresh: true`.
 {% endcomment %}
 
@@ -34,27 +35,14 @@
             <thead>
               <tr><th scope="col">Component</th><th scope="col" class="num">Required</th><th scope="col" class="num">Available</th><th scope="col" class="num">Shortage</th><th scope="col">Status</th><th scope="col">Requisition</th></tr>
             </thead>
-            <tbody>
-              {% for row in order.rows %}
-                <tr>
-                  <td><span class="cell-main">{{ row.material }}</span><span class="cell-sub">{% if row.description %}{{ row.description }} · {% endif %}{{ row.item }}</span></td>
-                  <td class="num">{{ row.open_requirement|quantity:row.unit }}</td>
-                  <td class="num">{% if row.available is None %}<span class="muted">–</span>{% elif row.converted %}{% with original=row.available_in_stock_unit|quantity:row.stock_unit shown=row.available|quantity:row.unit %}{% value_tip shown original|add:" (= "|add:shown|add:")" %}{% endwith %}{% else %}{{ row.available|quantity:row.unit }}{% endif %}</td>
-                  <td class="num">{% if row.shortage is None %}<span class="muted">–</span>{% else %}{{ row.shortage|quantity:row.unit }}{% endif %}</td>
-                  <td>{% if row.status %}<span class="cell-inline">{% status_pill row.status|component_pill %}{% component_status_tip row.status order.buffer_percent row.unit row.stock_unit as tip %}{% info_tooltip row.status|component_label tip %}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
-                  <td>{% requisition_label "none" %}</td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="6" class="muted empty-row">This order has no components.</td></tr>
-              {% endfor %}
-            </tbody>
+            <tbody id="components-body">{% include "cockpit/orders/rows.html" %}</tbody>
           </table>
         </div>
+        {% if not can_create %}<p class="muted table-note">You can view requisitions but not create them.</p>{% endif %}
       </section>
 
       <aside class="card card-body side-panel" id="side-panel" aria-live="polite">
-        <h2>Requisition</h2>
-        <p class="muted">Choose Request on a short or low-cover component, or open an existing requisition.</p>
+        {% include panel_template %}
       </aside>
     </div>
   </div>

@@ -47,7 +47,6 @@ def click_request(page, material: str) -> None:
     row.get_by_role("button", name="Request").click()
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #28")
 @pytest.mark.parametrize("role", ["Planner", "Manager"])
 def test_ac_21_planner_and_manager_see_request_on_short_and_low_cover(
     fakes, clock, client_as, role
@@ -74,7 +73,6 @@ def test_ac_21_failed_requisition_offers_retry_to_planner_only(fakes, clock, cli
     assert not viewer_page.has_button("Retry")
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #28")
 def test_ac_21_viewer_sees_no_request_retry_or_request_again(fakes, clock, client_as):
     load_with_failed_requisition(fakes, client_as)
 
@@ -109,7 +107,6 @@ def test_ac_21_browser_rejected_label_offers_request_again(fakes, running_clock,
     expect(page.get_by_role("button", name="Request again")).to_be_visible()
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #28")
 def test_ac_21_browser_side_panel_review_then_pr_sent(fakes, running_clock, browser_as):
     from playwright.sync_api import expect
 
@@ -126,7 +123,6 @@ def test_ac_21_browser_side_panel_review_then_pr_sent(fakes, running_clock, brow
     expect(page.get_by_text("10000000").first).to_be_visible()
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #28")
 def test_ac_21_browser_side_panel_failed_then_retry(fakes, running_clock, browser_as):
     from playwright.sync_api import expect
 

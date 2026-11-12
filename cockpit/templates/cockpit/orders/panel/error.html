@@ -1,0 +1,4 @@
+{% load ui %}{% comment %}This order and material cannot be requested (400), e.g. the snapshot changed.{% endcomment %}
+<h2>Requisition</h2>
+{% error_note message %}
+<div class="panel-actions">{% include "cockpit/orders/panel/close.html" %}</div>

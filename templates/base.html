@@ -7,13 +7,15 @@
     {% comment %}
       responseHandling: a 403 to an HTMX request replaces the whole page with the 403 page,
       whatever the clicked element's own hx-swap or hx-select say (#22). htmx drops the <body>
-      tag of a full-page response, so the rule selects #page inside it. The three entries
-      after it are htmx 2.0.4's defaults, unchanged.
+      tag of a full-page response, so the rule selects #page inside it. A 400 or 409 is swapped
+      too, with no target of its own, so the clicked element's hx-target applies: the requisition
+      panel shows "not requestable" and "already open" (#28, I-1). Every other 4xx and 5xx stays
+      silent. The three entries after these are htmx 2.0.4's defaults, unchanged.
       historyCacheSize 0 and refreshOnHistoryMiss: Back always loads the full page from the
       server and no page content is kept in localStorage (#25, ARCHITECTURE.md "HTMX on data
       pages"). htmx reads only the first htmx-config tag, so all settings live in this one.
     {% endcomment %}
-    <meta name="htmx-config" content='{"historyCacheSize": 0, "refreshOnHistoryMiss": true, "responseHandling": [{"code": "403", "swap": true, "target": "body", "swapOverride": "innerHTML", "select": "#page"}, {"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": false, "error": true}]}'>
+    <meta name="htmx-config" content='{"historyCacheSize": 0, "refreshOnHistoryMiss": true, "responseHandling": [{"code": "403", "swap": true, "target": "body", "swapOverride": "innerHTML", "select": "#page"}, {"code": "40[09]", "swap": true}, {"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": false, "error": true}]}'>
     <link rel="stylesheet" href="{% static 'cockpit/tokens.css' %}">
     <link rel="stylesheet" href="{% static 'cockpit/app.css' %}">
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>

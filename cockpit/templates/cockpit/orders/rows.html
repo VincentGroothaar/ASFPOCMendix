@@ -1,0 +1,16 @@
+{% load ui %}{% comment %}
+  The component rows of the order detail page (ui-spec 4.2; #26, #28). Used by the page and, wrapped in a
+  <template>, as the out-of-band swap of every panel response (#28, B-1). A row whose material the panel shows
+  is highlighted; the Requisition cell is a Request button, the label of the latest requisition, or a dash.
+{% endcomment %}{% url 'cockpit:requisition_create' order.number as create_url %}{% for item in table_rows %}{% with row=item.row cell=item.cell %}
+<tr id="row-{{ row.item }}"{% if item.selected %} class="is-selected" aria-current="true"{% endif %}>
+  <td><span class="cell-main">{{ row.material }}</span><span class="cell-sub">{% if row.description %}{{ row.description }} · {% endif %}{{ row.item }}</span></td>
+  <td class="num">{{ row.open_requirement|quantity:row.unit }}</td>
+  <td class="num">{% if row.available is None %}<span class="muted">–</span>{% elif row.converted %}{% with original=row.available_in_stock_unit|quantity:row.stock_unit shown=row.available|quantity:row.unit %}{% value_tip shown original|add:" (= "|add:shown|add:")" %}{% endwith %}{% else %}{{ row.available|quantity:row.unit }}{% endif %}</td>
+  <td class="num">{% if row.shortage is None %}<span class="muted">–</span>{% else %}{{ row.shortage|quantity:row.unit }}{% endif %}</td>
+  <td>{% if row.status %}<span class="cell-inline">{% status_pill row.status|component_pill %}{% component_status_tip row.status order.buffer_percent row.unit row.stock_unit as tip %}{% info_tooltip row.status|component_label tip %}</span>{% else %}<span class="muted">–</span>{% endif %}</td>
+  <td>{% if cell.kind == "label" %}{% url 'cockpit:requisition_panel' order.number cell.requisition.pk as panel_url %}{% requisition_label cell.requisition.status panel_url %}{% elif cell.kind == "request" %}<form method="get" action="{{ create_url }}" class="inline-form"><input type="hidden" name="material" value="{{ row.material }}"><button type="submit" class="btn btn-primary btn-compact" hx-get="{{ create_url }}?material={{ row.material|urlencode }}" hx-target="#side-panel">Request</button></form>{% else %}{% requisition_label "none" %}{% endif %}</td>
+</tr>
+{% endwith %}{% empty %}
+<tr><td colspan="6" class="muted empty-row">This order has no components.</td></tr>
+{% endfor %}

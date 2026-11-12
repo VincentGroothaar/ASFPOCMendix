@@ -1,0 +1,28 @@
+{% load ui %}{% comment %}Review state (ui-spec 4.2, D-32): the summary strip, the Quantity field and Cancel / Send.{% endcomment %}
+{% url 'cockpit:requisition_create' prefill.order as create_url %}{% url 'cockpit:requisition_preview' prefill.order as preview_url %}{% url 'cockpit:requisition_panel_empty' prefill.order as empty_url %}
+<div class="panel-heading"><span class="panel-icon">{% icon "file" %}</span><div><h2>Review requisition</h2><p class="muted">{{ prefill.material }}{% if prefill.description %} · {{ prefill.description }}{% endif %}</p></div></div>
+{% if refusal %}{% error_note refusal %}{% endif %}
+<dl class="summary-strip">
+  <div class="summary-item"><dt>Shortage</dt><dd>{{ prefill.shortage|quantity:prefill.unit }}</dd></div>
+  <div class="summary-item"><dt>{% if prefill.low_cover %}To {{ cover_percent }}% cover{% else %}Requested{% endif %}</dt><dd>{{ prefill.quantity|quantity:prefill.unit }}</dd></div>
+  <div class="summary-item"><dt>Sent to SAP</dt><dd id="sent-to-sap">{% include "cockpit/orders/panel/sent_to_sap.html" %}</dd></div>
+</dl>
+<form id="requisition-form" class="panel-form" method="post" action="{{ create_url }}?material={{ prefill.material|urlencode }}"
+      hx-post="{{ create_url }}?material={{ prefill.material|urlencode }}" hx-target="#side-panel" novalidate>
+  {% csrf_token %}
+  <label class="field">Quantity (order unit {{ prefill.unit }})
+    <input type="text" name="quantity" inputmode="decimal" autocomplete="off" required value="{{ quantity_value }}"{% if error %} aria-invalid="true"{% endif %}
+           hx-get="{{ preview_url }}?material={{ prefill.material|urlencode }}" hx-trigger="input changed delay:300ms" hx-target="#sent-to-sap">
+    {% if error %}<span class="form-field-error">{{ error }}</span>{% endif %}
+  </label>
+  <dl class="kv">
+    <dt>Delivery date</dt><dd>{{ prefill.delivery_date|date_long }}</dd>
+    <dt>Plant</dt><dd>{{ prefill.plant }}</dd>
+  </dl>
+  <div class="panel-actions">
+    <button type="submit" class="btn btn-secondary" form="cancel-form">Cancel</button>
+    <button type="submit" class="btn btn-primary">Send requisition</button>
+  </div>
+</form>
+{# Cancel is a button of this sibling form, not a form inside the Review form (nested forms are invalid HTML). #}
+<form id="cancel-form" method="get" action="{{ empty_url }}" hx-get="{{ empty_url }}" hx-target="#side-panel"></form>
