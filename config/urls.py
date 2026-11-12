@@ -16,3 +16,6 @@ urlpatterns = [
 
 # Every refused page or action renders the cockpit 403 page (ui-spec 4.7 E).
 handler403 = "cockpit.views.permission_denied"
+
+# Every unknown page or record renders the cockpit 404 page; logged-out users go to login (#26).
+handler404 = "cockpit.views.page_not_found"

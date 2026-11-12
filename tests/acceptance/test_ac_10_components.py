@@ -7,8 +7,6 @@ The sandbox has no withdrawn quantities in AUC1, so the second test uses constru
 
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance.support import (
     PLANT,
     Component,
@@ -21,8 +19,6 @@ from tests.acceptance.support import (
     shows_quantity,
     sync,
 )
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #26")
 
 
 def test_ac_10_components_match_sap_on_one_live_order(live_sap, client_as):

@@ -1,5 +1,5 @@
 {% load ui %}<div class="page-title">
-  <div class="page-title-line"><h1>{{ title }}</h1>{% if pill_status %}{% status_pill pill_status %}{% endif %}</div>
-  {% if subline %}<p class="page-subline">{{ subline }}</p>{% endif %}
+  <div class="page-title-line"><h1>{{ title }}</h1>{% if pill_status %}{% status_pill pill_status %}{% endif %}{% if unit_mismatch %}<span class="info-wrap"><span class="mismatch-icon mismatch-tip" tabindex="0" role="img" aria-label="{{ mismatch_text }}" aria-describedby="{{ tip_id }}">{% icon "alert-triangle" %}</span><span class="tooltip" id="{{ tip_id }}" role="tooltip">{{ mismatch_text }}</span></span>{% endif %}</div>
+  {% if subline or overdue %}<p class="page-subline">{{ subline }}{% if overdue %} {% status_pill "overdue" %}{% endif %}</p>{% endif %}
 </div>
 {% if data_screen or data_as_of or refresh_url %}{% page_data data_as_of refresh_url %}{% endif %}
