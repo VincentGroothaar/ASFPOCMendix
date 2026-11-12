@@ -620,16 +620,25 @@ def read_live_sap(path: str, params: dict[str, str]) -> list[dict]:
     """GET one entity set from the live sandbox, the way spec.md "SAP reads" describes it.
 
     Used by the tests to know what SAP holds, independent of the app. Only ever a GET.
+    When the sandbox itself is down (HTTP 5xx, no connection, timeout) the test is skipped with
+    the reason in the log; a 4xx still fails (issue #75).
     """
     import os
 
+    import pytest
+
     base_url = os.environ.get("SAP_BASE_URL") or "https://sandbox.api.sap.com"
-    response = requests.get(
-        f"{base_url}/s4hanacloud/sap/opu/odata/sap/{path}",
-        params={**params, "$format": "json"},
-        headers={"APIKey": os.environ["SAP_API_KEY"], "Accept": "application/json"},
-        timeout=30,
-    )
+    try:
+        response = requests.get(
+            f"{base_url}/s4hanacloud/sap/opu/odata/sap/{path}",
+            params={**params, "$format": "json"},
+            headers={"APIKey": os.environ["SAP_API_KEY"], "Accept": "application/json"},
+            timeout=30,
+        )
+    except (requests.ConnectionError, requests.Timeout) as error:
+        pytest.skip(f"SAP sandbox unavailable (outside outage): {type(error).__name__}")
+    if response.status_code >= 500:
+        pytest.skip(f"SAP sandbox unavailable (outside outage): HTTP {response.status_code}")
     response.raise_for_status()
     return response.json()["d"]["results"]
 
