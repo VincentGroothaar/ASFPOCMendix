@@ -82,7 +82,7 @@ The app runs as its own Render web service next to the mock (see `mock_pr/README
    | `DJANGO_DEBUG` | `false` |
    | `DJANGO_ALLOWED_HOSTS` | Optional: Render's own host name (`<service>.onrender.com`) is added automatically. Only for extra host names, without `https://` |
    | `SAP_BASE_URL`, `SAP_API_KEY` | As in your local `.env` |
-   | `MOCK_PR_BASE_URL` | The mock's public URL on Render, e.g. `https://<mock-service>.onrender.com` |
+   | `MOCK_PR_BASE_URL` | The mock's public URL on Render, host only, e.g. `https://<mock-service>.onrender.com`, without `/sap/opu/...`. A URL that ends in the service path also works (#83) |
    | `MOCK_API_KEY` | The same key as on the mock service |
    | `TEST_PASSWORD_VIEWER`, `TEST_PASSWORD_PLANNER`, `TEST_PASSWORD_MANAGER_A`, `TEST_PASSWORD_MANAGER_B`, `TEST_PASSWORD_ADMIN` | One strong password per PoC account. The service does not start if one is missing or too weak |
 
