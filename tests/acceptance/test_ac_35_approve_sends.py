@@ -16,6 +16,10 @@ from tests.acceptance.support import (
 )
 
 
+@pytest.mark.skip(
+    reason="Passes without approval before #32 (every requisition is sent at create, #27); "
+    "un-skip in #32/#33"
+)
 def test_ac_35_approval_sends_to_the_local_mock(fakes, clock, client_as, live_mock):
     above_limit_plant(fakes.sap)
     sync()
