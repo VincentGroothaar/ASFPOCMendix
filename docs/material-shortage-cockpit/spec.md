@@ -57,7 +57,7 @@ The flow and the system boundaries follow [ARCHITECTURE.md](../../ARCHITECTURE.m
 
 | URL | Who | What |
 |---|---|---|
-| `/` | everyone logged in | Business roles: redirects to `/orders/` (a placeholder start page until #25). Admin: redirects to `/admin/` |
+| `/` | everyone logged in | Business roles: redirects to `/orders/`. Admin: redirects to `/admin/` |
 | `/orders/?plant=&from=&to=&page=` | Viewer, Planner, Manager | Order list (REQ-1). Plant selector from `COCKPIT_PLANTS`; defaults today → +14 days; 50 per page; overdue orders listed first with a badge |
 | `POST /plants/<plant>/refresh/` | Viewer, Planner, Manager | Full sync, then reloads the list (HTMX) |
 | `/orders/<number>/` | Viewer, Planner, Manager | Components, stock and statuses (REQ-2 to REQ-4); Request button or requisition label (PR sent, Awaiting approval, PR failed, Rejected) per material |
