@@ -9,6 +9,7 @@ app_name = "cockpit"
 urlpatterns = [
     path("", views.home, name="home"),
     path("orders/", views.order_list, name="order_list"),
+    path("dashboard/", views.dashboard, name="dashboard"),
     path("plants/<str:plant>/refresh/", views.refresh_plant, name="refresh_plant"),
     path(
         "orders/<str:number>/requisitions/",

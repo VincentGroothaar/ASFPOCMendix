@@ -5,8 +5,6 @@ Constructed snapshot."""
 import re
 from decimal import Decimal
 
-import pytest
-
 from tests.acceptance.support import (
     Component,
     Order,
@@ -19,22 +17,16 @@ from tests.acceptance.support import (
     sync,
 )
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #30")
-
 
 def load_plant(sap) -> None:
     sap.orders += [
         one_component_order("1000101", days(1), "RM-SHORT", "100"),  # Short by 30
         one_component_order("1000102", days(2), "RM-SHORT", "20"),  # Short by 20
         one_component_order("1000103", days(3), "RM-LOW", "100"),  # Low cover
-        Order(
-            "1000104",
-            days(4),
-            [
-                Component("RM-COVER", Decimal("100"), item="0001"),
-                Component("RM-KG", Decimal("5"), unit="PC", item="0002"),  # unit mismatch
-            ],
-        ),
+        one_component_order("1000105", days(5), "RM-COVER", "100"),  # Covered
+        # Only a unit mismatch line: counted under Unit mismatch, not under Covered (one slice
+        # per order, decision A on #30).
+        Order("1000104", days(4), [Component("RM-KG", Decimal("5"), unit="PC", item="0001")]),
     ]
     sap.stock += [
         Stock("RM-SHORT", Decimal("70")),

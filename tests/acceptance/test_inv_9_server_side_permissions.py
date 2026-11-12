@@ -20,7 +20,7 @@ NOT_BUILT_34 = pytest.mark.xfail(strict=True, reason="Not built yet: #34")
     [
         "/",  # built in #22
         "/orders/",  # built in #25
-        pytest.param("/dashboard/", marks=NOT_BUILT_34),
+        "/dashboard/",  # built in #30
         "/requisitions/",
         pytest.param("/settings/", marks=NOT_BUILT_34),
     ],
