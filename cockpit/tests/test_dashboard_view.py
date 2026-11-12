@@ -5,7 +5,6 @@ Like test_orders_view.py, the snapshot is written into the test database with a 
 """
 
 from datetime import timedelta
-from pathlib import Path
 from urllib.parse import quote
 
 import pytest
@@ -219,6 +218,9 @@ def test_refresh_returns_to_the_dashboard_without_htmx(client_as) -> None:
         "/admin/",
         "/requisitions/",
         "javascript:1",
+        " /orders/",
+        "\t/orders/",
+        "/orders/?" + "a" * 3000,
     ],
 )
 def test_refresh_ignores_any_other_next_target(client_as, target) -> None:
@@ -233,9 +235,3 @@ def test_the_dashboard_refresh_button_remembers_the_page(client_as) -> None:
     response = client_as("Viewer").get("/dashboard/?plant=AUC1")
 
     assertContains(response, 'hx-post="/plants/AUC1/refresh/?next=%2Fdashboard%2F%3Fplant%3DAUC1"')
-
-
-def test_orders_page_script_reads_filters_open() -> None:
-    script = Path("static/cockpit/orders.js").read_text(encoding="utf-8")
-
-    assert 'get("filters") === "open"' in script

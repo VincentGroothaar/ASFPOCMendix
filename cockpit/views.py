@@ -414,11 +414,14 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
 
 REFRESH_RETURN_PATHS = ("/orders/", "/dashboard/")
+MAX_NEXT_LENGTH = 2000
 
 
 def _safe_next(request: HttpRequest) -> str | None:
     """The page to return to after a Refresh without HTMX: only Orders or the dashboard."""
     target = request.POST.get("next") or request.GET.get("next") or ""
+    if len(target) > MAX_NEXT_LENGTH or not target.startswith("/"):
+        return None
     parsed = urlsplit(target)
     if parsed.scheme or parsed.netloc or parsed.path not in REFRESH_RETURN_PATHS:
         return None

@@ -4,6 +4,7 @@ Builds a constructed snapshot, opens the dashboard as a Viewer at desktop and ph
 checks for console errors and keyboard use, and saves screenshots under test-results/ui/.
 """
 
+import re
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -116,3 +117,28 @@ def test_dashboard_in_the_browser(transactional_db, live_server: LiveServer, pag
     page.screenshot(path=str(SCREENSHOTS / "03-dashboard-mobile.png"), full_page=True)
 
     assert errors == []
+
+
+def test_orders_page_script_opens_filters_and_updates_the_sidebar(
+    transactional_db, live_server: LiveServer, page: Page
+) -> None:
+    """`?filters=open` opens the filter bar and focuses Plant; a filter change updates the
+    sidebar links to Orders and Dashboard (issue #30, rule 7, AC-28i)."""
+    build_snapshot()
+    viewer = User.objects.create_user("viewer.a", password=PASSWORD)
+    viewer.groups.add(Group.objects.get_or_create(name="Viewer")[0])
+    page.set_default_timeout(5_000)
+    page.set_viewport_size({"width": 1440, "height": 1000})
+    page.goto(live_server.url + "/orders/?plant=AUC1&filters=open")
+    page.get_by_label("Username").fill("viewer.a")
+    page.get_by_label("Password").fill(PASSWORD)
+    page.get_by_role("button", name="Log in").click()
+
+    expect(page.locator("#filter-fields")).to_be_visible()
+    expect(page.locator("#filter-plant")).to_be_focused()
+
+    page.locator("input[name=from]").fill("2026-01-01")
+    page.locator("input[name=from]").dispatch_event("change")
+    link = page.get_by_role("link", name="Dashboard", exact=True)
+    expect(link).to_have_attribute("href", re.compile(r"from=2026-01-01"))
+    expect(link).to_have_attribute("href", re.compile(r"plant=AUC1"))
