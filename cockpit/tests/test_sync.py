@@ -193,7 +193,7 @@ def make_requisition(order: ProductionOrder) -> Requisition:
 def test_s1_first_sync_stores_orders_components_and_stock(sap, client, clock) -> None:
     state = sync_plant(PLANT, client)
 
-    assert state == SyncState(plant=PLANT, synced_at=NOW, failed=False, error="")
+    assert state == SyncState(plant=PLANT, synced_at=NOW, failed=False, failed_at=None, error="")
     order = ProductionOrder.objects.get(number="1000101")
     assert (order.plant, order.material, order.description) == (PLANT, "FG-1", "Bike")
     assert (order.quantity, order.unit, order.start_date) == (
@@ -218,7 +218,9 @@ def test_s1_first_sync_stores_orders_components_and_stock(sap, client, clock) ->
 
 @pytest.mark.django_db
 def test_s1_ensure_fresh_syncs_a_plant_that_was_never_synced(sap, client, clock) -> None:
-    assert sync_state(PLANT) == SyncState(plant=PLANT, synced_at=None, failed=False, error="")
+    assert sync_state(PLANT) == SyncState(
+        plant=PLANT, synced_at=None, failed=False, failed_at=None, error=""
+    )
 
     state = ensure_fresh(PLANT, client)
 
@@ -353,7 +355,11 @@ def test_s6_failure_after_a_success_keeps_the_snapshot_and_commits_the_error(
     state = ensure_fresh(PLANT, client)
 
     assert state == SyncState(
-        plant=PLANT, synced_at=NOW, failed=True, error="SAP answered with HTTP 500."
+        plant=PLANT,
+        synced_at=NOW,
+        failed=True,
+        failed_at=NOW + timedelta(minutes=6),
+        error="SAP answered with HTTP 500.",
     )
     after = in_new_connection(stored_snapshot)
     assert {**after, "error": "", "error_at": None} == before
@@ -368,7 +374,7 @@ def test_s7_first_ever_failure_stores_no_data_and_commits_the_error(sap, client,
     state = ensure_fresh(PLANT, client)
 
     assert state == SyncState(
-        plant=PLANT, synced_at=None, failed=True, error="SAP answered with HTTP 500."
+        plant=PLANT, synced_at=None, failed=True, failed_at=NOW, error="SAP answered with HTTP 500."
     )
     after = in_new_connection(stored_snapshot)
     assert after["orders"] == [] and after["lines"] == 0 and after["stock"] == []
@@ -514,7 +520,7 @@ def test_s10_success_after_a_failure_clears_the_error(sap, client, clock) -> Non
     state = sync_plant(PLANT, client)
 
     assert state == SyncState(
-        plant=PLANT, synced_at=NOW + timedelta(minutes=1), failed=False, error=""
+        plant=PLANT, synced_at=NOW + timedelta(minutes=1), failed=False, failed_at=None, error=""
     )
     row = PlantSnapshot.objects.get(plant=PLANT)
     assert row.last_sync_error == "" and row.last_sync_error_at is None
@@ -648,5 +654,105 @@ def test_s16_after_a_failed_refresh_a_fresh_load_shows_the_failure_without_calli
 
     assert sap.order_calls() == calls
     assert state == SyncState(
-        plant=PLANT, synced_at=NOW, failed=True, error="SAP answered with HTTP 500."
+        plant=PLANT,
+        synced_at=NOW,
+        failed=True,
+        failed_at=NOW + timedelta(minutes=1),
+        error="SAP answered with HTTP 500.",
     )
+
+
+# --- Issue #69: failure time and missing SAP configuration -----------------------------------
+
+NOT_CONFIGURED = "The SAP connection is not configured."
+
+
+@pytest.mark.django_db
+def test_69_s1_failed_at_is_the_stored_failure_time_and_none_after_success(
+    sap, client, clock
+) -> None:
+    sap.fail_everything()
+    failed = sync_plant(PLANT, client)
+    assert failed.failed_at == NOW == PlantSnapshot.objects.get(plant=PLANT).last_sync_error_at
+
+    sap.failing_sets = set()
+    clock.move_to(NOW + timedelta(minutes=1))
+    assert sync_plant(PLANT, client).failed_at is None
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("missing", ["SAP_BASE_URL", "SAP_API_KEY"])
+def test_69_s2_s3_missing_config_on_a_never_synced_plant_fails_and_stores_nothing(
+    settings, clock, missing
+) -> None:
+    settings.SAP_BASE_URL = "https://sap.test"
+    settings.SAP_API_KEY = "key"
+    setattr(settings, missing, "")
+
+    for sync_function in (sync_plant, ensure_fresh):
+        state = sync_function(PLANT)
+
+        assert state == SyncState(
+            plant=PLANT, synced_at=None, failed=True, failed_at=NOW, error=NOT_CONFIGURED
+        )
+        assert not PlantSnapshot.objects.filter(plant=PLANT).exists()
+
+
+@pytest.mark.django_db
+def test_69_s2_s3_missing_config_on_a_stale_snapshot_keeps_the_stored_row(
+    sap, client, clock, settings
+) -> None:
+    sync_plant(PLANT, client)
+    before = PlantSnapshot.objects.values().get(plant=PLANT)
+    settings.SAP_API_KEY = ""
+    clock.move_to(NOW + timedelta(minutes=6))
+
+    refreshed = sync_plant(PLANT)
+    loaded = ensure_fresh(PLANT)
+
+    expected = SyncState(
+        plant=PLANT,
+        synced_at=NOW,
+        failed=True,
+        failed_at=NOW + timedelta(minutes=6),
+        error=NOT_CONFIGURED,
+    )
+    assert refreshed == loaded == expected
+    assert PlantSnapshot.objects.values().get(plant=PLANT) == before
+
+
+@pytest.mark.django_db
+def test_69_missing_config_on_a_fresh_snapshot_does_not_build_a_client(
+    sap, client, clock, settings
+) -> None:
+    sync_plant(PLANT, client)
+    settings.SAP_API_KEY = ""
+    clock.move_to(NOW + timedelta(minutes=4))
+
+    assert ensure_fresh(PLANT) == SyncState(
+        plant=PLANT, synced_at=NOW, failed=False, failed_at=None, error=""
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_69_s3_missing_config_rolls_back_the_first_open_row_for_other_connections(
+    clock, settings
+) -> None:
+    settings.SAP_API_KEY = ""
+
+    ensure_fresh(PLANT)
+
+    assert in_new_connection(lambda: PlantSnapshot.objects.filter(plant=PLANT).count()) == 0
+
+
+@pytest.mark.django_db
+def test_69_missing_config_logs_one_failed_line(clock, settings, caplog) -> None:
+    caplog.set_level(logging.INFO, logger="cockpit.sync")
+    settings.SAP_API_KEY = ""
+
+    sync_plant(PLANT)
+
+    lines = [record.getMessage() for record in caplog.records if record.name == "cockpit.sync"]
+    assert len(lines) == 1
+    assert lines[0].startswith("sync plant=AUC1 result=failed sap_calls=0 ")
+    assert lines[0].endswith(f"error={NOT_CONFIGURED}")
