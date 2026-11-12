@@ -128,9 +128,22 @@ def order_detail(number: str, today: date) -> OrderDetail | None:
         )
 
     result = plant_result(order.plant, today)
-    calculated = result.orders[order.number]
+    calculated = result.orders.get(order.number)
+    if calculated is None:
+        # A sync from another request made the order inactive between the two reads.
+        return _detail(
+            order,
+            status=None,
+            overdue=False,
+            unit_mismatch=False,
+            buffer_percent=result.buffer_percent,
+            rows=tuple(_unchecked_row(line) for line in components),
+        )
+    # `.get`: a sync between the two reads may have added a line.
     descriptions = {line.item: line.description for line in components}
-    rows = tuple(_checked_row(line, descriptions[line.item]) for line in calculated.components)
+    rows = tuple(
+        _checked_row(line, descriptions.get(line.item, "")) for line in calculated.components
+    )
     return _detail(
         order,
         status=calculated.status,
