@@ -86,17 +86,22 @@ def test_htmx_login_redirect_never_points_elsewhere(db, current_url) -> None:
 
 
 @pytest.mark.parametrize("role", list(Role))
-def test_each_role_reaches_only_what_its_role_allows(client_as, role) -> None:
+def test_each_role_reaches_only_what_its_role_allows(client_as, role, settings) -> None:
+    # No SAP connection: a data page then shows its "no data yet" state and never calls the
+    # live sandbox from a unit test (#69, R-I3 on #25).
+    settings.SAP_BASE_URL = ""
     client = client_as(role.value)
 
     for route, view in cockpit_views():
         if "<" in route:
             continue  # URLs with arguments get their own tests in the issue that adds them
         response = client.get("/" + route)
-        if view.required_action in ROLE_ACTIONS[role]:
-            assert response.status_code == 200, route
-        elif role is Role.ADMIN and route == "":
+        if route == "" and role is Role.ADMIN:
             assert response["Location"] == "/admin/"
+        elif route == "" and view.required_action in ROLE_ACTIONS[role]:
+            assert response["Location"] == "/orders/"  # the start page is the order list (#25)
+        elif view.required_action in ROLE_ACTIONS[role]:
+            assert response.status_code == 200, route
         else:
             assert response.status_code == 403, route
 

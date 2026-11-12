@@ -20,8 +20,13 @@ def test_login_page_shows_the_form_and_note(db) -> None:
     assertContains(response, "Accounts and roles: Admin in Django admin.")
 
 
-@pytest.mark.parametrize(("role", "landing"), [("Planner", "/"), ("Admin", "/admin/")])
-def test_after_login_each_role_lands_on_its_start_page(make_user, role, landing) -> None:
+@pytest.mark.parametrize(
+    ("role", "landing"), [("Planner", ["/", "/orders/"]), ("Admin", ["/", "/admin/"])]
+)
+def test_after_login_each_role_lands_on_its_start_page(make_user, settings, role, landing) -> None:
+    # Business roles land on `/`, which shows the order list (#25). No SAP connection, so the
+    # order list shows its "no data yet" state instead of calling the live sandbox.
+    settings.SAP_BASE_URL = ""
     make_user(role, username="person")
     client = Client()
 
@@ -29,7 +34,7 @@ def test_after_login_each_role_lands_on_its_start_page(make_user, role, landing)
         "/accounts/login/", {"username": "person", "password": PASSWORD}, follow=True
     )
 
-    assert response.redirect_chain[-1][0] == landing
+    assert [url for url, _ in response.redirect_chain] == landing
     assert response.status_code == 200
 
 
@@ -65,7 +70,7 @@ def test_logout_by_get_does_not_log_out(client_as) -> None:
     client = client_as("Planner")
 
     assert client.get("/accounts/logout/").status_code == 405
-    assert client.get("/").status_code == 200
+    assert client.get("/")["Location"] == "/orders/"  # still logged in: not sent to login
 
 
 def test_an_empty_field_shows_django_standard_field_error(db) -> None:

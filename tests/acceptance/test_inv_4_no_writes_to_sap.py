@@ -6,8 +6,6 @@ import inspect
 from decimal import Decimal
 from urllib.parse import urlparse
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import MIXED_ORDER, MOCK_URL, SAP_URL, load_mixed_order
 
@@ -26,7 +24,6 @@ def test_inv_4_sap_read_client_exposes_only_reads():
         assert not any(w in name.lower() for w in ("post", "put", "patch", "delete", "merge"))
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #25 (/orders/ and Refresh)")
 def test_inv_4_full_flow_sends_only_gets_to_sap(fakes, clock, client_as):
     load_mixed_order(fakes.sap)
     for stock in fakes.sap.stock:

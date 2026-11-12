@@ -182,12 +182,16 @@ def page_header(
     subline: str | None = None,
     data_as_of: datetime | None = None,
     refresh_url: str | None = None,
+    data_screen: bool = False,
 ) -> dict:
     """The page title, an optional status pill and sub-line, and on data screens
     `Data as of` plus a Refresh button (ui-spec 2.1).
 
     Refresh posts to `refresh_url` and swaps nothing; the refresh view answers with
     `HX-Refresh: true`, so the page reloads with its filters (#24, #25).
+
+    With `data_screen=True` the `#page-data` block is always rendered, also when it is empty
+    (state D), so an HTMX response can always replace it out-of-band (#25, R2-I2).
     """
     if pill_status is not None:
         _check(pill_status, STATUS_PILLS, "status")
@@ -197,7 +201,20 @@ def page_header(
         "subline": subline,
         "data_as_of": data_as_of,
         "refresh_url": refresh_url,
+        "data_screen": data_screen,
     }
+
+
+@register.inclusion_tag("components/page_data.html")
+def page_data(
+    data_as_of: datetime | None = None, refresh_url: str | None = None, oob: bool = False
+) -> dict:
+    """The `#page-data` block of the page header: `Data as of` and Refresh (ui-spec 2.1).
+
+    With `oob=True` it is marked for an HTMX out-of-band swap, so a filter change can update
+    it for the plant now shown (#25, R-B1). Refresh shows the `.sync-indicator` while it runs.
+    """
+    return {"data_as_of": data_as_of, "refresh_url": refresh_url, "oob": oob}
 
 
 @register.inclusion_tag("components/breadcrumb.html")
@@ -241,10 +258,12 @@ def banner(
     action_label: str | None = None,
     action_url: str | None = None,
     action_method: str = "get",
+    indicator: str | None = None,
 ) -> dict:
     """A full-width "needs attention" banner with an optional action (ui-spec 3.12).
 
     With action_method "post" the action is an HTMX POST button (e.g. Try again).
+    `indicator` is a CSS selector of the loading indicator to show while it runs (#25).
     """
     _check(action_method, {"get", "post"}, "banner action method")
     return {
@@ -252,6 +271,7 @@ def banner(
         "action_label": action_label,
         "action_url": action_url,
         "action_method": action_method,
+        "indicator": indicator,
     }
 
 

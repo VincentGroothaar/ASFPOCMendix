@@ -17,12 +17,13 @@ from cockpit.views import csrf_failure
         ("Manager", ["Orders", "Dashboard", "Requisitions", "Thresholds"]),
     ],
 )
-def test_start_page_shows_the_frame_for_each_role(make_user, role, items) -> None:
+def test_start_page_shows_the_frame_for_each_role(make_user, settings, role, items) -> None:
+    settings.SAP_BASE_URL = ""  # the order list shows "no data yet"; no live SAP call
     user = make_user(role, username=f"{role.lower()}.a")
     client = Client()
     client.force_login(user)
 
-    response = client.get("/")
+    response = client.get("/", follow=True)
 
     assertContains(response, '<nav class="sidebar" aria-label="Main">')
     for label in items:

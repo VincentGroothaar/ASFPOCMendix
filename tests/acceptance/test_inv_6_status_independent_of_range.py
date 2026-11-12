@@ -1,12 +1,8 @@
 """INV-6: a status depends only on the plant's data and settings, never on the date filter.
 Every order shown in a narrow range has the same status as in the wide range."""
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import PLANT, Stock, days, one_component_order, read_page
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 STATUSES = (builders.SHORT, builders.LOW_COVER, builders.COVERED)
 

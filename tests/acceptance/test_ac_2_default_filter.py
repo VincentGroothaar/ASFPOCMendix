@@ -1,12 +1,8 @@
 """AC-2 (REQ-1): without parameters, the range is today to today + 14 days and the plant is the
 first in COCKPIT_PLANTS. Checked with a fixed clock (today = 3 Nov 2026)."""
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import Order, days, read_page
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 
 def test_ac_2_default_range_is_today_to_today_plus_14(fakes, clock, client_as):

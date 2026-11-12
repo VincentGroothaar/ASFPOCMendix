@@ -2,7 +2,4 @@
   <div class="page-title-line"><h1>{{ title }}</h1>{% if pill_status %}{% status_pill pill_status %}{% endif %}</div>
   {% if subline %}<p class="page-subline">{{ subline }}</p>{% endif %}
 </div>
-{% if data_as_of or refresh_url %}<div class="page-data">
-  {% if data_as_of %}<span class="muted">Data as of {{ data_as_of|datetime_short }}</span>{% endif %}
-  {% if refresh_url %}<button type="button" class="btn btn-secondary" hx-post="{{ refresh_url }}" hx-swap="none" hx-disabled-elt="this">{% icon "refresh" 16 %}Refresh</button>{% endif %}
-</div>{% endif %}
+{% if data_screen or data_as_of or refresh_url %}{% page_data data_as_of refresh_url %}{% endif %}
