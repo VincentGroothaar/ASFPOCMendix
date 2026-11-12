@@ -1,0 +1,8 @@
+{% load ui %}{% comment %}Any other status (Awaiting approval, Rejected): #32 and #33 give these their own states.{% endcomment %}
+<div class="panel-heading"><div><h2>{{ requisition.reference }}</h2><p class="muted">{{ requisition.material }}</p></div>{% status_pill requisition.status %}</div>
+<dl class="kv">
+  <dt>Quantity</dt><dd>{{ requisition.quantity_entered|quantity:requisition.unit_entered }}</dd>
+  <dt>Requested by</dt><dd>{{ requisition.created_by.get_username }} · {{ requisition.created_at|datetime_short }}</dd>
+</dl>
+<p><a href="{% url 'cockpit:requisition_detail' requisition.pk %}">Open full details</a></p>
+<div class="panel-actions">{% include "cockpit/orders/panel/close.html" %}</div>

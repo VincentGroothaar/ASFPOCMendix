@@ -6,7 +6,6 @@ import os
 import re
 from decimal import Decimal
 
-import pytest
 import requests
 
 from tests.acceptance import builders
@@ -18,8 +17,6 @@ from tests.acceptance.support import (
     shows_quantity,
     sync,
 )
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #29")
 
 
 def test_ac_24_successful_requisition_against_the_local_mock(fakes, clock, client_as, live_mock):

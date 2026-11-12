@@ -17,6 +17,21 @@ urlpatterns = [
         views.requisition_create,
         name="requisition_create",
     ),
+    path(
+        "orders/<str:number>/requisitions/preview/",
+        views.requisition_preview,
+        name="requisition_preview",
+    ),
+    path(
+        "orders/<str:number>/requisitions/panel/empty/",
+        views.requisition_panel_empty,
+        name="requisition_panel_empty",
+    ),
+    path(
+        "orders/<str:number>/requisitions/<int:pk>/",
+        views.requisition_panel,
+        name="requisition_panel",
+    ),
     path("requisitions/", views.requisition_list, name="requisition_list"),
     path("requisitions/<int:pk>/", views.requisition_detail, name="requisition_detail"),
 ]

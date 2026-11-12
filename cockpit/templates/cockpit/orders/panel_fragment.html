@@ -1,0 +1,5 @@
+{% comment %}
+  An HTMX answer of the requisition panel (#28): the panel content for #side-panel, plus the components rows as an
+  out-of-band swap. The <template> wrapper is needed because htmx drops a table element that does not start the
+  response (decision B-1). The full page never has hx-swap-oob.
+{% endcomment %}{% include panel_template %}<template><tbody id="components-body" hx-swap-oob="true">{% include "cockpit/orders/rows.html" %}</tbody></template>

@@ -127,8 +127,9 @@ def status_pill(status: str) -> dict:
 def requisition_label(status: str, panel_url: str | None = None) -> dict:
     """An outlined requisition label (ui-spec 3.2), or a dash for "none".
 
-    With `panel_url` the label is a button that loads the requisition into the side panel
-    (`#side-panel`) without leaving the page. A dash is never a button.
+    With `panel_url` the label is a GET form with a button: with HTMX it loads the requisition
+    into the side panel (`#side-panel`) without leaving the page, and without JavaScript the
+    form opens the same URL (#28, R2-2). A dash is never a button.
     """
     _check(status, {*REQUISITION_LABELS, NO_REQUISITION}, "requisition status")
     if status == NO_REQUISITION:
