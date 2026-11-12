@@ -102,6 +102,16 @@ def request(page: Page, material: str) -> None:
     row(page, material).get_by_role("button", name="Request").click()
 
 
+def wait_until_htmx_has_processed(page: Page, selector: str) -> None:
+    """A field swapped in by HTMX only reacts once htmx has processed it; a real person is
+    slower than that, a test is not (the review of #28 saw the preview request go missing)."""
+    page.wait_for_function(
+        "selector => { const e = document.querySelector(selector); "
+        "return e && e['htmx-internal-data']; }",
+        arg=selector,
+    )
+
+
 def open_as(page: Page, live_server: LiveServer, username: str = "pat") -> None:
     page.set_viewport_size(DESKTOP)
     log_in(page, live_server, username, ORDER)
@@ -183,6 +193,7 @@ def test_the_sent_to_sap_value_follows_the_quantity(
     request(page, "RM-120")
     sent = page.locator("#sent-to-sap")
     expect(sent).to_have_text("500.000 G")  # the prefill: 0.5 KG short
+    wait_until_htmx_has_processed(page, "#requisition-form input[name=quantity]")
 
     page.get_by_label("Quantity (order unit KG)").fill("0.25")
     expect(sent).to_have_text("250.000 G")
