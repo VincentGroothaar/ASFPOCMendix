@@ -20,13 +20,10 @@ from django.utils import timezone
 from django.utils.cache import patch_vary_headers
 from django.views.decorators.http import require_http_methods, require_POST
 
-from cockpit.access import requires
-from cockpit.models import Requisition
-from cockpit.services import formats, requisition_views, requisitions
-from cockpit.services.dashboard import Dashboard, build_dashboard
 from cockpit.access import HtmxLoginRequiredMiddleware, requires
 from cockpit.models import ProductionOrder, Requisition
 from cockpit.services import formats, plant_status, requisition_views, requisitions
+from cockpit.services.dashboard import Dashboard, build_dashboard
 from cockpit.services.formats import format_datetime
 from cockpit.services.order_list import (
     PILL_KEYS,
