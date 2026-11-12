@@ -15,8 +15,9 @@ PASSWORD = "a-long-test-password-31"
 
 
 def test_browser_logs_in_and_opens_start_page(
-    transactional_db, live_server: LiveServer, page: Page
+    transactional_db, live_server: LiveServer, page: Page, settings
 ) -> None:
+    settings.SAP_BASE_URL = ""  # the order list shows "no data yet"; no live SAP call
     planner = User.objects.create_user("pat", password=PASSWORD)
     planner.groups.add(Group.objects.get_or_create(name="Planner")[0])
 
@@ -26,6 +27,7 @@ def test_browser_logs_in_and_opens_start_page(
     page.get_by_label("Password").fill(PASSWORD)
     page.get_by_role("button", name="Log in").click()
 
-    expect(page).to_have_url(live_server.url + "/")
-    expect(page.get_by_role("heading", level=1)).to_have_text("Material Shortage Cockpit")
+    # The start page `/` is the order list (#25).
+    expect(page).to_have_url(live_server.url + "/orders/")
+    expect(page.get_by_role("heading", level=1)).to_have_text("Production orders")
     expect(page.get_by_label("Username")).to_have_count(0)

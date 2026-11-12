@@ -1,0 +1,43 @@
+{% extends "layouts/frame.html" %}
+{% load static ui %}
+{% comment %}
+  Orders (ui-spec 3.6, 3.4, 3.7, 4.1 and 4.7 B-D; issue #25).
+  The filter form sits outside #orders-results, so an HTMX filter change keeps the filter bar
+  open and the typed values in place. The parts of the filter bar and header that depend on the
+  filters (#filter-chips, #filter-reset, #page-data) are swapped out-of-band by results.html.
+{% endcomment %}
+
+{% block title %}Production orders · Material Shortage Cockpit{% endblock %}
+
+{% block page_title %}{% if sync.synced_at %}{% page_header "Production orders" data_as_of=sync.synced_at refresh_url=refresh_url data_screen=True %}{% else %}{% page_header "Production orders" data_screen=True %}{% endif %}{% endblock %}
+
+{% block content %}
+  <section class="card filter-bar" aria-label="Filters">
+    <form id="order-filters" action="{% url 'cockpit:order_list' %}" method="get"
+          hx-get="{% url 'cockpit:order_list' %}" hx-target="#orders-results" hx-push-url="true"
+          hx-trigger="change, submit" hx-indicator=".sync-indicator" autocomplete="off">
+      <div class="filter-line">
+        {% include "cockpit/orders/filter_chips.html" %}
+        <button type="button" class="btn btn-ghost filter-toggle" aria-expanded="false" aria-controls="filter-fields">{% icon "filter" %}<span class="filter-toggle-label">Edit filters</span></button>
+      </div>
+      <div class="filter-fields" id="filter-fields" hidden>
+        <label class="field">Plant
+          <select name="plant" id="filter-plant">
+            {% for plant in plants %}<option value="{{ plant }}"{% if plant == filters.plant %} selected{% endif %}>{{ plant }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="field">Start date from
+          <input type="date" name="from" value="{{ filters.start_from|date:'Y-m-d' }}">
+        </label>
+        <label class="field">Start date to
+          <input type="date" name="to" value="{{ filters.start_to|date:'Y-m-d' }}">
+        </label>
+        {% include "cockpit/orders/filter_reset.html" %}
+      </div>
+    </form>
+  </section>
+
+  {% include "cockpit/orders/results_body.html" %}
+
+  <script src="{% static 'cockpit/orders.js' %}" defer></script>
+{% endblock %}

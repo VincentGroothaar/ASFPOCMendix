@@ -4,36 +4,49 @@ Keep business logic out of here: put it in `cockpit/services/` and call it.
 Every view needs a login (middleware) and declares its role check with `@requires(...)`.
 """
 
+from dataclasses import dataclass
 from decimal import Decimal
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.views import LogoutView
 from django.core.exceptions import PermissionDenied
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+from django.utils.cache import patch_vary_headers
+from django.views.decorators.http import require_http_methods, require_POST
 
 from cockpit.access import requires
 from cockpit.models import Requisition
 from cockpit.services import formats, requisition_views, requisitions
+from cockpit.services.formats import format_datetime
+from cockpit.services.order_list import (
+    PILL_KEYS,
+    OrderList,
+    RequisitionFilter,
+    build_order_list,
+    default_filters,
+    parse_filters,
+    tile_tooltips,
+)
 from cockpit.services.roles import Action, Role, can, role_of
+from cockpit.services.shortage import Status
+from cockpit.services.sync import ensure_fresh, sync_plant
 
 LOGGED_OUT_MESSAGE = "You are logged out."
 
 
 def home(request: HttpRequest) -> HttpResponse:
-    """Send Admin to user administration; show business roles the start page.
-
-    Until the orders page exists (#25) this is a placeholder; #25 makes it redirect to /orders/.
-    """
+    """Send Admin to user administration and business roles to the order list (#25)."""
     if role_of(request.user) is Role.ADMIN:
         return redirect("admin:index")
     if not can(request.user, Action.VIEW_BUSINESS):
         raise PermissionDenied
-    return render(request, "cockpit/home.html")
+    return redirect("cockpit:order_list")
 
 
 # `home` cannot use @requires because Admin is redirected before the check. This marks it for
@@ -214,3 +227,112 @@ def requisition_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "response_text": response_text,
     }
     return render(request, "cockpit/requisitions/detail.html", context)
+
+
+# --- Orders (REQ-1, REQ-4; issue #25) -----------------------------------------------------------
+
+# The Requisition select on the order list (ui-spec 4.1), in screen order.
+REQUISITION_OPTIONS = [
+    ("", "All"),
+    (RequisitionFilter.NONE.value, "None"),
+    (RequisitionFilter.SENT.value, "PR sent"),
+    (RequisitionFilter.AWAITING_APPROVAL.value, "Awaiting approval"),
+    (RequisitionFilter.FAILED.value, "PR failed"),
+]
+STATUS_TITLES = {
+    None: "All orders",
+    Status.SHORT: "Short orders",
+    Status.LOW_COVER: "Low cover orders",
+    Status.COVERED: "Covered orders",
+}
+
+
+@requires(Action.VIEW_BUSINESS)
+def order_list(request: HttpRequest) -> HttpResponse:
+    """The order list: filter bar, tiles and table (ui-spec 4.1).
+
+    A filter change is an HTMX request: it gets only `#orders-results` plus the out-of-band
+    header and filter-bar blocks. Every other request (also htmx's history restore) gets the
+    full page (ARCHITECTURE.md, "HTMX on data pages").
+    """
+    plants = settings.COCKPIT_PLANTS
+    today = timezone.localdate()
+    filters = parse_filters(request.GET, plants, today)
+    sync = ensure_fresh(filters.plant)
+    requisition_value = filters.requisition.value if filters.requisition else ""
+    context = {
+        "filters": filters,
+        "plants": plants,
+        "sync": sync,
+        "refresh_url": reverse("cockpit:refresh_plant", args=[filters.plant]),
+        "reset_query": urlencode(
+            default_filters(plants, today).query(
+                status=filters.status, requisition=filters.requisition
+            )
+        ),
+        "clear_query": urlencode(filters.query(status=None, requisition=None, page=1)),
+        "requisition_options": REQUISITION_OPTIONS,
+        "requisition_value": requisition_value,
+        "requisition_title": dict(REQUISITION_OPTIONS)[requisition_value],
+        "view_title": STATUS_TITLES[filters.status],
+    }
+    if sync.synced_at is not None:
+        orders = build_order_list(filters, today)
+        context["orders"] = orders
+        context["tiles"] = _tiles(orders, filters.status)
+        context["banner_text"] = (
+            f"SAP could not be reached. Showing data as of {format_datetime(sync.synced_at)}."
+        )
+
+    is_fragment = request.headers.get("HX-Request") == "true" and not request.headers.get(
+        "HX-History-Restore-Request"
+    )
+    template = "cockpit/orders/results.html" if is_fragment else "cockpit/orders/page.html"
+    response = render(request, template, context)
+    patch_vary_headers(response, ["HX-Request"])
+    return response
+
+
+@dataclass(frozen=True)
+class Tile:
+    """One KPI tile on the order list (ui-spec 3.4): a toggle for the status filter."""
+
+    label: str
+    count: int
+    pill_key: str | None  # colour of the number; None for All orders
+    pressed: bool
+    value: str  # the `status` it sends; "" clears the filter (a pressed tile, or All orders)
+    tooltip: str | None
+
+
+def _tiles(orders: OrderList, selected: Status | None) -> list[Tile]:
+    """The four tiles: All orders, Short, Low cover and Covered, with counts and tooltips."""
+    tooltips = tile_tooltips(orders.buffer_percent)
+    tiles = [Tile("All orders", orders.counts.all, None, selected is None, "", None)]
+    for status, label, count in (
+        (Status.SHORT, "Short", orders.counts.short),
+        (Status.LOW_COVER, "Low cover", orders.counts.low_cover),
+        (Status.COVERED, "Covered", orders.counts.covered),
+    ):
+        pressed = selected == status
+        value = "" if pressed else status.value
+        tiles.append(Tile(label, count, PILL_KEYS[status], pressed, value, tooltips[status]))
+    return tiles
+
+
+@requires(Action.VIEW_BUSINESS)
+@require_POST
+def refresh_plant(request: HttpRequest, plant: str) -> HttpResponse:
+    """Refresh and Try again: sync the plant from SAP now, then reload the page (AC-4).
+
+    The page header's Refresh posts here with HTMX; the answer `HX-Refresh: true` makes the
+    browser reload the page with its own URL, so the filters stay (contract from #23).
+    """
+    if plant not in settings.COCKPIT_PLANTS:
+        raise Http404("Unknown plant")
+    sync_plant(plant)
+    if request.headers.get("HX-Request") == "true":
+        response = HttpResponse(status=204)
+        response["HX-Refresh"] = "true"
+        return response
+    return redirect(f"{reverse('cockpit:order_list')}?{urlencode({'plant': plant})}")

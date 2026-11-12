@@ -5,11 +5,7 @@ Constructed data (spec.md, "Proven by unit tests only"). Order 1000101 (4 Nov) t
 on 8 Nov, 1000101 is not listed, but 1000102 must still be Short.
 """
 
-import pytest
-
 from tests.acceptance.support import PLANT, Stock, days, one_component_order, read_page
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 
 def test_ac_18_same_order_same_status_in_two_ranges(fakes, clock, client_as):

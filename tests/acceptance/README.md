@@ -41,13 +41,20 @@ themselves, so they can be trusted while the acceptance tests are still red.
 |---|---|---|
 | AC-10, AC-12 (one test each) | `SAP_API_KEY` (live SAP sandbox; CI passes the Actions secret) | skipped |
 | AC-24, AC-35 (one test each) | `MOCK_PR_BASE_URL` and `MOCK_API_KEY` (the local mock; CI starts it) | skipped |
-| Browser tests (`test_ac_*_browser_*`) | Playwright's Chromium (`uv run playwright install chromium`) | error |
+| Browser tests (`test_ac_*_browser_*`, `test_ac_52_*`, `test_order_list_browser.py`) | Playwright's Chromium (`uv run playwright install chromium`) | error |
 
 All other tests use the fakes, so they run anywhere.
+
+`test_order_list_browser.py` is not a per-AC file: it holds browser checks for the order list
+filters that the design review of #25 asked for (local criteria AC-25-1 and AC-25-7 in issue
+#25). Its name avoids spec.md AC-25 (requisition failed).
+
+Browser tests that act right after an HTMX swap wait for htmx to settle first (`settled(page)`
+in that file): htmx wires up swapped-in elements a moment after the swap.
 
 ## Checked by hand, not by a test
 
 | ID | Why | How |
 |---|---|---|
-| AC-5 | A cold load of the hosted app within 5 s depends on Render and the live sandbox | Timed manual run on the hosted app, result logged |
+| AC-5 | A cold load of the hosted app within 5 s depends on Render and the live sandbox | Timed local run against the live sandbox in the PR, then a timed run on the hosted app after merge, posted as `[test]` on the issue (decision 8 on #25) |
 | INV-2 | "No secrets in the repository" is a property of the repository, not of the app | Secret scanning with push protection on GitHub, and review |

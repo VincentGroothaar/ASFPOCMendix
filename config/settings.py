@@ -64,6 +64,12 @@ if HOSTED_BEHIND_HTTPS:
 SAP_BASE_URL = os.environ.get("SAP_BASE_URL", "")
 SAP_API_KEY = os.environ.get("SAP_API_KEY", "")
 
+# Plants offered on the order list; the first is the default (REQ-1, AC-2). Only these plants
+# are ever synced from SAP (#25).
+COCKPIT_PLANTS = env_list("COCKPIT_PLANTS", "AUC1")
+if not COCKPIT_PLANTS:
+    raise ImproperlyConfigured("COCKPIT_PLANTS must name at least one plant, e.g. AUC1.")
+
 # --- Purchase requisition mock (the only POST target, INV-3 and INV-4) -------
 
 MOCK_PR_BASE_URL = os.environ.get("MOCK_PR_BASE_URL", "")

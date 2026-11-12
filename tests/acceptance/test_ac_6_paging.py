@@ -8,11 +8,7 @@ depend on a tie-breaker. The range is widened to cover all 60. Order k gets
 page 2 alone would show all of them Covered.
 """
 
-import pytest
-
 from tests.acceptance.support import PLANT, Stock, days, one_component_order, read_page
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 
 def number(k: int) -> str:

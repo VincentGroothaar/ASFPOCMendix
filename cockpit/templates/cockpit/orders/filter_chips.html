@@ -1,0 +1,5 @@
+{% load ui %}<div class="filter-chips" id="filter-chips"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <span class="filter-count">2 filters active:</span>
+  <span class="chip">Plant {{ filters.plant }}</span>
+  <span class="chip">Start {{ filters.start_from|date_short }} – {{ filters.start_to|date_long }}</span>
+</div>

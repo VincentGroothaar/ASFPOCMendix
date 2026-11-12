@@ -6,11 +6,7 @@ The fake SAP applies the app's $filter like the sandbox does, so an order the ap
 filter out in its SAP query shows up here.
 """
 
-import pytest
-
 from tests.acceptance.support import PLANT, Order, days, read_page
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 SHOWN = {
     "1000101": "released, starts inside the range",

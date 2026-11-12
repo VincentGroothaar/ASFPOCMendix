@@ -2,6 +2,8 @@
 
 Reads orders, components, stock and descriptions for the demo plant with the real client.
 Skipped when SAP_API_KEY is not set, so it runs locally and wherever the key is configured.
+Also skipped, with the reason in the log, when the sandbox itself is down (HTTP 5xx, no
+connection, timeout; issue #75): an outage at SAP says nothing about our code.
 The sandbox changes daily, so this checks shapes and rules, not counts.
 """
 
@@ -14,6 +16,7 @@ from sap.client import ODataClient
 from sap.production_orders import read_released_orders
 from sap.products import read_descriptions
 from sap.stock import read_unrestricted_stock
+from sap.tests.live import skip_if_sandbox_down
 
 PLANT = "AUC1"
 
@@ -26,10 +29,11 @@ pytestmark = pytest.mark.skipif(
 def test_reads_orders_components_stock_and_descriptions_for_the_plant() -> None:
     client = ODataClient.from_settings()
 
-    orders = read_released_orders(client, PLANT)
-    materials = sorted({line.material for order in orders for line in order.components})
-    stock = read_unrestricted_stock(client, PLANT, materials)
-    descriptions = read_descriptions(client, materials)
+    with skip_if_sandbox_down():
+        orders = read_released_orders(client, PLANT)
+        materials = sorted({line.material for order in orders for line in order.components})
+        stock = read_unrestricted_stock(client, PLANT, materials)
+        descriptions = read_descriptions(client, materials)
 
     assert orders, f"Expected released open orders in {PLANT}"
     assert all(order.plant == PLANT for order in orders)

@@ -1,11 +1,7 @@
 """AC-3 (REQ-1): overdue orders show an "overdue" badge and are listed before the range.
 Constructed snapshot, fixed clock (today = 3 Nov 2026)."""
 
-import pytest
-
 from tests.acceptance.support import Order, days, read_page
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 
 def test_ac_3_overdue_orders_have_a_badge_and_come_first(fakes, clock, client_as):
