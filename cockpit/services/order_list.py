@@ -21,7 +21,7 @@ from enum import StrEnum
 
 from django.core.paginator import Page, Paginator
 
-from cockpit.models import ProductionOrder, Requisition, Stock
+from cockpit.models import Component, ProductionOrder, Requisition, Stock
 from cockpit.services.buffer import current_buffer
 from cockpit.services.shortage import (
     ComponentLine,
@@ -119,6 +119,16 @@ class OrderCounts:
     short: int
     low_cover: int
     covered: int
+
+
+@dataclass(frozen=True)
+class RequisitionRow:
+    """The latest requisition of one order and material, as plain values (for the dashboard)."""
+
+    id: int
+    order_number: str
+    material: str
+    status: Requisition.Status
 
 
 @dataclass(frozen=True)
@@ -235,20 +245,37 @@ def _calculate(plant: str, orders: list[ProductionOrder], today: date) -> PlantR
     return calculate(order_lines, stock_lines, settings, today)
 
 
+def _latest_requisitions(**order_filter: object) -> list[tuple[int, str, str, str, str]]:
+    """The latest requisition (highest id) per order and material, as (order id, order number,
+    material, status, id) tuples. The one definition of "latest" for Orders and the dashboard."""
+    rows = (
+        Requisition.objects.filter(**order_filter)
+        .order_by("order_id", "material", "-id")
+        .distinct("order_id", "material")
+        .values_list("order_id", "order__number", "material", "status", "id")
+    )
+    return list(rows)
+
+
+def latest_requisitions(order_numbers: Iterable[str]) -> list[RequisitionRow]:
+    """The latest requisition per order and material for these orders (dashboard, #30)."""
+    rows = _latest_requisitions(order__number__in=list(order_numbers))
+    return [
+        RequisitionRow(id=pk, order_number=number, material=material, status=status)
+        for _order_id, number, material, status, pk in rows
+    ]
+
+
 def order_requisition_labels(order_ids: Iterable[int]) -> dict[int, Requisition.Status]:
     """The requisition label of each order: its most urgent open or failed requisition.
 
     Per order and material only the latest requisition (highest id) counts; a Rejected latest
     one adds no label (decisions 5 and R-I2 on #25). Orders without a label are left out.
     """
-    latest = (
-        Requisition.objects.filter(order_id__in=list(order_ids))
-        .order_by("order_id", "material", "-id")
-        .distinct("order_id", "material")
-        .values_list("order_id", "status")
-    )
     statuses: dict[int, set[str]] = {}
-    for order_id, status in latest:
+    for order_id, _number, _material, status, _pk in _latest_requisitions(
+        order_id__in=list(order_ids)
+    ):
         statuses.setdefault(order_id, set()).add(status)
     labels = {}
     for order_id, found in statuses.items():
@@ -257,6 +284,34 @@ def order_requisition_labels(order_ids: Iterable[int]) -> dict[int, Requisition.
                 labels[order_id] = label
                 break
     return labels
+
+
+def orders_in_scope(filters: OrderFilters, today: date) -> list[str]:
+    """The numbers of the orders a screen shows for these filters: the one scope rule.
+
+    Active orders of the plant that start inside the range, plus every overdue order (D-18).
+    A start date after the end date leaves only the overdue orders. The Orders page and the
+    dashboard (#30) both use this rule.
+    """
+    return [order.number for order in _scope(_active_orders(filters.plant), filters, today)]
+
+
+def _scope(
+    orders: Iterable[ProductionOrder], filters: OrderFilters, today: date
+) -> list[ProductionOrder]:
+    return [
+        order
+        for order in orders
+        if order.start_date < today or filters.start_from <= order.start_date <= filters.start_to
+    ]
+
+
+def material_descriptions(order_numbers: Iterable[str]) -> dict[str, str]:
+    """The description of each component material of these orders (empty ones are left out)."""
+    rows = Component.objects.filter(order__number__in=list(order_numbers)).values_list(
+        "material", "description"
+    )
+    return {material: description for material, description in rows if description}
 
 
 # --- The list -----------------------------------------------------------------------------------
@@ -269,11 +324,7 @@ def build_order_list(filters: OrderFilters, today: date) -> OrderList:
     orders = _active_orders(filters.plant)
     result = _calculate(filters.plant, orders, today)
     # Overdue orders are always listed, whatever the range (D-18).
-    in_scope = [
-        order
-        for order in orders
-        if order.start_date < today or filters.start_from <= order.start_date <= filters.start_to
-    ]
+    in_scope = _scope(orders, filters, today)
     labels = order_requisition_labels(order.id for order in in_scope)
     rows = [_row(order, result, labels.get(order.id), today) for order in in_scope]
 

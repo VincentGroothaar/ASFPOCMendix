@@ -6,7 +6,7 @@ Every view needs a login (middleware) and declares its role check with `@require
 
 from dataclasses import dataclass
 from decimal import Decimal
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from django.conf import settings
 from django.contrib import messages
@@ -23,6 +23,7 @@ from django.views.decorators.http import require_http_methods, require_POST
 from cockpit.access import HtmxLoginRequiredMiddleware, requires
 from cockpit.models import ProductionOrder, Requisition
 from cockpit.services import formats, plant_status, requisition_views, requisitions
+from cockpit.services.dashboard import Dashboard, build_dashboard
 from cockpit.services.formats import format_datetime
 from cockpit.services.order_list import (
     PILL_KEYS,
@@ -30,7 +31,11 @@ from cockpit.services.order_list import (
     RequisitionFilter,
     build_order_list,
     default_filters,
+    latest_requisitions,
+    material_descriptions,
+    orders_in_scope,
     parse_filters,
+    plant_result,
     tile_tooltips,
 )
 from cockpit.services.roles import Action, Role, can, role_of
@@ -350,6 +355,109 @@ def _tiles(orders: OrderList, selected: Status | None) -> list[Tile]:
     return tiles
 
 
+# --- Dashboard (REQ-6, #30) ---------------------------------------------------------------------
+
+DONUT_RADIUS = 15.9155  # a circle of circumference 100, so a slice's length is its percentage
+DONUT_COLOURS = {
+    "short": "var(--chart-short)",
+    "low": "var(--chart-low)",
+    "covered": "var(--chart-covered)",
+    "mismatch": "var(--chart-mismatch)",
+}
+
+
+def _donut_segments(dashboard: Dashboard) -> list[dict[str, object]]:
+    """The SVG ring segments of the donut: one circle per non-empty slice.
+
+    Each segment is a dash of `length` (percent of the ring) at `offset`. A single slice at
+    100% is a full ring, and a total of 0 has no segments (the template draws a grey ring).
+    """
+    segments = []
+    start = 0.0
+    for slice_ in dashboard.slices:
+        if slice_.count == 0:
+            continue
+        length = 100 * slice_.count / dashboard.total
+        segments.append(
+            {
+                "key": slice_.key,
+                "colour": DONUT_COLOURS[slice_.key],
+                "length": f"{length:.4f}",
+                "gap": f"{100 - length:.4f}",
+                "offset": f"{-start:.4f}",
+            }
+        )
+        start += length
+    return segments
+
+
+def _donut_label(dashboard: Dashboard) -> str:
+    """The text alternative of the donut, for screen readers."""
+    parts = ", ".join(f"{s.count} {s.label.lower()}" for s in dashboard.slices)
+    return f"{dashboard.total} orders: {parts}"
+
+
+@requires(Action.VIEW_BUSINESS)
+def dashboard(request: HttpRequest) -> HttpResponse:
+    """The shortage dashboard for the same plant and range as Orders (ui-spec 4.3).
+
+    Plant and range are changed on the Orders page; the sidebar carries them here. The
+    states B, C and D (ui-spec 4.7) work as on Orders.
+    """
+    plants = settings.COCKPIT_PLANTS
+    today = timezone.localdate()
+    filters = parse_filters(request.GET, plants, today)
+    sync = ensure_fresh(filters.plant)
+    refresh_url = (
+        reverse("cockpit:refresh_plant", args=[filters.plant])
+        + "?"
+        + urlencode({"next": request.get_full_path()})
+    )
+    context = {
+        "filters": filters,
+        "plants": plants,
+        "sync": sync,
+        "refresh_url": refresh_url,
+        "choose_plant_url": f"{reverse('cockpit:order_list')}?"
+        + urlencode({"plant": filters.plant, "filters": "open"}),
+        "subline": (
+            f"Plant {filters.plant} · start "
+            f"{formats.format_date(filters.start_from)} – {formats.format_date(filters.start_to)}"
+        ),
+    }
+    if sync.synced_at is not None:
+        in_scope = orders_in_scope(filters, today)
+        data = build_dashboard(
+            in_scope,
+            plant_result(filters.plant, today),
+            latest_requisitions(in_scope),
+            today,
+            material_descriptions(in_scope),
+        )
+        context["dashboard"] = data
+        context["segments"] = _donut_segments(data)
+        context["donut_label"] = _donut_label(data)
+        context["banner_text"] = (
+            f"SAP could not be reached. Showing data as of {format_datetime(sync.synced_at)}."
+        )
+    return render(request, "cockpit/dashboard.html", context)
+
+
+REFRESH_RETURN_PATHS = ("/orders/", "/dashboard/")
+MAX_NEXT_LENGTH = 2000
+
+
+def _safe_next(request: HttpRequest) -> str | None:
+    """The page to return to after a Refresh without HTMX: only Orders or the dashboard."""
+    target = request.POST.get("next") or request.GET.get("next") or ""
+    if len(target) > MAX_NEXT_LENGTH or not target.startswith("/"):
+        return None
+    parsed = urlsplit(target)
+    if parsed.scheme or parsed.netloc or parsed.path not in REFRESH_RETURN_PATHS:
+        return None
+    return target
+
+
 @requires(Action.VIEW_BUSINESS)
 def order_detail(request: HttpRequest, number: str) -> HttpResponse:
     """One order with its components, stock and statuses (ui-spec 4.2; issue #26).
@@ -412,4 +520,7 @@ def refresh_plant(request: HttpRequest, plant: str) -> HttpResponse:
         response = HttpResponse(status=204)
         response["HX-Refresh"] = "true"
         return response
+    target = _safe_next(request)
+    if target:
+        return redirect(target)
     return redirect(f"{reverse('cockpit:order_list')}?{urlencode({'plant': plant})}")
