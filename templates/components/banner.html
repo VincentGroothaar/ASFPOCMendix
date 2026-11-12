@@ -1,4 +1,4 @@
 <div class="banner" role="status">
   <span>{{ text }}</span>
-  {% if action_label %}{% if action_method == "post" %}<button type="button" class="btn btn-ghost" hx-post="{{ action_url }}" hx-swap="none" hx-disabled-elt="this">{{ action_label }}</button>{% else %}<a class="btn btn-ghost" href="{{ action_url }}">{{ action_label }}</a>{% endif %}{% endif %}
+  {% if action_label %}{% if action_method == "post" %}<button type="button" class="btn btn-ghost" hx-post="{{ action_url }}" hx-swap="none" hx-disabled-elt="this"{% if indicator %} hx-indicator="{{ indicator }}"{% endif %}>{{ action_label }}</button>{% else %}<a class="btn btn-ghost" href="{{ action_url }}">{{ action_label }}</a>{% endif %}{% endif %}
 </div>

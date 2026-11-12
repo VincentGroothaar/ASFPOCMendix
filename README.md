@@ -47,6 +47,7 @@ Settings come from environment variables. Locally they are read from `.env`; see
 | -------------- | ---------------------------------------------------- |
 | `SAP_BASE_URL` | Base URL of the SAP OData V2 sandbox                 |
 | `SAP_API_KEY`  | API key for the SAP sandbox (never commit it)        |
+| `COCKPIT_PLANTS` | Comma-separated plants for the order list; the first is the default. Default `AUC1` |
 | `DATABASE_URL` | Postgres URL, required, e.g. `postgresql://cockpit:cockpit@localhost:5432/cockpit` |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Used by `docker compose` to create the local database |
 | `MOCK_PR_BASE_URL`, `MOCK_API_KEY` | Purchase requisition mock: its base URL (for the Cockpit) and its API key (for both); see `mock_pr/README.md` |

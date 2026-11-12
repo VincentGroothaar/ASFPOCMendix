@@ -1,0 +1,7 @@
+{% load ui %}{% comment %}
+  The answer to an HTMX filter change: the new #orders-results, plus the header and filter-bar
+  blocks that depend on the filters, swapped out-of-band (#25, R-B1, R3-I1).
+{% endcomment %}{% include "cockpit/orders/results_body.html" %}
+{% if sync.synced_at %}{% page_data sync.synced_at refresh_url oob=True %}{% else %}{% page_data oob=True %}{% endif %}
+{% include "cockpit/orders/filter_chips.html" with oob=True %}
+{% include "cockpit/orders/filter_reset.html" with oob=True %}

@@ -3,11 +3,7 @@ a snapshot older than 5 minutes syncs on page load. Fake SAP and a fixed clock (
 
 from datetime import timedelta
 
-import pytest
-
 from tests.acceptance.support import NOW, PLANT, Order, days, read_page
-
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #25")
 
 ORDERS = "A_ProductionOrder_2"
 

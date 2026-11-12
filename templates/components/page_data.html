@@ -1,0 +1,4 @@
+{% load ui %}<div class="page-data" id="page-data"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if data_as_of %}<span class="muted">Data as of {{ data_as_of|datetime_short }}</span>{% endif %}
+  {% if refresh_url %}<button type="button" class="btn btn-secondary" hx-post="{{ refresh_url }}" hx-swap="none" hx-disabled-elt="this" hx-indicator=".sync-indicator">{% icon "refresh" 16 %}Refresh</button>{% endif %}
+</div>

@@ -1,13 +1,13 @@
-"""Tests for the cockpit start page (`/`)."""
+"""Tests for the cockpit start page (`/`): it sends each role to its first screen (#25)."""
 
-from pytest_django.asserts import assertContains, assertRedirects, assertTemplateUsed
+from pytest_django.asserts import assertRedirects
 
 
-def test_home_page_shows_app_name(client_as) -> None:
-    response = client_as("Planner").get("/")
+def test_home_sends_business_roles_to_the_order_list(client_as) -> None:
+    for role in ("Viewer", "Planner", "Manager"):
+        response = client_as(role).get("/")
 
-    assertContains(response, "<h1>Material Shortage Cockpit</h1>", html=True)
-    assertTemplateUsed(response, "base.html")
+        assertRedirects(response, "/orders/", fetch_redirect_response=False)
 
 
 def test_home_sends_admin_to_user_administration(client_as) -> None:

@@ -47,12 +47,15 @@ def screenshot(page: Page, name: str) -> None:
 
 
 @pytest.mark.parametrize("role", ["Viewer", "Planner", "Manager"])
-def test_frame_per_role(transactional_db, live_server: LiveServer, page: Page, role) -> None:
+def test_frame_per_role(
+    transactional_db, live_server: LiveServer, page: Page, settings, role
+) -> None:
+    settings.SAP_BASE_URL = ""  # the order list shows "no data yet"; no live SAP call
     make_user(f"{role.lower()}.a", role)
     page.set_viewport_size(DESKTOP)
 
     with mock.patch.object(navigation, "pending_approval_count", return_value=3):
-        log_in(page, live_server, f"{role.lower()}.a", "/")
+        log_in(page, live_server, f"{role.lower()}.a", "/orders/")
 
     nav = page.get_by_role("navigation", name="Main")
     expect(nav.get_by_role("link", name="Orders")).to_be_visible()
