@@ -169,7 +169,6 @@ def requisition_list(request: HttpRequest) -> HttpResponse:
         "result": result,
         "page_obj": result.page,
         "status_filters": requisition_views.STATUS_FILTERS,
-        "pr_text": requisition_views.pr_text,
     }
     return render(request, "cockpit/requisitions/list.html", context)
 

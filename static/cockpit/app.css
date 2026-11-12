@@ -785,7 +785,6 @@ table.data tr.is-selected td:first-child {
   margin: 0;
 }
 
-/* --- Below 900px wide (ui-spec 2.1). CSS variables cannot be used in media queries. --- */
 /* --- 4.4 / 4.5 Requisition list and detail --- */
 .toolbar-filters {
   display: flex;
@@ -854,6 +853,7 @@ details pre {
   font-size: var(--font-size-caption);
 }
 
+/* --- Below 900px wide (ui-spec 2.1). CSS variables cannot be used in media queries. --- */
 @media (max-width: 899px) {
   .app {
     grid-template-columns: 1fr;

@@ -76,7 +76,7 @@ def test_list_shows_the_business_fields_of_each_attempt(client_as, order, pat):
     assertContains(response, sent.reference)
     assertContains(response, "PR 10000001")
     assertContains(response, "Steel plate")
-    assertContains(response, "6 PC")
+    assertContains(response, "6.000 PC")
     assertContains(response, "04 Nov")
     assertContains(response, "1000001")
     assertContains(response, "pat")

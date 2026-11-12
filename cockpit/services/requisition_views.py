@@ -57,7 +57,8 @@ def list_requisitions(
 
     An unknown `status` counts as All. A page number that is not a number or is below 1 shows
     page 1, and one past the end shows the last page. Each requisition on the page gets a
-    `description` attribute: the material's description from its order's components.
+    `description` attribute (the material's description from its order's components) and a
+    `pr_text` attribute (see `pr_text`).
     """
     if status not in STATUS_FILTERS:
         status = ""
@@ -93,6 +94,7 @@ def _add_descriptions(requisitions: list[Requisition]) -> None:
     found = {(c.order_id, c.material): c.description for c in components}
     for requisition in requisitions:
         requisition.description = found.get((requisition.order_id, requisition.material), "")
+        requisition.pr_text = pr_text(requisition)
 
 
 def describe(requisition: Requisition) -> Requisition:

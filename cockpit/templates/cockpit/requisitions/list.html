@@ -34,9 +34,9 @@
         <tbody>
           {% for r in page_obj %}
             <tr>
-              <td><a href="{% url 'cockpit:requisition_detail' r.pk %}" class="cell-main">{{ r.reference }}</a><span class="cell-sub">{% if r.pr_number %}PR {{ r.pr_number }}{% elif r.status == "rejected" %}No PR number{% else %}No PR number yet{% endif %}</span></td>
+              <td><a href="{% url 'cockpit:requisition_detail' r.pk %}" class="cell-main">{{ r.reference }}</a><span class="cell-sub">{{ r.pr_text }}</span></td>
               <td><span class="cell-main">{{ r.material }}</span>{% if r.description %}<span class="cell-sub">{{ r.description }}</span>{% endif %}</td>
-              <td class="num">{{ r.quantity_sent|quantity:r.unit_sent }}</td>
+              <td class="num">{{ r.quantity_sent|quantity_sent:r.unit_sent }}</td>
               <td>{{ r.delivery_date|date_short }}</td>
               <td><a href="/orders/{{ r.order.number }}/">{{ r.order.number }}</a></td>
               <td>{{ r.created_by.get_username }}<span class="cell-sub">{{ r.created_at|datetime_short }}</span></td>
