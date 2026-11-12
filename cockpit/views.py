@@ -21,7 +21,7 @@ from django.utils.cache import patch_vary_headers
 from django.views.decorators.http import require_http_methods, require_POST
 
 from cockpit.access import HtmxLoginRequiredMiddleware, requires
-from cockpit.models import ProductionOrder, Requisition
+from cockpit.models import ORDER_NUMBER_LENGTH, ProductionOrder, Requisition
 from cockpit.services import formats, plant_status, requisition_views, requisitions
 from cockpit.services.formats import format_datetime
 from cockpit.services.order_list import (
@@ -357,7 +357,9 @@ def order_detail(request: HttpRequest, number: str) -> HttpResponse:
     The order is looked up before the sync, because the plant to sync comes from the order; an
     unknown number never calls SAP. Orders are never deleted, so it still exists after the sync.
     """
-    order = ProductionOrder.objects.filter(number=number).only("plant").first()
+    order = None
+    if _storable_order_number(number):
+        order = ProductionOrder.objects.filter(number=number).only("plant").first()
     if order is None:
         raise NotFound(f"Order {number} not found")
     sync = ensure_fresh(order.plant)
@@ -378,6 +380,12 @@ def order_detail(request: HttpRequest, number: str) -> HttpResponse:
             f"SAP could not be reached. Showing data as of {format_datetime(sync.synced_at)}."
         )
     return render(request, "cockpit/orders/detail.html", context)
+
+
+def _storable_order_number(number: str) -> bool:
+    """False for a number the database cannot hold (too long, or a NUL byte), which would
+    otherwise raise a database error (a 500) instead of a 404 (#77 review)."""
+    return "\x00" not in number and len(number) <= ORDER_NUMBER_LENGTH
 
 
 def _order_subline(detail: plant_status.OrderDetail) -> str:
