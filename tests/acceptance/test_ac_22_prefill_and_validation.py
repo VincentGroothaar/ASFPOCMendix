@@ -30,7 +30,6 @@ def new_words(before, after) -> set[str]:
     return set(after.text.split()) - set(before.text.split())
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #27")
 @pytest.mark.parametrize(("material", "prefill"), [("RM-SHORT", "30"), ("RM-LOW", "6")])
 def test_ac_22_confirm_step_prefills_the_quantity(fakes, clock, client_as, material, prefill):
     load_mixed_order(fakes.sap)
@@ -55,7 +54,6 @@ def test_ac_22_low_cover_prefill_rounds_up_to_3_decimals(fakes, clock, client_as
     assert Decimal("0.024") in page.input_decimals()
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #27")
 @pytest.mark.parametrize("quantity", ["0", "-5", "abc", "1.2345", ""])
 def test_ac_22_invalid_quantities_are_rejected(fakes, clock, client_as, quantity):
     load_mixed_order(fakes.sap)

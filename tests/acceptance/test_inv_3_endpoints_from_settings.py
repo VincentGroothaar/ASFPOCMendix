@@ -23,7 +23,6 @@ APP_CODE = [Path("cockpit"), Path("sap"), Path("config")]
 HARD_CODED = ["sandbox.api.sap.com", "localhost:8001", "onrender.com"]
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #27")
 def test_inv_3_app_uses_the_configured_urls_and_keys(fakes, clock, client_as):
     load_mixed_order(fakes.sap)
     for stock in fakes.sap.stock:

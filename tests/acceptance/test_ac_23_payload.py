@@ -18,8 +18,6 @@ from tests.acceptance.support import (
     sync,
 )
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #27")
-
 
 @pytest.mark.parametrize(("start", "delivery"), [(days(5), days(5)), (days(-3), TODAY)])
 def test_ac_23_payload_is_in_stock_unit_with_the_delivery_date(

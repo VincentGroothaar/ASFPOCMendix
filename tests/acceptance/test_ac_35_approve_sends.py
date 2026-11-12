@@ -15,8 +15,6 @@ from tests.acceptance.support import (
     sync,
 )
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #33")
-
 
 def test_ac_35_approval_sends_to_the_local_mock(fakes, clock, client_as, live_mock):
     above_limit_plant(fakes.sap)
@@ -37,6 +35,7 @@ def test_ac_35_approval_sends_to_the_local_mock(fakes, clock, client_as, live_mo
     assert in_mock.status_code == 200
 
 
+@pytest.mark.xfail(strict=True, reason="Not built yet: #33")
 def test_ac_35_approval_with_an_endpoint_error_is_stored_as_failed(fakes, clock, client_as):
     above_limit_plant(fakes.sap)
     sync()

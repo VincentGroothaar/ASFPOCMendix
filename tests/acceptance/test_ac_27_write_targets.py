@@ -6,8 +6,6 @@ import inspect
 from decimal import Decimal
 from urllib.parse import urlparse
 
-import pytest
-
 from tests.acceptance import builders
 from tests.acceptance.support import (
     MIXED_ORDER,
@@ -31,7 +29,6 @@ def test_ac_27_sap_read_client_has_no_write_method():
     assert not [name for name in public if any(word in name.lower() for word in WRITE_WORDS)]
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #27")
 def test_ac_27_only_the_mock_receives_writes_with_csrf_and_api_key(fakes, clock, client_as):
     load_mixed_order(fakes.sap)
     for stock in fakes.sap.stock:

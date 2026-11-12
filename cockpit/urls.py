@@ -8,4 +8,9 @@ app_name = "cockpit"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path(
+        "orders/<str:number>/requisitions/",
+        views.requisition_create,
+        name="requisition_create",
+    ),
 ]

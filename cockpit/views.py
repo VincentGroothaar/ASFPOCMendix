@@ -4,13 +4,19 @@ Keep business logic out of here: put it in `cockpit/services/` and call it.
 Every view needs a login (middleware) and declares its role check with `@requires(...)`.
 """
 
+from decimal import Decimal
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.views import LogoutView
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_http_methods
 
+from cockpit.access import requires
+from cockpit.services import requisitions
 from cockpit.services.roles import Action, Role, can, role_of
 
 LOGGED_OUT_MESSAGE = "You are logged out."
@@ -64,3 +70,82 @@ class CockpitLogoutView(LogoutView):
         # Added after logout has cleared the session; the message travels in a cookie.
         messages.info(request, LOGGED_OUT_MESSAGE)
         return response
+
+
+# --- Requisitions (REQ-5, #27) --------------------------------------------------------------------
+
+# How the view answers each refusal from the requisition service.
+REFUSAL_STATUS = {"unknown": 404, "not_requestable": 400, "invalid_quantity": 200, "duplicate": 409}
+
+
+@require_http_methods(["GET", "POST"])
+@requires(Action.CREATE_REQUISITION)
+def requisition_create(request: HttpRequest, number: str) -> HttpResponse:
+    """Confirm step (GET) and create (POST) of a requisition for one order and material.
+
+    A plain page for now; #28 shows the same view in the side panel. All rules are in
+    `services/requisitions.py`.
+    """
+    material = request.GET.get("material", "")
+    if request.method == "GET":
+        try:
+            prefill = requisitions.prepare(number, material)
+        except requisitions.RequisitionRefused as refused:
+            return _render_refusal(request, refused)
+        return _render_confirm(request, prefill, quantity_value=_plain(prefill.quantity))
+
+    raw_quantity = request.POST.get("quantity", "")
+    try:
+        requisition = requisitions.create(request.user, number, material, raw_quantity)
+    except requisitions.RequisitionRefused as refused:
+        if refused.reason not in ("invalid_quantity", "duplicate"):
+            return _render_refusal(request, refused)
+        try:
+            prefill = requisitions.prepare(number, material)
+        except requisitions.RequisitionRefused as refused_again:
+            return _render_refusal(request, refused_again)
+        status = REFUSAL_STATUS[refused.reason]
+        field_error = refused.message if refused.reason == "invalid_quantity" else ""
+        page_error = refused.message if refused.reason == "duplicate" else ""
+        return _render_confirm(
+            request, prefill, raw_quantity, field_error, page_error, status=status
+        )
+    retry_url = f"{request.path}?{urlencode({'material': material})}"
+    return render(
+        request,
+        "cockpit/requisitions/result.html",
+        {"requisition": requisition, "retry_url": retry_url},
+    )
+
+
+def _render_confirm(
+    request: HttpRequest,
+    prefill: requisitions.Prefill,
+    quantity_value: str,
+    error: str = "",
+    refusal: str = "",
+    status: int = 200,
+) -> HttpResponse:
+    """The confirm form, prefilled or with the value the planner typed and its error."""
+    context = {
+        "prefill": prefill,
+        "quantity_value": quantity_value,
+        "error": error,
+        "refusal": refusal,
+        "cover_percent": _plain(prefill.cover_percent),
+    }
+    return render(request, "cockpit/requisitions/confirm.html", context, status=status)
+
+
+def _render_refusal(request: HttpRequest, refused: requisitions.RequisitionRefused) -> HttpResponse:
+    """A page that says why this order and material cannot be requested."""
+    status = REFUSAL_STATUS[refused.reason]
+    return render(
+        request, "cockpit/requisitions/refused.html", {"message": refused.message}, status=status
+    )
+
+
+def _plain(value: Decimal) -> str:
+    """A number as a plain string without trailing zeros, for a form field: 30.000 → 30."""
+    text = format(value, "f")
+    return text.rstrip("0").rstrip(".") if "." in text else text

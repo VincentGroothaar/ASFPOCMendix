@@ -6,8 +6,6 @@ import pytest
 from tests.acceptance import builders
 from tests.acceptance.support import MIXED_ORDER, load_mixed_order, sync
 
-pytestmark = pytest.mark.xfail(strict=True, reason="Not built yet: #27")
-
 
 @pytest.mark.parametrize("role", ["Viewer", "Admin"])
 def test_ac_31_viewer_and_admin_cannot_create_a_requisition(fakes, clock, client_as, role):
