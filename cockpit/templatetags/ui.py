@@ -17,6 +17,7 @@ from django import template
 from django.http import QueryDict
 
 from cockpit.services import formats
+from cockpit.services.shortage import Status
 
 register = template.Library()
 
@@ -43,6 +44,18 @@ STATUS_PILLS: dict[str, PillStyle] = {
     "failed": PillStyle("PR failed", "short", dot=True),
     "rejected": PillStyle("Rejected", "neutral", dot=True),
 }
+
+# The pill of each component status from the calculation (#20).
+COMPONENT_PILL_KEYS: dict[Status, str] = {
+    Status.SHORT: "short",
+    Status.LOW_COVER: "low",
+    Status.COVERED: "covered",
+    Status.UNIT_MISMATCH: "mismatch",
+    Status.ISSUED: "issued",
+}
+
+# Hover text of the unit mismatch warning next to an order status (D-31).
+UNIT_MISMATCH_WARNING = "Unit mismatch: a component isn't checked"
 
 # ui-spec 3.2: outlined labels. "none" means no requisition and shows a dash.
 REQUISITION_LABELS: dict[str, PillStyle] = {
@@ -129,6 +142,59 @@ def info_tooltip(subject: str, text: str) -> dict:
     return {"subject": subject, "text": text, "tip_id": f"tip-{next(_tooltip_ids)}"}
 
 
+@register.inclusion_tag("components/value_tip.html")
+def value_tip(text: str, tip: str) -> dict:
+    """A value that shows a tooltip on hover and keyboard focus, e.g. converted stock (#26).
+
+    The value and the tooltip are separate elements, so the value's own text stays exact.
+    """
+    return {"text": text, "tip": tip, "tip_id": f"tip-{next(_tooltip_ids)}"}
+
+
+@register.simple_tag
+def component_status_tip(status: str, buffer_percent: Decimal, unit: str, stock_unit: str) -> str:
+    """The ⓘ text of a component status (ui-spec 5.2), with the current cover buffer."""
+    buffer = buffer_percent.quantize(Decimal("0.01"))
+    shown = _percent(buffer)
+    texts = {
+        Status.SHORT: (
+            "Short: available stock is below the open requirement, after earlier orders take "
+            "their share."
+        ),
+        Status.LOW_COVER: (
+            f"Low cover: covered, but less than {shown} to spare (available below "
+            f"{_percent(buffer + 100)} of required). Nothing is reserved."
+        ),
+        Status.COVERED: f"Covered: at least {shown} to spare.",
+        Status.UNIT_MISMATCH: (
+            f"Unit mismatch: order unit {unit} and stock unit {stock_unit} can't be converted, "
+            "so this component isn't checked."
+        ),
+        Status.ISSUED: "Issued: no open requirement left, so it isn't checked.",
+    }
+    return texts[Status(status)]
+
+
+@register.filter
+def component_pill(status: str) -> str:
+    """The `status_pill` key of a component status: `low_cover` → `low` (ui-spec 3.1)."""
+    return COMPONENT_PILL_KEYS[Status(status)]
+
+
+@register.filter
+def component_label(status: str) -> str:
+    """The screen label of a component status, e.g. `Low cover`, for the ⓘ name."""
+    return STATUS_PILLS[COMPONENT_PILL_KEYS[Status(status)]].label
+
+
+def _percent(value: Decimal) -> str:
+    """`10.00` → `10%`, `12.50` → `12.5%` (never `1E+1%`)."""
+    text = f"{value:f}"
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return f"{text}%"
+
+
 @register.inclusion_tag("components/kpi_tile.html")
 def kpi_tile(
     label: str,
@@ -183,6 +249,8 @@ def page_header(
     data_as_of: datetime | None = None,
     refresh_url: str | None = None,
     data_screen: bool = False,
+    overdue: bool = False,
+    unit_mismatch: bool = False,
 ) -> dict:
     """The page title, an optional status pill and sub-line, and on data screens
     `Data as of` plus a Refresh button (ui-spec 2.1).
@@ -192,6 +260,9 @@ def page_header(
 
     With `data_screen=True` the `#page-data` block is always rendered, also when it is empty
     (state D), so an HTMX response can always replace it out-of-band (#25, R2-I2).
+
+    `overdue` adds the Overdue pill at the end of the sub-line; `unit_mismatch` adds the warning
+    icon next to the pill, with its text on hover and keyboard focus (D-18, D-31; #26 I-2).
     """
     if pill_status is not None:
         _check(pill_status, STATUS_PILLS, "status")
@@ -202,6 +273,10 @@ def page_header(
         "data_as_of": data_as_of,
         "refresh_url": refresh_url,
         "data_screen": data_screen,
+        "overdue": overdue,
+        "unit_mismatch": unit_mismatch,
+        "mismatch_text": UNIT_MISMATCH_WARNING,
+        "tip_id": f"tip-{next(_tooltip_ids)}",
     }
 
 

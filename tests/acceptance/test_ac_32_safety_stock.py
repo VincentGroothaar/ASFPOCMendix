@@ -84,7 +84,6 @@ def test_ac_32_browser_short_tooltip_names_the_safety_stock(fakes, running_clock
     expect(page.get_by_text(SAFETY_NOTE, exact=False)).to_be_visible()
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #31")
 def test_ac_32_browser_no_safety_note_when_safety_stock_is_zero(fakes, running_clock, browser_as):
     from playwright.sync_api import expect
 
