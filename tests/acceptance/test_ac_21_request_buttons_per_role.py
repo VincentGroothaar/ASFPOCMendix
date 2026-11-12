@@ -62,7 +62,6 @@ def test_ac_21_planner_and_manager_see_request_on_short_and_low_cover(
     assert "PR failed" in page.row_with("RM-FAIL")
 
 
-@pytest.mark.xfail(strict=True, reason="Not built yet: #29")
 def test_ac_21_failed_requisition_offers_retry_to_planner_only(fakes, clock, client_as):
     """The failed requisition's page has Retry for a Planner (ui-spec 4.5), not for a Viewer."""
     load_with_failed_requisition(fakes, client_as)

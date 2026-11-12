@@ -1,0 +1,53 @@
+{% extends "layouts/frame.html" %}
+{% load ui %}
+{% comment %}All requisition attempts (REQ-5, ui-spec 4.4). Business fields only: no payloads (D-33).{% endcomment %}
+
+{% block title %}Requisitions · Material Shortage Cockpit{% endblock %}
+{% block page_title %}{% page_header "Requisitions" %}{% endblock %}
+
+{% block content %}
+  <section class="card table-card" aria-label="Requisitions">
+    <form method="get" action="{% url 'cockpit:requisition_list' %}" class="table-toolbar">
+      <h2>{% if result.status %}{{ result.status_label }}{% else %}All requisitions{% endif %}</h2>
+      <div class="toolbar-filters">
+        <label class="field-inline">Status
+          <select name="status" onchange="this.form.requestSubmit()">
+            <option value="">All</option>
+            {% for value, label in status_filters.items %}
+              <option value="{{ value }}"{% if value == result.status %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field-inline"><input type="checkbox" name="mine" value="1"{% if result.only_mine %} checked{% endif %} onchange="this.form.requestSubmit()"> Only mine</label>
+        <noscript><button type="submit" class="btn btn-secondary">Apply</button></noscript>
+        {% if result.filtered %}<a class="btn btn-ghost" href="{% url 'cockpit:requisition_list' %}">Clear</a>{% endif %}
+      </div>
+    </form>
+    <div class="table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Requisition</th><th>Material</th><th class="num">Quantity</th><th>Needed by</th>
+            <th>For order</th><th>Requested by</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in page_obj %}
+            <tr>
+              <td><a href="{% url 'cockpit:requisition_detail' r.pk %}" class="cell-main">{{ r.reference }}</a><span class="cell-sub">{{ r.pr_text }}</span></td>
+              <td><span class="cell-main">{{ r.material }}</span>{% if r.description %}<span class="cell-sub">{{ r.description }}</span>{% endif %}</td>
+              <td class="num">{{ r.quantity_sent|quantity_sent:r.unit_sent }}</td>
+              <td>{{ r.delivery_date|date_short }}</td>
+              <td><a href="/orders/{{ r.order.number }}/">{{ r.order.number }}</a></td>
+              <td>{{ r.created_by.get_username }}<span class="cell-sub">{{ r.created_at|datetime_short }}</span></td>
+              <td>{% status_pill r.status %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="muted">No requisitions yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% pagination page_obj "requisitions" request.GET %}
+{% endblock %}
