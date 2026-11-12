@@ -99,7 +99,7 @@ Read-only numbers in one bordered strip, divided by thin vertical lines, centred
 - **Collapsed by default.** Edit filters expands it below the line; the button then reads **Hide filters**.
 - Expanded fields: Plant (select), Start date from, Start date to, and **Reset to default**.
 - **The list updates when a value changes.** No Go or Show button (D-30).
-- Defaults on every visit (D-18, not remembered): the user's plant, today to today + 14 days.
+- Defaults on every visit (D-18, not remembered): the first plant in `COCKPIT_PLANTS`, today to today + 14 days (spec.md AC-2; #25).
 
 ### 3.7 Data table
 - Inside a white card. Header row: `--color-surface-muted`, caption size, semibold, muted. Row dividers `--color-border-subtle`.
@@ -237,7 +237,7 @@ Three cards:
 ## 5. Copy
 
 ### 5.1 Labels (word for word)
-Production orders · Shortage dashboard · Requisitions · Thresholds · Data as of · Refresh · Edit filters · Hide filters · Reset to default · [n] filters active: · All orders · Short · Low cover · Covered · Unit mismatch · Issued · Overdue · PR sent · Awaiting approval · PR failed · Rejected · Request · Review · Review requisition · Send requisition · Cancel · Close · Retry · Approve and send · Reject · Confirm reject · Request again · Back · Reason (optional) · Open full details · Technical details · Request and response · Only mine · Clear · Show · Progress · Details · Cover buffer · Approval limit · Safety stock · Fixed for the PoC · From SAP · Log out.
+Production orders · Shortage dashboard · Requisitions · Thresholds · Data as of · Refresh · Edit filters · Hide filters · Reset to default · [n] filters active: · All orders · Short · Low cover · Covered · Unit mismatch · Issued · Overdue · PR sent · Awaiting approval · PR failed · Rejected · Request · Review · Review requisition · Send requisition · Cancel · Close · Retry · Approve and send · Reject · Confirm reject · Request again · Back · Reason (optional) · Open full details · Technical details · Request and response · Only mine · Clear · Show · Progress · Details · Cover buffer · Approval limit · Safety stock · Fixed for the PoC · From SAP · Log out · No orders match these filters. (empty order list, #25)
 
 ### 5.2 Tooltip texts
 | Where | Text |
